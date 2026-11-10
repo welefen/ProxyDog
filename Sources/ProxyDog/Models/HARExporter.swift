@@ -69,7 +69,7 @@ enum HARExporter {
             "url": request.urlString,
             "httpVersion": "HTTP/1.1",
             "cookies": requestCookies(from: request.requestHeaders),
-            "headers": headerObjects(request.requestHeaders),
+            "headers": headerObjects(request.requestHeaders, body: request.requestBody),
             "queryString": queryItems(from: request.urlString),
             "headersSize": -1,
             "bodySize": request.requestBytes,
@@ -120,7 +120,7 @@ enum HARExporter {
             "statusText": status == 0 ? "" : reasonPhrase(for: status),
             "httpVersion": "HTTP/1.1",
             "cookies": responseCookies(from: request.responseHeaders),
-            "headers": headerObjects(request.responseHeaders),
+            "headers": headerObjects(request.responseHeaders, body: request.responseBody),
             "content": content,
             "redirectURL": request.responseHeaders.firstValue(forName: "Location") ?? "",
             "headersSize": -1,
@@ -130,8 +130,18 @@ enum HARExporter {
 
     // MARK: - Shared helpers
 
-    private static func headerObjects(_ headers: [HeaderField]) -> [[String: String]] {
-        headers.map { ["name": $0.name, "value": $0.value] }
+    /// HAR consumers expect `content.text`/`postData.text` to be the decoded payload, so a
+    /// `Content-Encoding` header would make them double-decompress. Drop it whenever the
+    /// proxy itself already inflated the captured body.
+    private static func headerObjects(_ headers: [HeaderField], body: Data?) -> [[String: String]] {
+        headers
+            .filter { header in
+                guard body != nil, !(body?.isEmpty ?? true),
+                      header.name.caseInsensitiveCompare("Content-Encoding") == .orderedSame
+                else { return true }
+                return !BodyDecompression.canDecode(contentEncoding: header.value)
+            }
+            .map { ["name": $0.name, "value": $0.value] }
     }
 
     private static func requestCookies(from headers: [HeaderField]) -> [[String: String]] {

@@ -249,6 +249,25 @@ final class ExchangeState {
         responseBody.append(contentsOf: bytes.prefix(Self.bodyCap - responseBody.count))
     }
 
+    /// Inflates the *captured* copies of request/response bodies when their headers
+    /// advertise a decodable `Content-Encoding`. The bytes relayed on the wire are never
+    /// touched; only the copies stored for the inspector are decoded. Decoding failures
+    /// (truncated capture, unsupported encoding, 16 MB output cap) keep the raw bytes.
+    func decodeCapturedBodies() {
+        if !responseBody.isEmpty,
+           let encoding = responseHeaders.firstValue(forName: "Content-Encoding"),
+           BodyDecompression.canDecode(contentEncoding: encoding),
+           let decoded = BodyDecompression.decode(responseBody, contentEncoding: encoding) {
+            responseBody = decoded
+        }
+        if !requestBody.isEmpty,
+           let encoding = requestHeaders.firstValue(forName: "Content-Encoding"),
+           BodyDecompression.canDecode(contentEncoding: encoding),
+           let decoded = BodyDecompression.decode(requestBody, contentEncoding: encoding) {
+            requestBody = decoded
+        }
+    }
+
     func snapshot(state: CaptureState, error: String? = nil) -> CapturedRequest {
         let requestBody = self.requestBody.isEmpty ? nil : self.requestBody
         let responseBody = self.responseBody.isEmpty ? nil : self.responseBody
@@ -1258,6 +1277,17 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             if !state.isUpgradeRequest && (lower == "connection" || lower == "keep-alive") { continue }
             headers.add(name: name, value: value)
         }
+        // The proxy needs readable bodies for the inspector, but macOS cannot inflate
+        // Brotli/Zstandard. When the client already sent Accept-Encoding, rewrite it to the
+        // best encoding we can decode (and that the client claims to accept). Requests
+        // without the header stay without it, so upstream falls back to identity.
+        if !state.isUpgradeRequest,
+           let clientAcceptEncoding = head.headers.first(name: "Accept-Encoding") {
+            headers.replaceOrAdd(
+                name: "Accept-Encoding",
+                value: BodyDecompression.upstreamAcceptEncoding(clientValue: clientAcceptEncoding)
+            )
+        }
         if headers.first(name: "Host") == nil {
             let hostValue = state.port == ProxyWire.defaultPort(forScheme: state.scheme)
                 ? state.host
@@ -1289,6 +1319,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         guard exchange === state, let channel else { return }
         exchange = nil
         clientWantsClose = false
+        state.decodeCapturedBodies()
         let completed = state.snapshot(state: .completed)
         lastCompletedCapture = completed
         sink.captureDidUpdate(completed)

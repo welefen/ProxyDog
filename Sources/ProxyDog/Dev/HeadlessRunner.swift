@@ -4,6 +4,9 @@ import Foundation
 final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
     private let lock = NSLock()
     private let handle: FileHandle
+    /// When set, decoded text bodies are echoed as a prefix so tests can assert that
+    /// compressed payloads were decoded.
+    var includeBodyPrefix = false
     /// Number of WebSocket messages already printed per exchange, so every update only
     /// emits the new frames instead of the whole history.
     private var reportedMessageCounts: [UUID: Int] = [:]
@@ -42,6 +45,17 @@ final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
         if let duration = request.duration { payload["duration_ms"] = Int(duration * 1000) }
         if let error = request.errorMessage { payload["error"] = error }
         if let contentType = request.responseContentType { payload["content_type"] = contentType }
+        if includeBodyPrefix,
+           let body = request.responseBody,
+           body.count > 0,
+           let text = String(data: body.prefix(400), encoding: .utf8) {
+            payload["body_prefix"] = text
+                .replacingOccurrences(of: "\n", with: " ")
+                .replacingOccurrences(of: "\r", with: " ")
+        }
+        if let encoding = request.responseHeaders.firstValue(forName: "Content-Encoding") {
+            payload["content_encoding"] = encoding
+        }
         if let app = request.clientAppName { payload["client_app"] = app }
         if let pid = request.clientPID { payload["client_pid"] = pid }
         if let path = request.clientAppPath { payload["client_path"] = path }
@@ -111,6 +125,7 @@ enum HeadlessRunner {
         }
 
         let sink = JSONLineCaptureSink(path: outputPath)
+        sink.includeBodyPrefix = arguments.contains("--print-bodies")
         let server = ProxyServer(
             port: port,
             sslProxyingEnabled: sslEnabled,

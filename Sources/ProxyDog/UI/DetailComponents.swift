@@ -175,6 +175,21 @@ private struct BodySectionView: View {
 
     private var isJSON: Bool { contentKind == .json }
 
+    /// `Content-Encoding` of the body on this side, when the upstream sent one.
+    private var contentEncoding: String? {
+        switch side {
+        case .request:
+            return request.requestHeaders.firstValue(forName: "Content-Encoding")
+        case .response:
+            return request.responseHeaders.firstValue(forName: "Content-Encoding")
+        }
+    }
+
+    /// A compressed payload the system cannot decode: show raw bytes, never text.
+    private var isUndecodableCompressed: Bool {
+        BodyDecompression.isUndecodable(contentEncoding: contentEncoding)
+    }
+
     private var title: String {
         side == .request
             ? String(localized: "Request body")
@@ -208,7 +223,7 @@ private struct BodySectionView: View {
 
             Spacer(minLength: DS.Space.x2)
 
-            if isJSON && hasBody {
+            if isJSON && hasBody && !isUndecodableCompressed {
                 PDSegmented(
                     items: [
                         .init(value: false, label: String(localized: "Pretty")),
@@ -295,9 +310,16 @@ private struct BodySectionView: View {
     private func noticeBar(for data: Data) -> some View {
         let truncatedAtLimit = data.count >= AppDefaults.maxBodyBytes
         let displayTruncated = data.count > Self.displayLimit
+        let compressionNotice = isUndecodableCompressed
 
-        if truncatedAtLimit || displayTruncated {
+        if truncatedAtLimit || displayTruncated || compressionNotice {
             VStack(spacing: 0) {
+                if compressionNotice {
+                    noticeRow(String(
+                        format: String(localized: "%@ compressed payload; decoding is not supported yet, showing raw bytes"),
+                        (contentEncoding ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                    ))
+                }
                 if truncatedAtLimit {
                     noticeRow(String(localized: "Body captured up to the 2 MB limit"))
                 }
@@ -328,19 +350,23 @@ private struct BodySectionView: View {
 
     @ViewBuilder
     private func viewer(for data: Data) -> some View {
-        switch contentKind {
-        case .json:
-            jsonViewer(data)
-        case .image:
-            if NSImage(data: data) != nil {
-                ImageBodyView(data: data, contentType: contentType)
-            } else {
+        if isUndecodableCompressed {
+            HexDumpView(data: data)
+        } else {
+            switch contentKind {
+            case .json:
+                jsonViewer(data)
+            case .image:
+                if NSImage(data: data) != nil {
+                    ImageBodyView(data: data, contentType: contentType)
+                } else {
+                    HexDumpView(data: data)
+                }
+            case .javascript, .html, .xml, .css, .text, .form:
+                MonoTextBodyView(text: displayText(from: data))
+            case .font, .audio, .video, .binary:
                 HexDumpView(data: data)
             }
-        case .javascript, .html, .xml, .css, .text, .form:
-            MonoTextBodyView(text: displayText(from: data))
-        case .font, .audio, .video, .binary:
-            HexDumpView(data: data)
         }
     }
 

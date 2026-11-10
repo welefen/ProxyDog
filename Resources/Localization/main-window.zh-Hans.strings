@@ -147,3 +147,6 @@
 /* Client attribution */
 "Process" = "进程";
 "User-Agent" = "User-Agent";
+
+/* Compressed bodies */
+"%@ compressed payload; decoding is not supported yet, showing raw bytes" = "内容使用 %@ 压缩，暂不支持解码，以下为原始字节";

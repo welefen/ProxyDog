@@ -13,6 +13,11 @@ let package = Package(
             name: "ProcessProbe",
             path: "Sources/ProcessProbe"
         ),
+        .target(
+            name: "ZlibShim",
+            path: "Sources/ZlibShim",
+            linkerSettings: [.linkedLibrary("z")]
+        ),
         .executableTarget(
             name: "ProxyDog",
             dependencies: [
@@ -21,6 +26,7 @@ let package = Package(
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOSSL", package: "swift-nio-ssl"),
                 "ProcessProbe",
+                "ZlibShim",
             ],
             path: "Sources/ProxyDog"
         )
