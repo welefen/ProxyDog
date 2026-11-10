@@ -472,6 +472,8 @@ struct SettingsView: View {
                         set: { settings.appearance = $0 }
                     )
                 )
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(1)
                 .accessibilityLabel("Theme")
             }
             SettingsHairline()
@@ -485,6 +487,8 @@ struct SettingsView: View {
                     },
                     selection: $language
                 )
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(1)
                 .accessibilityLabel("Language")
                 .onChange(of: language) { _, newValue in
                     AppLanguage.apply(newValue)
