@@ -47,6 +47,7 @@ struct ContentView: View {
         }
         .onAppear {
             SampleTraffic.bootstrapIfRequested(state: state)
+            SampleTraffic.runDevProbesIfNeeded()
         }
     }
 }

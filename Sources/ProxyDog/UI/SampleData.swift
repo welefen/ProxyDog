@@ -39,6 +39,12 @@ enum DevLaunchOptions {
         value(for: "--sample-filter").flatMap(RequestCategory.init(rawValue:))
     }
 
+    /// QA probe: sends one analytics event a few seconds after launch so the
+    /// self-request filter can be tested while the system proxy points at ProxyDog.
+    static var analyticsProbeEnabled: Bool {
+        arguments.contains("--analytics-probe")
+    }
+
     /// Stress-test mode: number of synthetic captures to load (e.g. `--sample-stress 10000`).
     static var stressCount: Int? {
         value(for: "--sample-stress").flatMap(Int.init)
@@ -66,6 +72,16 @@ enum DevLaunchOptions {
 @MainActor
 enum SampleTraffic {
     private static var didLoad = false
+
+    /// Dev-only probes that need the app running (currently just the self-request filter
+    /// check). Inert unless an explicit flag is passed.
+    static func runDevProbesIfNeeded() {
+        guard DevLaunchOptions.analyticsProbeEnabled else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            Analytics.shared.track("probe_self_request")
+            FileHandle.standardError.write(Data("[probe] sent analytics probe event\n".utf8))
+        }
+    }
 
     static func bootstrapIfRequested(state: AppState) {
         guard DevLaunchOptions.isSampleTrafficEnabled, !didLoad else { return }

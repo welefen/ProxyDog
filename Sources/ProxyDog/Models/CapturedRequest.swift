@@ -171,6 +171,21 @@ extension CapturedRequest {
         state == .failed || (statusCode.map { $0 >= 400 } ?? false)
     }
 
+    /// True when this exchange was opened by ProxyDog itself (e.g. its analytics or update
+    /// check going through the system proxy). Those are noise and never shown in the list.
+    var isFromThisProcess: Bool {
+        if let pid = clientPID, pid == ProcessInfo.processInfo.processIdentifier {
+            return true
+        }
+        if let name = clientAppName, name == AppInfo.name {
+            return true
+        }
+        if let path = clientAppPath, path.hasPrefix(Bundle.main.bundlePath + "/") {
+            return true
+        }
+        return false
+    }
+
     /// The response advertised HTTP/3 via `Alt-Svc`. QUIC traffic bypasses the system HTTP
     /// proxy, so this is an informational hint — those flows cannot be captured here.
     var advertisesHTTP3: Bool {

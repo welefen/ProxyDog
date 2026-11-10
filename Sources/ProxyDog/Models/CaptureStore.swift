@@ -23,6 +23,14 @@ final class CaptureStore: ObservableObject {
 
     func upsert(_ request: CapturedRequest) {
         guard !isPaused else { return }
+        // ProxyDog's own traffic (analytics, update checks) is noise: drop it, and remove the
+        // pending placeholder that may have been inserted before attribution identified it.
+        if request.isFromThisProcess {
+            if requests.contains(where: { $0.id == request.id }) {
+                requests.removeAll { $0.id == request.id }
+            }
+            return
+        }
         if let index = requests.firstIndex(where: { $0.id == request.id }) {
             // Pin state is owned by the store; the proxy core reports everything else.
             var updated = request
