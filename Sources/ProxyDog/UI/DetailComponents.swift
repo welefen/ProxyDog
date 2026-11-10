@@ -393,21 +393,8 @@ private struct BodySectionView: View {
 
 // MARK: - Body renderings
 
-/// Monospaced, selectable text with quiet padding.
-struct MonoTextBodyView: View {
-    let text: String
-
-    var body: some View {
-        ScrollView {
-            Text(text)
-                .font(DS.Typography.mono(11.5))
-                .foregroundStyle(DSColor.textPrimary)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(DS.Space.x3)
-        }
-    }
-}
+// `MonoTextBodyView` lives in SelectableTextView.swift: it is backed by NSTextView so
+// large HTML/JS bodies do not freeze the window while SwiftUI lays them out.
 
 /// Image preview with a mono caption (format, pixel size, byte size).
 struct ImageBodyView: View {
