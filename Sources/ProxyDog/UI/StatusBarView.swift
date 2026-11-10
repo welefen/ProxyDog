@@ -12,7 +12,6 @@ struct StatusBarView: View {
     var body: some View {
         HStack(spacing: DS.Space.x4) {
             countItem(PDFormat.count(state.allRequests.count), label: requestLabel)
-            countItem(PDFormat.count(state.pinnedCount), label: String(localized: "pinned"))
             countItem(
                 PDFormat.count(errorCount),
                 label: errorLabel,
