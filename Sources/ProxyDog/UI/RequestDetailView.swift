@@ -223,6 +223,13 @@ private struct OverviewTab: View {
                     DetailFieldRow(label: String(localized: "Method"), value: request.method)
                     URLFieldRow(url: request.urlString)
                     DetailFieldRow(label: String(localized: "Protocol"), value: request.httpVersion)
+                    if let rewrite = request.rewriteRuleName {
+                        DetailFieldRow(
+                            label: String(localized: "Rewrite"),
+                            value: request.rewriteAction.map { "\(rewrite) · \($0)" } ?? rewrite,
+                            color: DSColor.textSecondary
+                        )
+                    }
                     if let client = request.clientAppName {
                         DetailFieldRow(label: String(localized: "Client"), value: client)
                     }

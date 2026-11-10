@@ -202,6 +202,9 @@ final class ExchangeState {
 
     /// Local app that opened the client connection, once attribution resolved.
     var clientProcess: ClientProcess?
+    /// Static rewrite rule applied to this exchange, when any.
+    var rewriteRuleName: String?
+    var rewriteAction: String?
 
     var requestBody = Data()
     private(set) var requestBytesReceived = 0
@@ -270,6 +273,25 @@ final class ExchangeState {
         }
     }
 
+    /// Client-visible URL used for rewrite-rule matching.
+    var originalURLString: String {
+        RewriteEngine.urlString(scheme: scheme, host: host, port: port, path: path)
+    }
+
+    /// Replaces the captured request body (used after a request-body rewrite). The wire bytes
+    /// may be larger than the capture cap; only the prefix is kept.
+    func replaceCapturedRequestBody(_ data: Data) {
+        requestBytesReceived = data.count
+        requestBody = Data(data.prefix(Self.bodyCap))
+    }
+
+    /// Replaces the captured response body (used after a `.modifyResponse` rewrite) and records
+    /// the number of bytes actually put on the wire.
+    func replaceCapturedResponseBody(_ data: Data, wireBytes: Int) {
+        responseBody = Data(data.prefix(Self.bodyCap))
+        responseBytesReceived = wireBytes
+    }
+
     func snapshot(state: CaptureState, error: String? = nil) -> CapturedRequest {
         let requestBody = self.requestBody.isEmpty ? nil : self.requestBody
         let responseBody = self.responseBody.isEmpty ? nil : self.responseBody
@@ -291,6 +313,8 @@ final class ExchangeState {
             wireResponseBytes: responseBytesReceived,
             state: state,
             errorMessage: error,
+            rewriteRuleName: rewriteRuleName,
+            rewriteAction: rewriteAction,
             isPinned: false,
             clientSignature: clientSignature,
             clientPID: clientProcess?.pid,
@@ -321,6 +345,8 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
     private let sslProxyingEnabled: Bool
     /// Resolved per connection so a running server picks up a newly configured upstream proxy.
     private let upstreamProxyProvider: @Sendable () -> UpstreamProxy?
+    /// Static rewrite rules, evaluated per exchange by the HTTP handlers.
+    let rewriteRulesProvider: @Sendable () -> [RewriteRule]
 
     private var buffer = ByteBufferAllocator().buffer(capacity: 0)
     private var extraBytes: ByteBuffer?
@@ -335,8 +361,10 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
         sink: CaptureSink,
         certificateAuthority: CertificateAuthority,
         sslProxyingEnabled: Bool,
-        upstreamProxyProvider: @Sendable @escaping () -> UpstreamProxy? = { nil }
+        upstreamProxyProvider: @Sendable @escaping () -> UpstreamProxy? = { nil },
+        rewriteRulesProvider: @Sendable @escaping () -> [RewriteRule] = { [] }
     ) {
+        self.rewriteRulesProvider = rewriteRulesProvider
         self.sink = sink
         self.certificateAuthority = certificateAuthority
         self.sslProxyingEnabled = sslProxyingEnabled
@@ -514,7 +542,8 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             sink: sink,
             connectTarget: ProxyConnectTarget(host: host, port: port),
             upstreamProxyProvider: upstreamProxyProvider,
-            clientIdentity: clientIdentity
+            clientIdentity: clientIdentity,
+            rewriteRulesProvider: rewriteRulesProvider
         )
 
         // The TLS handler negotiates ALPN; HTTP2MITM waits for the handshake result and then
@@ -556,7 +585,8 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             responseEncoder: responseEncoder,
             requestDecoderWrapper: decoderWrapper,
             upstreamProxyProvider: upstreamProxyProvider,
-            clientIdentity: clientIdentity
+            clientIdentity: clientIdentity,
+            rewriteRulesProvider: rewriteRulesProvider
         )
 
         return channel.setOption(ChannelOptions.autoRead, value: false)
@@ -862,6 +892,8 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     private let upstreamProxyProvider: @Sendable () -> UpstreamProxy?
     /// Local app that owns this client connection (attributed once per connection).
     private let clientIdentity: ClientIdentity
+    /// Static rewrite rules evaluated for every exchange (read on the event loop).
+    let rewriteRulesProvider: @Sendable () -> [RewriteRule]
 
     let responseEncoder: HTTPResponseEncoder
     let requestDecoderWrapper: ByteToMessageHandler<HTTPRequestDecoder>
@@ -874,6 +906,20 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     private var upstreamResponseDecoderWrapper: ByteToMessageHandler<HTTPResponseDecoder>?
     private var clientWantsClose = false
     private var isTunnel = false
+
+    // Rewrite-rule state for the request currently being processed.
+    private var currentRequestHead: HTTPRequestHead?
+    private var pendingRequestRule: RewriteRule?
+    private var bufferingRuleBody = false
+    private var ruleBodyBuffer = Data()
+    private var forwardTargetOverride: ProxyWire.ResolvedTarget?
+    private var forwardURIOverride: String?
+    private var forwardHostHeaderOverride: String?
+    private var forwardBodyOverride: ByteBuffer?
+    private var forwardContentLengthOverride: Int?
+    private var dropForwardEncodingHeaders = false
+    private var responsePhaseRule: RewriteRule?
+
     /// Most recent finished capture of this connection, kept so a late process probe can
     /// still patch (and re-emit) it.
     private var lastCompletedCapture: CapturedRequest?
@@ -887,6 +933,8 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     private var pendingPipelinedParts: [HTTPServerRequestPart] = []
     private var pendingPipelinedBytes = 0
     private let maxPipelinedBytes = 4 * 1024 * 1024
+    /// Upper bound for buffering a request body to apply replace/modify rules.
+    private static let maxRewriteBodyBytes = 32 * 1024 * 1024
 
     init(
         sink: CaptureSink,
@@ -896,8 +944,10 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         responseEncoder: HTTPResponseEncoder,
         requestDecoderWrapper: ByteToMessageHandler<HTTPRequestDecoder>,
         upstreamProxyProvider: @Sendable @escaping () -> UpstreamProxy? = { nil },
-        clientIdentity: ClientIdentity = ClientIdentity()
+        clientIdentity: ClientIdentity = ClientIdentity(),
+        rewriteRulesProvider: @Sendable @escaping () -> [RewriteRule] = { [] }
     ) {
+        self.rewriteRulesProvider = rewriteRulesProvider
         self.sink = sink
         self.connectTarget = connectTarget
         self.scheme = scheme
@@ -1037,6 +1087,9 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             return
         }
 
+        resetRewriteState()
+        currentRequestHead = head
+
         let connection = (head.headers.first(name: "Connection") ?? "").lowercased()
         clientWantsClose = connection.contains("close")
             || (head.version == .http1_0 && !connection.contains("keep-alive"))
@@ -1055,7 +1108,58 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         )
         exchange = state
         state.clientProcess = clientIdentity.current
+
+        // Rewrite rules match the original, client-visible URL. WebSocket upgrade requests are
+        // left alone so we never break a protocol upgrade in flight.
+        let url = RewriteEngine.urlString(scheme: target.scheme, host: target.host, port: target.port, path: target.path)
+        let rules = rewriteRulesProvider()
+        let rule = isUpgrade ? nil : RewriteEngine.requestPhaseRule(rules, method: head.method.rawValue, url: url)
+        responsePhaseRule = isUpgrade ? nil : RewriteEngine.responsePhaseRule(rules, method: head.method.rawValue, url: url)
+        if let rule {
+            state.rewriteRuleName = rule.displayName
+            state.rewriteAction = rule.action.label
+        }
         sink.captureDidUpdate(state.snapshot(state: .pending))
+
+        if let rule {
+            switch rule.action {
+            case .replaceResponse:
+                sendSyntheticResponse(state: state, rule: rule)
+                return
+
+            case .redirect:
+                if let redirect = RewriteEngine.redirectTarget(rule.redirectURL) {
+                    forwardTargetOverride = ProxyWire.ResolvedTarget(
+                        scheme: redirect.scheme,
+                        host: redirect.host,
+                        port: redirect.port,
+                        path: redirect.path
+                    )
+                    forwardURIOverride = redirect.path
+                    forwardHostHeaderOverride = RewriteEngine.hostHeader(
+                        scheme: redirect.scheme,
+                        host: redirect.host,
+                        port: redirect.port
+                    )
+                } else {
+                    // Invalid redirect target: ignore the rule instead of failing the exchange.
+                    state.rewriteRuleName = nil
+                    state.rewriteAction = nil
+                }
+
+            case .replaceRequest, .modifyRequest:
+                // Buffer the request body, rewrite it, then open the upstream connection.
+                pendingRequestRule = rule
+                bufferingRuleBody = true
+                ruleBodyBuffer = Data()
+                channel?.setOption(ChannelOptions.autoRead, value: true).whenFailure { _ in }
+                return
+
+            case .modifyResponse:
+                break
+            }
+        }
+
         channel?.setOption(ChannelOptions.autoRead, value: false).whenFailure { _ in }
         openUpstream(state: state, head: head)
     }
@@ -1064,6 +1168,28 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         guard let state = exchange else { return }
         if let bytes = body.getBytes(at: body.readerIndex, length: body.readableBytes) {
             state.appendRequestBytes(bytes)
+        }
+        if bufferingRuleBody {
+            if ruleBodyBuffer.count + body.readableBytes > Self.maxRewriteBodyBytes {
+                // Too large to buffer: abandon the rule and stream the original body.
+                bufferingRuleBody = false
+                pendingRequestRule = nil
+                state.rewriteRuleName = nil
+                state.rewriteAction = nil
+                var buffered = ByteBufferAllocator().buffer(capacity: ruleBodyBuffer.count)
+                buffered.writeBytes(ruleBodyBuffer)
+                ruleBodyBuffer = Data()
+                state.pendingBodyParts.append(buffered)
+                if let head = currentRequestHead {
+                    channel?.setOption(ChannelOptions.autoRead, value: false).whenFailure { _ in }
+                    openUpstream(state: state, head: head)
+                }
+            } else {
+                if let bytes = body.getBytes(at: body.readerIndex, length: body.readableBytes) {
+                    ruleBodyBuffer.append(contentsOf: bytes)
+                }
+                return
+            }
         }
         if let upstream, state.upstreamReady {
             upstream.writeAndFlush(HTTPClientRequestPart.body(.byteBuffer(body)))
@@ -1076,9 +1202,93 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         guard let state = exchange else { return }
         state.requestEnded = true
         state.pendingTrailers = trailers
+
+        if bufferingRuleBody, let rule = pendingRequestRule, let head = currentRequestHead {
+            bufferingRuleBody = false
+            pendingRequestRule = nil
+            let original = ruleBodyBuffer
+            ruleBodyBuffer = Data()
+
+            var forwardedBody: Data?
+            switch rule.action {
+            case .replaceRequest:
+                forwardedBody = Data(rule.replacementBody.utf8)
+            case .modifyRequest:
+                forwardedBody = rule.transformData(original)
+            default:
+                forwardedBody = nil
+            }
+
+            if let forwardedBody {
+                // Capture what the upstream actually receives (documented choice).
+                state.replaceCapturedRequestBody(forwardedBody)
+                forwardBodyOverride = ByteBuffer(bytes: forwardedBody)
+                forwardContentLengthOverride = forwardedBody.count
+                dropForwardEncodingHeaders = true
+            } else if !original.isEmpty {
+                // Could not apply (e.g. non-UTF8 body): forward the original bytes untouched.
+                forwardBodyOverride = ByteBuffer(bytes: original)
+                forwardContentLengthOverride = original.count
+            }
+
+            openUpstream(state: state, head: head)
+            return
+        }
+
         if let upstream, state.upstreamReady {
             upstream.writeAndFlush(HTTPClientRequestPart.end(trailers))
             state.pendingTrailers = nil
+        }
+    }
+
+    private func resetRewriteState() {
+        currentRequestHead = nil
+        pendingRequestRule = nil
+        bufferingRuleBody = false
+        ruleBodyBuffer = Data()
+        forwardTargetOverride = nil
+        forwardURIOverride = nil
+        forwardHostHeaderOverride = nil
+        forwardBodyOverride = nil
+        forwardContentLengthOverride = nil
+        dropForwardEncodingHeaders = false
+        responsePhaseRule = nil
+    }
+
+    /// Completes an exchange locally with a rule-synthesized response (`.replaceResponse`).
+    private func sendSyntheticResponse(state: ExchangeState, rule: RewriteRule) {
+        exchange = nil
+        let body = Data(rule.replacementBody.utf8)
+        let status = RewriteEngine.responseStatus(rule.responseStatus)
+        let keepAlive = !clientWantsClose
+
+        var headers = HTTPHeaders()
+        headers.add(name: "Content-Type", value: RewriteEngine.contentType(rule))
+        headers.add(name: "Content-Length", value: String(body.count))
+        headers.add(name: "Connection", value: keepAlive ? "keep-alive" : "close")
+
+        state.responseStatusCode = Int(status.code)
+        state.responseHeaders = ProxyWire.headerFields(headers)
+        state.replaceCapturedResponseBody(body, wireBytes: body.count)
+
+        let completed = state.snapshot(state: .completed)
+        lastCompletedCapture = completed
+        sink.captureDidUpdate(completed)
+
+        guard let channel, channel.isActive else { return }
+        let responseHead = HTTPResponseHead(version: .http1_1, status: status, headers: headers)
+        channel.write(HTTPServerResponsePart.head(responseHead))
+        if !body.isEmpty {
+            var buffer = channel.allocator.buffer(capacity: body.count)
+            buffer.writeBytes([UInt8](body))
+            channel.write(HTTPServerResponsePart.body(.byteBuffer(buffer)))
+        }
+        channel.writeAndFlush(HTTPServerResponsePart.end(nil)).whenComplete { _ in
+            if keepAlive {
+                channel.setOption(ChannelOptions.autoRead, value: true).whenFailure { _ in }
+            } else {
+                channel.close(promise: nil)
+            }
         }
     }
 
@@ -1096,7 +1306,8 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     private func makeUpstreamHandles(
         state: ExchangeState,
         head: HTTPRequestHead,
-        clientChannel: Channel
+        clientChannel: Channel,
+        responseRule: RewriteRule?
     ) -> UpstreamHandles {
         let requestEncoder = HTTPRequestEncoder()
         let responseDecoder = HTTPResponseDecoder(
@@ -1111,7 +1322,8 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             clientWantsClose: clientWantsClose,
             owner: self,
             requestEncoder: requestEncoder,
-            responseDecoderWrapper: decoderWrapper
+            responseDecoderWrapper: decoderWrapper,
+            responseRule: responseRule
         )
         return UpstreamHandles(
             requestEncoder: requestEncoder,
@@ -1130,16 +1342,19 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
 
     private func openUpstreamDirect(state: ExchangeState, head: HTTPRequestHead) {
         guard let channel else { return }
-        let useTLS = state.scheme.lowercased() == "https"
-        let host = state.host
-        let port = state.port
+        let target = forwardTargetOverride ?? ProxyWire.ResolvedTarget(
+            scheme: state.scheme, host: state.host, port: state.port, path: state.path
+        )
+        let useTLS = target.scheme.lowercased() == "https"
+        let host = target.host
+        let port = target.port
 
         let bootstrap = ClientBootstrap(group: channel.eventLoop)
             .channelOption(ChannelOptions.socketOption(.tcp_nodelay), value: 1)
             .connectTimeout(.seconds(20))
             .channelInitializer { upstreamChannel in
                 let eventLoop = upstreamChannel.eventLoop
-                let handles = self.makeUpstreamHandles(state: state, head: head, clientChannel: channel)
+                let handles = self.makeUpstreamHandles(state: state, head: head, clientChannel: channel, responseRule: self.responsePhaseRule)
 
                 var setup: EventLoopFuture<Void>
                 if useTLS {
@@ -1192,9 +1407,12 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     /// handshake, then TLS (https) or plain HTTP (http) inside the tunnel.
     private func openUpstreamThroughProxy(state: ExchangeState, head: HTTPRequestHead, proxy: UpstreamProxy) {
         guard let channel else { return }
-        let useTLS = state.scheme.lowercased() == "https"
-        let host = state.host
-        let port = state.port
+        let target = forwardTargetOverride ?? ProxyWire.ResolvedTarget(
+            scheme: state.scheme, host: state.host, port: state.port, path: state.path
+        )
+        let useTLS = target.scheme.lowercased() == "https"
+        let host = target.host
+        let port = target.port
 
         ProxyOutboundConnector.connect(
             eventLoop: channel.eventLoop,
@@ -1203,7 +1421,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             proxy: proxy
         )
             .flatMap { (proxyChannel: Channel, leftover: ByteBuffer) -> EventLoopFuture<(Channel, UpstreamHTTPRelayHandler)> in
-                let handles = self.makeUpstreamHandles(state: state, head: head, clientChannel: channel)
+                let handles = self.makeUpstreamHandles(state: state, head: head, clientChannel: channel, responseRule: self.responsePhaseRule)
 
                 var setup: EventLoopFuture<Void>
                 if useTLS {
@@ -1268,6 +1486,10 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             let lower = name.lowercased()
             if lower == "proxy-connection" || lower == "proxy-authorization" { continue }
             if !state.isUpgradeRequest && (lower == "connection" || lower == "keep-alive") { continue }
+            if dropForwardEncodingHeaders
+                && (lower == "content-encoding" || lower == "transfer-encoding") {
+                continue
+            }
             headers.add(name: name, value: value)
         }
         // The proxy needs readable bodies for the inspector, but macOS cannot inflate
@@ -1281,21 +1503,33 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
                 value: BodyDecompression.upstreamAcceptEncoding(clientValue: clientAcceptEncoding)
             )
         }
-        if headers.first(name: "Host") == nil {
+        if let hostOverride = forwardHostHeaderOverride {
+            headers.replaceOrAdd(name: "Host", value: hostOverride)
+        } else if headers.first(name: "Host") == nil {
             let hostValue = state.port == ProxyWire.defaultPort(forScheme: state.scheme)
                 ? state.host
                 : "\(state.host):\(state.port)"
             headers.add(name: "Host", value: hostValue)
+        }
+        if let contentLength = forwardContentLengthOverride {
+            headers.replaceOrAdd(name: "Content-Length", value: String(contentLength))
         }
         if !state.isUpgradeRequest {
             // One upstream connection per exchange keeps close-delimited responses simple.
             headers.replaceOrAdd(name: "Connection", value: "close")
         }
 
-        let outgoing = HTTPRequestHead(version: .http1_1, method: head.method, uri: state.path, headers: headers)
+        let uri = forwardURIOverride ?? state.path
+        let outgoing = HTTPRequestHead(version: .http1_1, method: head.method, uri: uri, headers: headers)
         upstream.writeAndFlush(HTTPClientRequestPart.head(outgoing))
-        for part in state.pendingBodyParts {
-            upstream.writeAndFlush(HTTPClientRequestPart.body(.byteBuffer(part)))
+        if let forwardBodyOverride {
+            if forwardBodyOverride.readableBytes > 0 {
+                upstream.writeAndFlush(HTTPClientRequestPart.body(.byteBuffer(forwardBodyOverride)))
+            }
+        } else {
+            for part in state.pendingBodyParts {
+                upstream.writeAndFlush(HTTPClientRequestPart.body(.byteBuffer(part)))
+            }
         }
         state.pendingBodyParts.removeAll()
         state.upstreamReady = true
@@ -1303,6 +1537,8 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             upstream.writeAndFlush(HTTPClientRequestPart.end(state.pendingTrailers))
             state.pendingTrailers = nil
         }
+        // Request-body rewrites are one-shot per exchange.
+        forwardBodyOverride = nil
         channel?.setOption(ChannelOptions.autoRead, value: true).whenFailure { _ in }
     }
 
@@ -1510,6 +1746,16 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
     private var closeDelimited = false
     private var keepAlive = false
 
+    // `.modifyResponse` buffering state. The response head is withheld until the body is
+    // complete so it can be sent as identity-encoded bytes with an exact Content-Length.
+    private let responseRule: RewriteRule?
+    private var buffering = false
+    private var bufferedHead: HTTPResponseHead?
+    private var bufferedOutgoingHead: HTTPResponseHead?
+    private var bufferedBody = Data()
+    private var bufferedNoBody = false
+    private static let maxRewriteBodyBytes = 16 * 1024 * 1024
+
     init(
         exchange: ExchangeState,
         method: HTTPMethod,
@@ -1517,7 +1763,8 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
         clientWantsClose: Bool,
         owner: ClientHTTPHandler,
         requestEncoder: HTTPRequestEncoder,
-        responseDecoderWrapper: ByteToMessageHandler<HTTPResponseDecoder>
+        responseDecoderWrapper: ByteToMessageHandler<HTTPResponseDecoder>,
+        responseRule: RewriteRule?
     ) {
         self.exchange = exchange
         self.method = method
@@ -1526,6 +1773,8 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
         self.owner = owner
         self.requestEncoder = requestEncoder
         self.responseDecoderWrapper = responseDecoderWrapper
+        self.responseRule = responseRule
+        self.buffering = false
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -1535,9 +1784,18 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
         case .body(let body):
             guard !completed else { return }
             captureBody(body)
+            if buffering {
+                appendBufferedBody(body)
+                return
+            }
             forward(.body(.byteBuffer(body)))
         case .end(let trailers):
             guard !completed else { return }
+            if buffering {
+                completed = true
+                finalizeBufferedResponse()
+                return
+            }
             completed = true
             let finalWrite = forward(.end(trailers))
             owner?.upstreamResponseFinished(exchange, keepAlive: keepAlive, finalWrite: finalWrite)
@@ -1547,6 +1805,11 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
     func channelInactive(context: ChannelHandlerContext) {
         guard !completed else { return }
         completed = true
+        if buffering, bufferedHead != nil {
+            // Close-delimited response that was being buffered for a rewrite: EOF ends the body.
+            finalizeBufferedResponse()
+            return
+        }
         if headForwarded, closeDelimited {
             // End of a close-delimited body: normal completion at EOF.
             let finalWrite = forward(.end(nil))
@@ -1615,8 +1878,117 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
         headers.replaceOrAdd(name: "Connection", value: keepAlive ? "keep-alive" : "close")
 
         let outgoing = HTTPResponseHead(version: .http1_1, status: head.status, headers: headers)
+        if responseRule != nil, !noBody {
+            // Withhold the head until the body is fully buffered and rewritten.
+            bufferedHead = head
+            bufferedOutgoingHead = outgoing
+            bufferedNoBody = noBody
+            buffering = true
+            return
+        }
+        buffering = false
         headForwarded = true
         forward(.head(outgoing))
+    }
+
+    // MARK: `.modifyResponse` buffering
+
+    private func appendBufferedBody(_ body: ByteBuffer) {
+        guard let bytes = body.getBytes(at: body.readerIndex, length: body.readableBytes) else { return }
+        if bufferedBody.count + bytes.count > Self.maxRewriteBodyBytes {
+            // Too large to rewrite: flush what we buffered and pass the rest through untouched.
+            flushBufferedPassthrough()
+            forward(.body(.byteBuffer(body)))
+            return
+        }
+        bufferedBody.append(contentsOf: bytes)
+    }
+
+    /// Turns the buffered response into the modified response (identity encoding, exact
+    /// Content-Length). Falls back to passing the original bytes through when the body is not
+    /// decodable/UTF-8 or the rule cannot be applied.
+    private func finalizeBufferedResponse() {
+        guard let original = bufferedHead, let outgoing = bufferedOutgoingHead else { return }
+        let body = bufferedBody
+        bufferedBody = Data()
+        buffering = false
+        bufferedHead = nil
+        bufferedOutgoingHead = nil
+
+        var transformed: Data?
+        if let rule = responseRule {
+            var decoded: Data? = body
+            if let encoding = original.headers.first(name: "content-encoding") {
+                decoded = BodyDecompression.canDecode(contentEncoding: encoding)
+                    ? BodyDecompression.decode(body, contentEncoding: encoding)
+                    : nil
+            }
+            if let decoded {
+                transformed = rule.transformData(decoded)
+            }
+            if let transformed {
+                exchange.rewriteRuleName = rule.displayName
+                exchange.rewriteAction = rule.action.label
+                exchange.replaceCapturedResponseBody(transformed, wireBytes: transformed.count)
+
+                let keepClientAlive = !clientWantsClose
+                var headers = HTTPHeaders()
+                for (name, value) in original.headers {
+                    let lower = name.lowercased()
+                    if lower == "connection"
+                        || lower == "keep-alive"
+                        || lower == "proxy-connection"
+                        || lower == "transfer-encoding"
+                        || lower == "upgrade"
+                        || lower == "content-encoding"
+                        || lower == "content-length" {
+                        continue
+                    }
+                    headers.add(name: name, value: value)
+                }
+                headers.replaceOrAdd(name: "Content-Length", value: String(transformed.count))
+                headers.replaceOrAdd(name: "Connection", value: keepClientAlive ? "keep-alive" : "close")
+
+                let responseHead = HTTPResponseHead(version: .http1_1, status: original.status, headers: headers)
+                headForwarded = true
+                forward(.head(responseHead))
+                if !transformed.isEmpty {
+                    var buffer = client.allocator.buffer(capacity: transformed.count)
+                    buffer.writeBytes([UInt8](transformed))
+                    forward(.body(.byteBuffer(buffer)))
+                }
+                let finalWrite = forward(.end(nil))
+                owner?.upstreamResponseFinished(exchange, keepAlive: keepClientAlive, finalWrite: finalWrite)
+                return
+            }
+        }
+
+        // Passthrough: send exactly what the upstream sent (with its original framing headers).
+        headForwarded = true
+        forward(.head(outgoing))
+        if !body.isEmpty {
+            var buffer = client.allocator.buffer(capacity: body.count)
+            buffer.writeBytes([UInt8](body))
+            forward(.body(.byteBuffer(buffer)))
+        }
+        let finalWrite = forward(.end(nil))
+        owner?.upstreamResponseFinished(exchange, keepAlive: keepAlive, finalWrite: finalWrite)
+    }
+
+    /// Flushes the withheld head and buffered body as-is, then switches to streaming.
+    private func flushBufferedPassthrough() {
+        guard buffering, let outgoing = bufferedOutgoingHead else { return }
+        buffering = false
+        bufferedHead = nil
+        bufferedOutgoingHead = nil
+        headForwarded = true
+        forward(.head(outgoing))
+        if !bufferedBody.isEmpty {
+            var buffer = client.allocator.buffer(capacity: bufferedBody.count)
+            buffer.writeBytes([UInt8](bufferedBody))
+            bufferedBody = Data()
+            forward(.body(.byteBuffer(buffer)))
+        }
     }
 
     private func captureBody(_ body: ByteBuffer) {

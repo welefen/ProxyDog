@@ -186,3 +186,6 @@
 "Wire" = "Wire";
 "Decoded" = "Decoded";
 "Response body size of the visible requests: on the wire (compressed) / after decompression" = "Response body size of the visible requests: on the wire (compressed) / after decompression";
+
+/* Rewrite */
+"Rewrite" = "Rewrite";

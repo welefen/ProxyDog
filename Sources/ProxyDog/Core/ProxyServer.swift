@@ -62,6 +62,9 @@ final class ProxyServer: @unchecked Sendable {
     /// intercepts their traffic the same way it does for HTTP-proxy clients.
     var socksPort: Int?
 
+    /// Enabled static rewrite rules, read from any thread for every exchange.
+    var rewriteRulesProvider: @Sendable () -> [RewriteRule] = { [] }
+
     private(set) var status: Status = .stopped
 
     let sink: CaptureSink
@@ -146,7 +149,8 @@ final class ProxyServer: @unchecked Sendable {
                     sink: sink,
                     certificateAuthority: certificateAuthority,
                     sslProxyingEnabled: sslEnabled,
-                    upstreamProxyProvider: upstreamProxyProvider
+                    upstreamProxyProvider: upstreamProxyProvider,
+                    rewriteRulesProvider: self.rewriteRulesProvider
                 )
                 return channel.pipeline.addHandler(handler)
             }

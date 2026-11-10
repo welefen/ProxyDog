@@ -36,6 +36,43 @@
 "Failed" = "Failed";
 "Running on %@" = "Running on %@";
 
+/* Settings · rewrite */
+"Rewrite rules" = "Rewrite rules";
+"Static rules that rewrite requests and responses as they pass through the proxy, without writing code." = "Static rules that rewrite requests and responses as they pass through the proxy, without writing code.";
+"Add rule" = "Add rule";
+"No rules yet" = "No rules yet";
+"Add a rule to redirect requests or patch request and response bodies." = "Add a rule to redirect requests or patch request and response bodies.";
+"Edit rule" = "Edit rule";
+"Delete rule" = "Delete rule";
+"New rule" = "New rule";
+"Enabled" = "Enabled";
+"Name" = "Name";
+"Empty matches any method." = "Empty matches any method.";
+"URL pattern" = "URL pattern";
+"Matched against the full URL; regular expression or plain text." = "Matched against the full URL; regular expression or plain text.";
+"Action" = "Action";
+"Redirect URL" = "Redirect URL";
+"Absolute URL to send the request to." = "Absolute URL to send the request to.";
+"Replacement body" = "Replacement body";
+"Find" = "Find";
+"Replace" = "Replace";
+"Regular expression; plain text is replaced literally." = "Regular expression; plain text is replaced literally.";
+"Status code" = "Status code";
+"Save" = "Save";
+"Cancel" = "Cancel";
+"Enter a URL pattern." = "Enter a URL pattern.";
+"Enter a redirect URL." = "Enter a redirect URL.";
+"Enter a replacement body." = "Enter a replacement body.";
+"Enter the text to find." = "Enter the text to find.";
+"Enter a valid status code." = "Enter a valid status code.";
+
+/* Rewrite actions */
+"Redirect" = "Redirect";
+"Replace request" = "Replace request";
+"Replace response" = "Replace response";
+"Modify request" = "Modify request";
+"Modify response" = "Modify response";
+
 /* Settings · appearance */
 "Theme" = "Theme";
 "Follows the system appearance by default." = "Follows the system appearance by default.";

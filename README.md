@@ -11,6 +11,7 @@
 - **WebSocket 调试**：抓取 101 升级握手，按帧解析双向消息（文本/二进制/ping/pong/关闭、分片重组），wss 自动解密；详情页「消息」标签实时追加，可查看每条消息内容。
 - **请求归属**：通过 libproc 反查发起连接的本地进程，详情页显示是哪个 App（含 PID，可看可执行路径），并保留原始 User-Agent。
 - **检索与筛选**：全文搜索、按域名过滤、Chrome DevTools 风格的类型筛选（Fetch/XHR、Doc、CSS、JS、Font、Img、Media、Manifest、Socket、Wasm、Other）、暂停/恢复抓包、清空、单条删除、收藏。
+- **重写规则（Rewrite）**：不写代码的静态规则，在设置里配置后立即生效；支持重定向、替换请求、替换响应、修改请求、修改响应 5 种动作（URL 正则/子串 + 可选 HTTP 方法匹配），HTTP/1.1 与 HTTP/2 流量都适用。
 - **导出**：HAR 1.2 文件导出、复制为 cURL。
 - **系统代理**：一键设置/关闭 macOS 系统 HTTP/HTTPS 代理（需要管理员授权）。
 - **上游代理（代理链）**：出站流量可以再交给已有的 HTTP CONNECT 或 SOCKS5 代理（例如本机正在运行的 VPN 客户端），抓包解密与 VPN 出网同时生效。
@@ -140,6 +141,25 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 
 限制：不解析 `permessage-deflate` 压缩帧（按二进制原样保存）、不支持 WebSocket over HTTP/2；ping/pong 与 close 控制帧只记录内容，不影响转发。
 
+## 重写规则（Rewrite）
+
+设置 → 重写规则里可以预设静态规则，代理会在转发时自动改写请求/响应，不用写代码。每条规则包含可选的 HTTP 方法、URL 匹配（正则，写普通文本则按子串匹配）和一个动作：
+
+| 动作 | 作用 | 例子 |
+|---|---|---|
+| 重定向 Redirect | 把请求转发到另一个地址 | 把某个接口 302/302 等价地转到测试环境 |
+| 替换请求 Replace request | 用固定内容替换请求正文 | 强制给接口发送固定的测试参数 |
+| 替换响应 Replace response | 不请求上游，直接返回本地响应 | 把线上接口返回替换成本地 JSON，模拟后端 |
+| 修改请求 Modify request | 对请求正文做正则查找/替换 | 把 `code:0` 批量改成 `code:-1` |
+| 修改响应 Modify response | 对响应正文做正则查找/替换 | 测试前端对 `code:-1` 的报错逻辑 |
+
+说明：
+
+- 同一阶段只有**第一条匹配且启用**的规则生效；禁用规则不参与匹配
+- 修改响应会对 gzip/deflate 响应先解压再改写，然后以未压缩形式返回（Content-Length 会同步修正）；br/zstd、二进制或超过 16MB 的响应会原样透传
+- 请求正文替换/修改支持最大 32MB；WebSocket 升级请求不做改写
+- 被规则改写的请求会在详情页「概览」里标注「重写 · 动作名」，HAR 导出包含改写后的内容
+
 ## 根证书
 
 - 位置：`~/Library/Application Support/ProxyDog/Certificates/ca.crt`
@@ -182,6 +202,9 @@ UPSTREAM_REAL=127.0.0.1:1235 ./scripts/test_upstream.sh   # 再用真实 VPN 的
 
 # HTTP/2 测试：ALPN 协商 h2、h2 抓包断言、HTTP/1.1 回退
 ./scripts/test_http2.sh
+
+# 重写规则测试：5 种动作 + 禁用规则 + 抓包标注
+./scripts/test_rewrite.sh
 
 # 请求归属测试：curl / Python 客户端 / MITM / SOCKS5 连接都能识别出 App
 ./scripts/test_attribution.sh

@@ -46,6 +46,10 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
 
     var state: CaptureState
     var errorMessage: String?
+    /// Name of the rewrite rule that modified this exchange, when any.
+    var rewriteRuleName: String?
+    /// Action of the applied rewrite rule (e.g. "Modify response").
+    var rewriteAction: String?
     var isPinned: Bool
     /// User-Agent-derived client signature (e.g. "Safari/605.1.15"), when present.
     var clientSignature: String?
@@ -80,6 +84,8 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         wireResponseBytes: Int = 0,
         state: CaptureState = .pending,
         errorMessage: String? = nil,
+        rewriteRuleName: String? = nil,
+        rewriteAction: String? = nil,
         isPinned: Bool = false,
         clientSignature: String? = nil,
         clientPID: Int32? = nil,
@@ -105,6 +111,8 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         self.wireResponseBytes = wireResponseBytes
         self.state = state
         self.errorMessage = errorMessage
+        self.rewriteRuleName = rewriteRuleName
+        self.rewriteAction = rewriteAction
         self.isPinned = isPinned
         self.clientSignature = clientSignature
         self.clientPID = clientPID

@@ -38,6 +38,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.x6) {
                     connectionSection
+                    rewriteSection
                     appearanceSection
                     certificateSection
                 }
@@ -48,7 +49,7 @@ struct SettingsView: View {
             }
             versionFooter
         }
-        .frame(width: 560, height: 880)
+        .frame(width: 560, height: 920)
         .onAppear {
             // Fill the upstream address from whatever proxy is already running so the user
             // never has to type it by hand.
@@ -305,6 +306,14 @@ struct SettingsView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Rewrite
+
+    private var rewriteSection: some View {
+        SettingsSection(title: "Rewrite rules") {
+            RewriteRulesSectionView(store: state.rewriteRules)
         }
     }
 

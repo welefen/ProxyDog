@@ -61,6 +61,8 @@ final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
         if let app = request.clientAppName { payload["client_app"] = app }
         if let pid = request.clientPID { payload["client_pid"] = pid }
         if let path = request.clientAppPath { payload["client_path"] = path }
+        if let name = request.rewriteRuleName { payload["rewrite_rule"] = name }
+        if let action = request.rewriteAction { payload["rewrite_action"] = action }
         if request.isWebSocket { payload["websocket"] = true }
         if !request.webSocketMessages.isEmpty { payload["ws_messages"] = request.webSocketMessages.count }
 
@@ -113,6 +115,16 @@ enum HeadlessRunner {
         let upstream = flagValue("--upstream").flatMap { UpstreamProxy(string: $0) }
         let socksPort = Int(flagValue("--socks-port") ?? "")
         let exitAfter = Double(flagValue("--exit-after") ?? "")
+        // QA: load static rewrite rules from a JSON file so rewrite behaviour is testable
+        // without the settings UI.
+        let rulesFile = flagValue("--rules-file")
+        let rewriteSnapshot = RewriteRuleSnapshot()
+        if let rulesFile,
+           let data = try? Data(contentsOf: URL(fileURLWithPath: rulesFile)),
+           let rules = try? RewriteRuleCoding.decode(data) {
+            rewriteSnapshot.update(rules)
+            print("{\"type\":\"rules\",\"count\":\(rules.count)}")
+        }
 
         if arguments.contains("--selftest") {
             exit(Self.runSelfTest(port: port) ? 0 : 1)
@@ -136,6 +148,7 @@ enum HeadlessRunner {
         )
         server.upstreamProxy = upstream
         server.socksPort = socksPort
+        server.rewriteRulesProvider = { rewriteSnapshot.current() }
         if let upstream {
             print("{\"type\":\"upstream\",\"proxy\":\"\(upstream.displayName)\"}")
         }

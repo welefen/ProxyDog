@@ -10,6 +10,7 @@ final class AppState: ObservableObject {
 
     let settings: AppSettings
     let store: CaptureStore
+    let rewriteRules: RewriteRuleStore
     let proxy: ProxyServer
 
     @Published private(set) var proxyStatus: ProxyServer.Status = .stopped
@@ -29,12 +30,13 @@ final class AppState: ObservableObject {
     private var ignoreOwnTrafficCancellable: AnyCancellable?
 
     convenience init() {
-        self.init(settings: AppSettings(), store: CaptureStore())
+        self.init(settings: AppSettings(), store: CaptureStore(), rewriteRules: RewriteRuleStore())
     }
 
-    init(settings: AppSettings, store: CaptureStore) {
+    init(settings: AppSettings, store: CaptureStore, rewriteRules: RewriteRuleStore) {
         self.settings = settings
         self.store = store
+        self.rewriteRules = rewriteRules
         let sink = MainActorCaptureSink(store: store)
         self.sink = sink
         let proxy = ProxyServer(
@@ -44,6 +46,7 @@ final class AppState: ObservableObject {
             certificateAuthority: .shared
         )
         self.proxy = proxy
+        proxy.rewriteRulesProvider = { [rewriteRules] in rewriteRules.snapshot.current() }
         proxy.onStatusChange = { [weak self] status in
             Task { @MainActor in
                 self?.proxyStatus = status

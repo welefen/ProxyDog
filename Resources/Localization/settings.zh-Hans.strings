@@ -36,6 +36,43 @@
 "Failed" = "启动失败";
 "Running on %@" = "正在监听 %@";
 
+/* Settings · rewrite */
+"Rewrite rules" = "重写规则";
+"Static rules that rewrite requests and responses as they pass through the proxy, without writing code." = "代理请求与响应经过时按规则自动重写，无需编写代码。";
+"Add rule" = "添加规则";
+"No rules yet" = "还没有规则";
+"Add a rule to redirect requests or patch request and response bodies." = "添加规则即可重定向请求，或修改请求与响应内容。";
+"Edit rule" = "编辑规则";
+"Delete rule" = "删除规则";
+"New rule" = "新建规则";
+"Enabled" = "启用";
+"Name" = "名称";
+"Empty matches any method." = "留空表示匹配任意方法。";
+"URL pattern" = "URL 模式";
+"Matched against the full URL; regular expression or plain text." = "匹配完整 URL，可使用正则表达式或普通文本。";
+"Action" = "动作";
+"Redirect URL" = "重定向地址";
+"Absolute URL to send the request to." = "请求将被重定向到的完整地址。";
+"Replacement body" = "替换内容";
+"Find" = "查找";
+"Replace" = "替换";
+"Regular expression; plain text is replaced literally." = "支持正则表达式；普通文本按字面替换。";
+"Status code" = "状态码";
+"Save" = "保存";
+"Cancel" = "取消";
+"Enter a URL pattern." = "请输入 URL 模式。";
+"Enter a redirect URL." = "请输入重定向地址。";
+"Enter a replacement body." = "请输入替换内容。";
+"Enter the text to find." = "请输入要查找的文本。";
+"Enter a valid status code." = "请输入有效的状态码。";
+
+/* Rewrite actions */
+"Redirect" = "重定向";
+"Replace request" = "替换请求";
+"Replace response" = "替换响应";
+"Modify request" = "修改请求";
+"Modify response" = "修改响应";
+
 /* Settings · appearance */
 "Theme" = "主题";
 "Follows the system appearance by default." = "默认跟随系统外观。";
