@@ -62,6 +62,10 @@ final class ProxyServer: @unchecked Sendable {
     /// entry points can chain through different proxies.
     var socksUpstreamProxy: UpstreamProxy?
 
+    /// Headless runs only configure `upstreamProxy`; fall back to it for SOCKS5 entries.
+    /// The app sets this to false so each listener's own switch is authoritative.
+    var socksUpstreamFallbackToHTTP = true
+
     /// When set, ProxyDog also accepts SOCKS5 clients on 127.0.0.1:<socksPort> and
     /// intercepts their traffic the same way it does for HTTP-proxy clients.
     var socksPort: Int?
@@ -147,9 +151,9 @@ final class ProxyServer: @unchecked Sendable {
             self?.upstreamProxy
         }
         let socksUpstreamProxyProvider: @Sendable () -> UpstreamProxy? = { [weak self] in
-            // Headless runs and single-upstream setups only set the HTTP slot; fall back to
-            // it so the SOCKS5 listener still chains through the configured proxy.
-            self?.socksUpstreamProxy ?? self?.upstreamProxy
+            guard let self else { return nil }
+            return self.socksUpstreamProxy
+                ?? (self.socksUpstreamFallbackToHTTP ? self.upstreamProxy : nil)
         }
         let bootstrap = ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)

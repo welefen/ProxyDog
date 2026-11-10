@@ -28,6 +28,11 @@
 "HTTP upstream" = "HTTP 上游";
 "SOCKS5 upstream" = "SOCKS5 上游";
 
+"HTTP upstream proxy" = "HTTP 上游代理";
+"Chains outbound traffic through an existing HTTP proxy such as a VPN client. Only affects traffic entering through the HTTP proxy port." = "通过已有的 HTTP 代理出站（例如 VPN 客户端），仅影响从 HTTP 代理端口进入的流量。";
+"SOCKS5 upstream proxy" = "SOCKS5 上游代理";
+"Chains traffic from the SOCKS5 listener through an existing SOCKS5 proxy. Only affects traffic entering through the SOCKS5 listener port." = "通过已有的 SOCKS5 代理出站，仅影响从 SOCKS5 监听端口进入的流量。";
+
 "SOCKS5 proxy" = "SOCKS5 代理";
 "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way." = "给只支持 SOCKS5 的 App 使用，例如 Telegram；ProxyDog 同样会抓包并解密 HTTPS。";
 "SOCKS5 port" = "SOCKS5 端口";

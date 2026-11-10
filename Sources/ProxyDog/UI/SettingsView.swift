@@ -251,18 +251,18 @@ struct SettingsView: View {
                 }
                 SettingsHairline()
                 SettingsRow(
-                    title: "Upstream proxy",
-                    hint: "Sends outbound traffic through an existing proxy such as a VPN client. Traffic from the HTTP proxy uses the HTTP address, traffic from the SOCKS5 listener uses the SOCKS5 address; when only one is filled both use it."
+                    title: "HTTP upstream proxy",
+                    hint: "Chains outbound traffic through an existing HTTP proxy such as a VPN client. Only affects traffic entering through the HTTP proxy port."
                 ) {
                     Toggle("", isOn: Binding(
-                        get: { settings.upstreamProxyEnabled },
-                        set: { setUpstreamEnabled($0) }
+                        get: { settings.upstreamHTTPEnabled },
+                        set: { setUpstreamEnabled($0, kind: .httpConnect) }
                     ))
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .controlSize(.small)
                     .tint(DSColor.accent)
-                    .accessibilityLabel("Upstream proxy")
+                    .accessibilityLabel("HTTP upstream proxy")
                 }
                 SettingsHairline()
                 SettingsRow(
@@ -278,12 +278,12 @@ struct SettingsView: View {
                             .frame(width: 112)
                             .padding(.horizontal, DS.Space.x2)
                             .padding(.vertical, 5)
-                            .background(fieldBackground(isFocused: upstreamHTTPHostFocused, isEnabled: settings.upstreamProxyEnabled))
+                            .background(fieldBackground(isFocused: upstreamHTTPHostFocused, isEnabled: settings.upstreamHTTPEnabled))
                             .onSubmit { commitUpstreamAddress(.httpConnect) }
                             .onChange(of: upstreamHTTPHostFocused) { _, focused in
                                 if !focused { commitUpstreamAddress(.httpConnect) }
                             }
-                            .disabled(!settings.upstreamProxyEnabled)
+                            .disabled(!settings.upstreamHTTPEnabled)
                         TextField(detectedUpstreamPort, text: $upstreamHTTPPortText)
                             .textFieldStyle(.plain)
                             .font(DS.Typography.mono(12))
@@ -293,7 +293,7 @@ struct SettingsView: View {
                             .frame(width: 56)
                             .padding(.horizontal, DS.Space.x2)
                             .padding(.vertical, 5)
-                            .background(fieldBackground(isFocused: upstreamHTTPPortFocused, isEnabled: settings.upstreamProxyEnabled))
+                            .background(fieldBackground(isFocused: upstreamHTTPPortFocused, isEnabled: settings.upstreamHTTPEnabled))
                             .onSubmit { commitUpstreamAddress(.httpConnect) }
                             .onChange(of: upstreamHTTPPortText) { _, newValue in
                                 let filtered = String(newValue.filter(\.isNumber).prefix(5))
@@ -302,13 +302,13 @@ struct SettingsView: View {
                             .onChange(of: upstreamHTTPPortFocused) { _, focused in
                                 if !focused { commitUpstreamAddress(.httpConnect) }
                             }
-                            .disabled(!settings.upstreamProxyEnabled)
+                            .disabled(!settings.upstreamHTTPEnabled)
                         SettingsIconButton(
                             systemName: "arrow.down.to.line",
                             help: String(localized: "Fill from system proxy"),
                             action: fillUpstreamFromSystem
                         )
-                        .disabled(!settings.upstreamProxyEnabled)
+                        .disabled(!settings.upstreamHTTPEnabled)
                     }
                 }
             }
@@ -354,6 +354,21 @@ struct SettingsView: View {
                 }
                 SettingsHairline()
                 SettingsRow(
+                    title: "SOCKS5 upstream proxy",
+                    hint: "Chains traffic from the SOCKS5 listener through an existing SOCKS5 proxy. Only affects traffic entering through the SOCKS5 listener port."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.upstreamSOCKSEnabled },
+                        set: { setUpstreamEnabled($0, kind: .socks5) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DSColor.accent)
+                    .accessibilityLabel("SOCKS5 upstream proxy")
+                }
+                SettingsHairline()
+                SettingsRow(
                     title: "SOCKS5 upstream",
                     errorText: upstreamErrorKind == .socks5 ? upstreamError : nil
                 ) {
@@ -366,12 +381,12 @@ struct SettingsView: View {
                             .frame(width: 112)
                             .padding(.horizontal, DS.Space.x2)
                             .padding(.vertical, 5)
-                            .background(fieldBackground(isFocused: upstreamSOCKSHostFocused, isEnabled: settings.upstreamProxyEnabled))
+                            .background(fieldBackground(isFocused: upstreamSOCKSHostFocused, isEnabled: settings.upstreamSOCKSEnabled))
                             .onSubmit { commitUpstreamAddress(.socks5) }
                             .onChange(of: upstreamSOCKSHostFocused) { _, focused in
                                 if !focused { commitUpstreamAddress(.socks5) }
                             }
-                            .disabled(!settings.upstreamProxyEnabled)
+                            .disabled(!settings.upstreamSOCKSEnabled)
                         TextField("1080", text: $upstreamSOCKSPortText)
                             .textFieldStyle(.plain)
                             .font(DS.Typography.mono(12))
@@ -381,7 +396,7 @@ struct SettingsView: View {
                             .frame(width: 56)
                             .padding(.horizontal, DS.Space.x2)
                             .padding(.vertical, 5)
-                            .background(fieldBackground(isFocused: upstreamSOCKSPortFocused, isEnabled: settings.upstreamProxyEnabled))
+                            .background(fieldBackground(isFocused: upstreamSOCKSPortFocused, isEnabled: settings.upstreamSOCKSEnabled))
                             .onSubmit { commitUpstreamAddress(.socks5) }
                             .onChange(of: upstreamSOCKSPortText) { _, newValue in
                                 let filtered = String(newValue.filter(\.isNumber).prefix(5))
@@ -390,7 +405,7 @@ struct SettingsView: View {
                             .onChange(of: upstreamSOCKSPortFocused) { _, focused in
                                 if !focused { commitUpstreamAddress(.socks5) }
                             }
-                            .disabled(!settings.upstreamProxyEnabled)
+                            .disabled(!settings.upstreamSOCKSEnabled)
                     }
                 }
             }
@@ -590,6 +605,7 @@ struct SettingsView: View {
         portError = nil
         syncUpstreamFields()
         upstreamError = nil
+        upstreamErrorKind = nil
         socksPortText = String(settings.socksProxyPort)
         socksError = nil
         language = AppLanguage.stored
@@ -622,12 +638,11 @@ struct SettingsView: View {
         return Int(text.trimmingCharacters(in: .whitespaces)) ?? 0
     }
 
-    private func setUpstreamEnabled(_ enabled: Bool) {
+    private func setUpstreamEnabled(_ enabled: Bool, kind: UpstreamProxyKind) {
         upstreamHTTPHostFocused = false
         upstreamHTTPPortFocused = false
         upstreamSOCKSHostFocused = false
         upstreamSOCKSPortFocused = false
-        let kind = settings.effectiveUpstreamKind
         if let error = state.applyUpstreamProxy(
             enabled: enabled,
             host: settings.upstreamHost(for: kind),
@@ -636,7 +651,7 @@ struct SettingsView: View {
         ) {
             // Nothing is applied on failure, so the switch falls back to off.
             upstreamError = error
-            upstreamErrorKind = settings.effectiveUpstreamKind
+            upstreamErrorKind = kind
             return
         }
         upstreamError = nil
@@ -648,7 +663,7 @@ struct SettingsView: View {
         let host = hostText(for: kind)
         let port = parsedPort(for: kind)
         if let error = state.applyUpstreamProxy(
-            enabled: settings.upstreamProxyEnabled,
+            enabled: settings.upstreamEnabled(for: kind),
             host: host,
             port: port,
             kind: kind
@@ -669,10 +684,10 @@ struct SettingsView: View {
         refreshDetectedUpstream()
         syncUpstreamFields()
 
-        guard settings.upstreamProxyEnabled else { return }
+        guard settings.upstreamHTTPEnabled else { return }
         let host = settings.upstreamHost(for: .httpConnect)
         let port = settings.upstreamPort(for: .httpConnect)
-        if let error = state.applyUpstreamProxy(enabled: true, host: host, port: port, kind: .httpConnect) {
+        if let error = state.applyUpstreamProxy(enabled: settings.upstreamHTTPEnabled, host: host, port: port, kind: .httpConnect) {
             upstreamError = error
             upstreamErrorKind = .httpConnect
             // Keep the pane consistent: an invalid detected address never stays enabled.

@@ -28,6 +28,11 @@
 "HTTP upstream" = "HTTP upstream";
 "SOCKS5 upstream" = "SOCKS5 upstream";
 
+"HTTP upstream proxy" = "HTTP upstream proxy";
+"Chains outbound traffic through an existing HTTP proxy such as a VPN client. Only affects traffic entering through the HTTP proxy port." = "Chains outbound traffic through an existing HTTP proxy such as a VPN client. Only affects traffic entering through the HTTP proxy port.";
+"SOCKS5 upstream proxy" = "SOCKS5 upstream proxy";
+"Chains traffic from the SOCKS5 listener through an existing SOCKS5 proxy. Only affects traffic entering through the SOCKS5 listener port." = "Chains traffic from the SOCKS5 listener through an existing SOCKS5 proxy. Only affects traffic entering through the SOCKS5 listener port.";
+
 "SOCKS5 proxy" = "SOCKS5 proxy";
 "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way." = "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way.";
 "SOCKS5 port" = "SOCKS5 port";

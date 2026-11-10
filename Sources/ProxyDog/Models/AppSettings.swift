@@ -35,7 +35,10 @@ final class AppSettings: ObservableObject {
         static let sslEnabled = "proxy.sslProxyingEnabled"
         static let systemProxy = "proxy.systemProxyEnabled"
         static let capacity = "capture.capacity"
-        static let upstreamEnabled = "proxy.upstreamEnabled"
+        static let upstreamHTTPEnabled = "proxy.upstreamHTTPEnabled"
+        static let upstreamSOCKSEnabled = "proxy.upstreamSOCKSEnabled"
+        // Legacy single upstream switch, used for migration.
+        static let legacyUpstreamEnabled = "proxy.upstreamEnabled"
         static let upstreamKind = "proxy.upstreamKind"
         static let upstreamHTTPHost = "proxy.upstreamHTTPHost"
         static let upstreamHTTPPort = "proxy.upstreamHTTPPort"
@@ -71,9 +74,25 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(systemProxyEnabled, forKey: Key.systemProxy) }
     }
 
-    /// Chain outbound traffic through an existing HTTP proxy (VPN client).
-    @Published var upstreamProxyEnabled: Bool {
-        didSet { defaults.set(upstreamProxyEnabled, forKey: Key.upstreamEnabled) }
+    /// Chain HTTP-proxy traffic through the HTTP upstream (VPN client).
+    @Published var upstreamHTTPEnabled: Bool {
+        didSet { defaults.set(upstreamHTTPEnabled, forKey: Key.upstreamHTTPEnabled) }
+    }
+
+    /// Chain SOCKS5-listener traffic through the SOCKS5 upstream.
+    @Published var upstreamSOCKSEnabled: Bool {
+        didSet { defaults.set(upstreamSOCKSEnabled, forKey: Key.upstreamSOCKSEnabled) }
+    }
+
+    func upstreamEnabled(for kind: UpstreamProxyKind) -> Bool {
+        kind == .httpConnect ? upstreamHTTPEnabled : upstreamSOCKSEnabled
+    }
+
+    func setUpstreamEnabled(_ enabled: Bool, for kind: UpstreamProxyKind) {
+        switch kind {
+        case .httpConnect: upstreamHTTPEnabled = enabled
+        case .socks5: upstreamSOCKSEnabled = enabled
+        }
     }
 
     /// HTTP upstream address (kept separately from SOCKS5 so both can be filled in).
@@ -159,7 +178,9 @@ final class AppSettings: ObservableObject {
         self.hasCompletedOnboarding = defaults.bool(forKey: Key.onboarding)
         self.sslProxyingEnabled = defaults.object(forKey: Key.sslEnabled) as? Bool ?? true
         self.systemProxyEnabled = defaults.bool(forKey: Key.systemProxy)
-        self.upstreamProxyEnabled = defaults.bool(forKey: Key.upstreamEnabled)
+        let legacyUpstreamEnabled = defaults.object(forKey: Key.legacyUpstreamEnabled) as? Bool ?? false
+        self.upstreamHTTPEnabled = defaults.object(forKey: Key.upstreamHTTPEnabled) as? Bool ?? legacyUpstreamEnabled
+        self.upstreamSOCKSEnabled = defaults.object(forKey: Key.upstreamSOCKSEnabled) as? Bool ?? legacyUpstreamEnabled
         let storedKind = UpstreamProxyKind(rawValue: defaults.string(forKey: Key.upstreamKind) ?? "") ?? .httpConnect
         self.upstreamProxyKind = storedKind
         // Migrate the old single-address configuration into the matching protocol slot.
