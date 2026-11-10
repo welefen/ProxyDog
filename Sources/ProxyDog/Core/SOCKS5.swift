@@ -343,6 +343,9 @@ final class SOCKS5ListenerHandler: ChannelInboundHandler, RemovableChannelHandle
     private let sink: CaptureSink
     private let certificateAuthority: CertificateAuthority
     private let upstreamProxyProvider: @Sendable () -> UpstreamProxy?
+    /// When false, TLS connections are tunnelled raw instead of being decrypted, matching
+    /// the HTTP proxy's "SSL proxying" switch.
+    private let sslProxyingEnabled: Bool
     /// Local app that owns this SOCKS5 client connection (attributed once per connection).
     private let clientIdentity = ClientIdentity()
 
@@ -362,11 +365,13 @@ final class SOCKS5ListenerHandler: ChannelInboundHandler, RemovableChannelHandle
     init(
         sink: CaptureSink,
         certificateAuthority: CertificateAuthority,
-        upstreamProxyProvider: @Sendable @escaping () -> UpstreamProxy?
+        upstreamProxyProvider: @Sendable @escaping () -> UpstreamProxy?,
+        sslProxyingEnabled: Bool = true
     ) {
         self.sink = sink
         self.certificateAuthority = certificateAuthority
         self.upstreamProxyProvider = upstreamProxyProvider
+        self.sslProxyingEnabled = sslProxyingEnabled
     }
 
     // MARK: Channel lifecycle
@@ -596,7 +601,22 @@ final class SOCKS5ListenerHandler: ChannelInboundHandler, RemovableChannelHandle
         phase = .tunneling
 
         if firstByte == 0x16 {
-            installTLSMITM(context: context, target: target)
+            if sslProxyingEnabled {
+                installTLSMITM(context: context, target: target)
+            } else {
+                // SSL proxying is off: tunnel the TLS stream and record it as a raw tunnel.
+                let request = CapturedRequest(
+                    method: "CONNECT",
+                    scheme: "https",
+                    host: target.host,
+                    port: target.port,
+                    path: "",
+                    intercepted: false,
+                    state: .tunneled
+                )
+                emitCapture(request, eventLoop: context.eventLoop)
+                installRawTunnel(context: context, target: target)
+            }
         } else if SOCKS5.looksLikeHTTPFirstByte(firstByte) {
             installPlainHTTP(context: context, target: target)
         } else {

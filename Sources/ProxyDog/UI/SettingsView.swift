@@ -223,7 +223,7 @@ struct SettingsView: View {
             SettingsHairline()
             SettingsRow(
                 title: "SSL proxying",
-                hint: "Decrypts HTTPS traffic with the ProxyDog root certificate."
+                hint: "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners."
             ) {
                 Toggle("", isOn: Binding(
                     get: { settings.sslProxyingEnabled },

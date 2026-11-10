@@ -182,7 +182,8 @@ final class ProxyServer: @unchecked Sendable {
                         let handler = SOCKS5ListenerHandler(
                             sink: sink,
                             certificateAuthority: certificateAuthority,
-                            upstreamProxyProvider: upstreamProxyProvider
+                            upstreamProxyProvider: upstreamProxyProvider,
+                            sslProxyingEnabled: sslEnabled
                         )
                         return socksChannel.pipeline.addHandler(handler)
                     }

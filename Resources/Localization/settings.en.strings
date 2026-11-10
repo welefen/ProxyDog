@@ -12,7 +12,7 @@
 "Changing the port restarts the proxy when it is running." = "Changing the port restarts the proxy when it is running.";
 "Restart proxy" = "Restart proxy";
 "SSL proxying" = "SSL proxying";
-"Decrypts HTTPS traffic with the ProxyDog root certificate." = "Decrypts HTTPS traffic with the ProxyDog root certificate.";
+"Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners." = "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners.";
 "System proxy" = "System proxy";
 "Routes this Mac's HTTP and HTTPS traffic through ProxyDog." = "Routes this Mac's HTTP and HTTPS traffic through ProxyDog.";
 "Start the proxy to change this." = "Start the proxy to change this.";
