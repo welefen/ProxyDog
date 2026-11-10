@@ -207,7 +207,7 @@ enum SampleTraffic {
             client: "ProxyDog/1.0",
             clientPID: 5678,
             clientAppName: "ProxyDog",
-            clientAppPath: "/Applications/ProxyDog.app/Contents/MacOS/ProxyDog"
+            clientAppPath: proxyDogExecutablePath
         ))
 
         // WebSocket exchange (101 + live message stream); index 2 in the sample list.
@@ -547,7 +547,7 @@ enum SampleTraffic {
             client: "ProxyDog/1.0",
             clientPID: 5678,
             clientAppName: "ProxyDog",
-            clientAppPath: "/Applications/ProxyDog.app/Contents/MacOS/ProxyDog"
+            clientAppPath: proxyDogExecutablePath
         ))
 
         requests.append(request(
@@ -565,7 +565,7 @@ enum SampleTraffic {
             client: "node-fetch/3.3.2",
             clientPID: 8891,
             clientAppName: "node",
-            clientAppPath: "/usr/local/bin/node"
+            clientAppPath: nodeExecutablePath
         ))
 
         requests.append(request(
@@ -589,7 +589,7 @@ enum SampleTraffic {
             client: "ProxyDog/1.0",
             clientPID: 5678,
             clientAppName: "ProxyDog",
-            clientAppPath: "/Applications/ProxyDog.app/Contents/MacOS/ProxyDog"
+            clientAppPath: proxyDogExecutablePath
         ))
 
         requests.append(request(
@@ -837,6 +837,17 @@ enum SampleTraffic {
             message(.sent, .close, 4.66, closePayload),
             message(.received, .close, 4.80, closePayload),
         ]
+    }
+
+    /// Executable path of the running ProxyDog bundle, so the sample resolves a logo.
+    private static var proxyDogExecutablePath: String {
+        Bundle.main.bundlePath + "/Contents/MacOS/ProxyDog"
+    }
+
+    /// First Node.js binary that exists on this machine (homebrew vs system installs).
+    private static var nodeExecutablePath: String {
+        let candidates = ["/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node"]
+        return candidates.first { FileManager.default.fileExists(atPath: $0) } ?? candidates[0]
     }
 
     /// Deterministic binary payload that stands in for a video frame.

@@ -59,6 +59,7 @@ enum DS {
         static let horizontalPadding: CGFloat = 12
 
         // Traffic list columns (trailing columns are fixed width so numbers align)
+        static let appIconColumnWidth: CGFloat = 22
         static let iconColumnWidth: CGFloat = 20
         static let methodColumnWidth: CGFloat = 46
         static let statusColumnWidth: CGFloat = 44

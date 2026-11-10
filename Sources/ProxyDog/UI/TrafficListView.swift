@@ -151,8 +151,13 @@ struct TrafficListView: View {
 
     private var columnHeader: some View {
         HStack(spacing: 0) {
-            Color.clear
-                .frame(width: DS.Metric.iconColumnWidth + DS.Metric.methodColumnWidth)
+            Text("Client")
+                .frame(
+                    width: DS.Metric.appIconColumnWidth
+                        + DS.Metric.iconColumnWidth
+                        + DS.Metric.methodColumnWidth,
+                    alignment: .leading
+                )
             Text("Request")
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text("Status")
@@ -309,6 +314,8 @@ private struct TrafficRowView: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 0) {
+                appIconCell
+
                 Image(systemName: request.contentKind.symbolName)
                     // Keep SF Symbol letterform variants in the Latin form (Aa, not 格式/甲乙丙).
                     .environment(\.locale, Locale(identifier: "en_US"))
@@ -363,6 +370,16 @@ private struct TrafficRowView: View {
         .help(request.urlString)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    @ViewBuilder
+    private var appIconCell: some View {
+        if let appName = request.clientAppName, !appName.isEmpty {
+            ClientAppIcon(path: request.clientAppPath)
+                .fastTooltip(appName)
+        } else {
+            ClientAppIcon(path: request.clientAppPath)
+        }
     }
 
     private var urlLine: some View {
