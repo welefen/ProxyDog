@@ -186,7 +186,8 @@ struct SettingsView: View {
     }
 
     private var connectionSection: some View {
-        SettingsSection(title: "Connection") {
+        VStack(alignment: .leading, spacing: DS.Space.x6) {
+            SettingsSection(title: "HTTP / HTTPS") {
             SettingsRow(
                 title: "Proxy port",
                 hint: "Changing the port restarts the proxy when it is running.",
@@ -270,7 +271,8 @@ struct SettingsView: View {
                 .disabled(!state.isProxyRunning)
                 .accessibilityLabel("Set as System Proxy")
             }
-            SettingsHairline()
+            }
+            SettingsSection(title: "Upstream proxy") {
             SettingsRow(
                 title: "Upstream proxy",
                 hint: "Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts."
@@ -389,7 +391,8 @@ struct SettingsView: View {
                         .disabled(!settings.upstreamProxyEnabled)
                 }
             }
-            SettingsHairline()
+            }
+            SettingsSection(title: "SOCKS5") {
             SettingsRow(
                 title: "SOCKS5 proxy",
                 hint: "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way."
@@ -429,7 +432,8 @@ struct SettingsView: View {
                     }
                     .disabled(!socksAddressAvailable)
             }
-            SettingsHairline()
+            }
+            SettingsSection(title: "Status") {
             SettingsRow(
                 title: "Proxy status",
                 hint: "Listens on the loopback interface only.",
@@ -452,6 +456,7 @@ struct SettingsView: View {
                         }
                     }
                 }
+            }
             }
         }
     }
