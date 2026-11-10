@@ -96,13 +96,8 @@ struct TrafficListView: View {
                     .frame(width: 1, height: 14)
                     .padding(.horizontal, DS.Space.x1)
 
-                PDIconButton(symbol: "wand.and.stars", help: String(localized: "Rewrite rules")) {
-                    state.requestRuleEditor(.rewrite)
-                    openSettings()
-                }
-
-                PDIconButton(symbol: "pause.circle", help: String(localized: "Breakpoints")) {
-                    state.requestRuleEditor(.breakpoint)
+                PDIconButton(symbol: "wand.and.stars", help: String(localized: "Rules")) {
+                    state.requestSettings(destination: .rules)
                     openSettings()
                 }
 
