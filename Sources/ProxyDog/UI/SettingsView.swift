@@ -564,7 +564,7 @@ struct SettingsView: View {
             Text(verbatim: "\(AppInfo.name) \(AppInfo.versionLabel)")
                 .font(DS.Typography.ui(11))
                 .foregroundStyle(DSColor.textMuted)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, DS.Space.x3)
         }
     }
