@@ -131,3 +131,15 @@
 "Copy payload" = "Copy payload";
 "No payload" = "No payload";
 "Payload truncated at the 512 KB capture limit" = "Payload truncated at the 512 KB capture limit";
+
+/* Request type filter */
+"All" = "All";
+"Fetch/XHR" = "Fetch/XHR";
+"Doc" = "Doc";
+"Img" = "Img";
+"Media" = "Media";
+"Manifest" = "Manifest";
+"Socket" = "Socket";
+"Other" = "Other";
+"No requests match this filter" = "No requests match this filter";
+"Clear filter" = "Clear filter";

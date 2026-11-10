@@ -25,11 +25,15 @@ struct TrafficListView: View {
         VStack(spacing: 0) {
             if state.allRequests.isEmpty {
                 TrafficEmptyStateView()
-            } else if requests.isEmpty {
-                TrafficNoMatchesView()
             } else {
-                columnHeader
-                list
+                typeFilterBar
+                PDHairline()
+                if requests.isEmpty {
+                    TrafficNoMatchesView(reason: emptyReason)
+                } else {
+                    columnHeader
+                    list
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -97,6 +101,50 @@ struct TrafficListView: View {
                 state.toggleProxy()
             }
         }
+    }
+
+    // MARK: Type filter
+
+    /// Chrome-style request type chips, horizontally scrollable so the bar works
+    /// even at the minimum column width.
+    private var typeFilterBar: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.x2 - 2) {
+                    ForEach(RequestCategory.allCases) { category in
+                        TypeFilterChip(
+                            category: category,
+                            isSelected: state.typeFilter == category
+                        ) {
+                            state.typeFilter = category
+                            listFocused = true
+                        }
+                        .id(category.id)
+                    }
+                }
+                .padding(.horizontal, DS.Space.x3)
+                .frame(height: 32)
+            }
+            .frame(height: 32)
+            .background(DSColor.base)
+            .onAppear { scrollToSelectedTypeFilter(proxy) }
+            .onChange(of: state.typeFilter) { _, _ in
+                scrollToSelectedTypeFilter(proxy)
+            }
+        }
+    }
+
+    private func scrollToSelectedTypeFilter(_ proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            proxy.scrollTo(state.typeFilter.id, anchor: .center)
+        }
+    }
+
+    /// Tells the empty state whether search or the type filter emptied the list.
+    private var emptyReason: TrafficNoMatchesView.Reason {
+        let hasQuery = !state.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if hasQuery { return .search }
+        return state.typeFilter.isFiltering ? .typeFilter : .search
     }
 
     // MARK: Column header
@@ -351,5 +399,49 @@ private struct TrafficRowView: View {
             parts.append(String(localized: "Pinned"))
         }
         return parts.joined(separator: ", ")
+    }
+}
+
+// MARK: - Type filter chip
+
+private struct TypeFilterChip: View {
+    let category: RequestCategory
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(category.label)
+                .font(DS.Typography.ui(12, isSelected ? .medium : .regular))
+                .foregroundStyle(isSelected ? DSColor.textPrimary : DSColor.textSecondary)
+                .lineLimit(1)
+                .padding(.horizontal, 10)
+                .frame(height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(background)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .strokeBorder(borderColor, lineWidth: isSelected ? 1 : DS.Metric.separator)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .help(category.label)
+        .accessibilityLabel(category.label)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private var background: Color {
+        if isSelected { return DSColor.accent.opacity(0.11) }
+        return isHovering ? DSColor.hover : DSColor.sunken
+    }
+
+    private var borderColor: Color {
+        isSelected ? DSColor.accent.opacity(0.85) : DSColor.border
     }
 }

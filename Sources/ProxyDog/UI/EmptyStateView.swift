@@ -135,24 +135,66 @@ struct TrafficEmptyStateView: View {
     }
 }
 
-// MARK: - Empty search results
+// MARK: - Empty search/filter results
 
 struct TrafficNoMatchesView: View {
+    enum Reason {
+        case search
+        case typeFilter
+    }
+
+    var reason: Reason = .search
+
     @EnvironmentObject private var state: AppState
 
     var body: some View {
         VStack(spacing: DS.Space.x3) {
-            Image(systemName: "magnifyingglass")
+            Image(systemName: symbol)
                 .font(.system(size: 16, weight: .regular))
                 .foregroundStyle(DSColor.textMuted)
-            Text("No matching requests")
+            Text(title)
                 .font(DS.Typography.ui(12.5, .medium))
                 .foregroundStyle(DSColor.textSecondary)
+            action
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var symbol: String {
+        switch reason {
+        case .search: return "magnifyingglass"
+        case .typeFilter: return "line.3.horizontal.decrease.circle"
+        }
+    }
+
+    private var title: String {
+        switch reason {
+        case .search: return String(localized: "No matching requests")
+        case .typeFilter: return String(localized: "No requests match this filter")
+        }
+    }
+
+    @ViewBuilder
+    private var action: some View {
+        switch reason {
+        case .search:
             PDIconButton(symbol: "xmark", help: String(localized: "Clear search")) {
                 state.searchText = ""
             }
+        case .typeFilter:
+            Button {
+                state.typeFilter = .all
+            } label: {
+                Text(String(localized: "Clear filter"))
+                    .font(DS.Typography.ui(12, .medium))
+                    .foregroundStyle(DSColor.accent)
+                    .frame(height: 24)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(String(localized: "Clear filter"))
+            .accessibilityLabel(String(localized: "Clear filter"))
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

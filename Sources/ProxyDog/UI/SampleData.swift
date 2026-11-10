@@ -34,6 +34,11 @@ enum DevLaunchOptions {
         value(for: "--sample-message").flatMap(Int.init)
     }
 
+    /// Preselects a request type filter (RequestCategory raw value) for screenshots.
+    static var initialTypeFilter: RequestCategory? {
+        value(for: "--sample-filter").flatMap(RequestCategory.init(rawValue:))
+    }
+
     /// Accepts both `--flag=value` and the `open --args --flag value` spelling.
     private static func value(for flag: String) -> String? {
         let prefix = flag + "="
@@ -67,6 +72,9 @@ enum SampleTraffic {
         // The store prepends, so insert oldest first to keep newest traffic on top.
         for request in makeRequests().reversed() {
             state.store.upsert(request)
+        }
+        if let filter = DevLaunchOptions.initialTypeFilter {
+            state.typeFilter = filter
         }
         let items = state.filteredRequests
         guard !items.isEmpty else { return }
@@ -402,6 +410,51 @@ enum SampleTraffic {
 
         requests.append(request(
             "GET",
+            "https://cdn.example.com/media/launch-trailer.mp4",
+            status: 200,
+            duration: 0.412,
+            secondsAgo: 45,
+            requestHeaders: headers([
+                ("Host", "cdn.example.com"),
+                ("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"),
+                ("Accept", "video/mp4,video/webm,*/*"),
+                ("Range", "bytes=0-1048575"),
+            ]),
+            responseHeaders: headers([
+                ("Server", "cloudfront"),
+                ("Content-Type", "video/mp4"),
+                ("Content-Range", "bytes 0-1048575/12582912"),
+                ("Accept-Ranges", "bytes"),
+                ("Cache-Control", "public, max-age=3600"),
+            ]),
+            responseBody: mediaBody,
+            client: "Safari 17.4"
+        ))
+
+        requests.append(request(
+            "GET",
+            "https://app.example.com/static/engine.wasm",
+            status: 200,
+            duration: 0.038,
+            secondsAgo: 52,
+            requestHeaders: headers([
+                ("Host", "app.example.com"),
+                ("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"),
+                ("Accept", "application/wasm"),
+                ("Accept-Encoding", "gzip, deflate, br"),
+            ]),
+            responseHeaders: headers([
+                ("Server", "nginx"),
+                ("Content-Type", "application/wasm"),
+                ("Content-Length", "\(wasmBody.count)"),
+                ("Cache-Control", "public, max-age=31536000, immutable"),
+            ]),
+            responseBody: wasmBody,
+            client: "Safari 17.4"
+        ))
+
+        requests.append(request(
+            "GET",
             "https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2",
             status: 200,
             duration: 0.044,
@@ -727,6 +780,25 @@ enum SampleTraffic {
             message(.sent, .close, 4.66, closePayload),
             message(.received, .close, 4.80, closePayload),
         ]
+    }
+
+    /// Deterministic binary payload that stands in for a video frame.
+    private static var mediaBody: Data {
+        var bytes = [UInt8]()
+        bytes.reserveCapacity(2048)
+        for index in 0..<2048 {
+            bytes.append(UInt8((index &* 17 &+ 3) % 256))
+        }
+        return Data(bytes)
+    }
+
+    /// Deterministic binary payload that stands in for a wasm module.
+    private static var wasmBody: Data {
+        var bytes: [UInt8] = [0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00]
+        for index in 0..<504 {
+            bytes.append(UInt8((index &* 31 &+ 13) % 256))
+        }
+        return Data(bytes)
     }
 
     /// Deterministic binary payload that stands in for a font file.

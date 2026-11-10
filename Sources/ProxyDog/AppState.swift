@@ -15,6 +15,8 @@ final class AppState: ObservableObject {
     @Published private(set) var proxyStatus: ProxyServer.Status = .stopped
     @Published var sidebarSelection: SidebarSelection = .all
     @Published var searchText: String = ""
+    /// Chrome-style type filter for the traffic list; `.all` means no filter.
+    @Published var typeFilter: RequestCategory = .all
     @Published var selectionID: CapturedRequest.ID?
     @Published private(set) var isCertificateTrusted = false
     @Published var isOnboardingPresented = false
@@ -439,6 +441,10 @@ final class AppState: ObservableObject {
             items = items.filter(\.isPinned)
         case .domain(let domain):
             items = items.filter { $0.host == domain }
+        }
+
+        if typeFilter.isFiltering {
+            items = items.filter { RequestCategory.categorize($0) == typeFilter }
         }
 
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

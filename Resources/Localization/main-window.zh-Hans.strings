@@ -131,3 +131,15 @@
 "Copy payload" = "复制载荷";
 "No payload" = "无载荷";
 "Payload truncated at the 512 KB capture limit" = "载荷已截断（捕获上限 512 KB）";
+
+/* Request type filter */
+"All" = "全部";
+"Fetch/XHR" = "Fetch/XHR";
+"Doc" = "文档";
+"Img" = "图片";
+"Media" = "媒体";
+"Manifest" = "清单";
+"Socket" = "Socket";
+"Other" = "其他";
+"No requests match this filter" = "没有符合筛选的请求";
+"Clear filter" = "清除筛选";
