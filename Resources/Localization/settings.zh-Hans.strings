@@ -13,6 +13,7 @@
 "Restart proxy" = "重启代理";
 "SSL proxying" = "SSL 解密";
 "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners." = "使用 ProxyDog 根证书解密 HTTPS 流量，对 HTTP 与 SOCKS5 监听端口同时生效。";
+"HTTP proxy" = "HTTP 代理";
 "System proxy" = "系统代理";
 "Routes this Mac's HTTP and HTTPS traffic through ProxyDog." = "将本机的 HTTP 和 HTTPS 流量转发到 ProxyDog。";
 "Start the proxy to change this." = "启动代理后才能修改。";

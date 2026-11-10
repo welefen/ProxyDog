@@ -233,7 +233,7 @@ struct SettingsView: View {
                 }
                 SettingsHairline()
                 SettingsRow(
-                    title: "System proxy",
+                    title: "HTTP proxy",
                     hint: state.isProxyRunning
                         ? "Routes this Mac's HTTP and HTTPS traffic through ProxyDog."
                         : "Start the proxy to change this."

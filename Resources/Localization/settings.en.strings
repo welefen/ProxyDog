@@ -13,6 +13,7 @@
 "Restart proxy" = "Restart proxy";
 "SSL proxying" = "SSL proxying";
 "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners." = "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners.";
+"HTTP proxy" = "HTTP proxy";
 "System proxy" = "System proxy";
 "Routes this Mac's HTTP and HTTPS traffic through ProxyDog." = "Routes this Mac's HTTP and HTTPS traffic through ProxyDog.";
 "Start the proxy to change this." = "Start the proxy to change this.";
