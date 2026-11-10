@@ -36,6 +36,12 @@ final class CaptureStore: ObservableObject {
         }
     }
 
+    /// Replaces the whole buffer in one publish. Used by the QA stress loader so a large
+    /// fixture does not pay the per-row prepend cost; live captures still go through `upsert`.
+    func loadBatch(_ batch: [CapturedRequest]) {
+        requests = Array(batch.prefix(capacity))
+    }
+
     func clear() {
         requests.removeAll()
     }

@@ -39,6 +39,11 @@ enum DevLaunchOptions {
         value(for: "--sample-filter").flatMap(RequestCategory.init(rawValue:))
     }
 
+    /// Stress-test mode: number of synthetic captures to load (e.g. `--sample-stress 10000`).
+    static var stressCount: Int? {
+        value(for: "--sample-stress").flatMap(Int.init)
+    }
+
     /// Accepts both `--flag=value` and the `open --args --flag value` spelling.
     private static func value(for flag: String) -> String? {
         let prefix = flag + "="
@@ -69,9 +74,45 @@ enum SampleTraffic {
     }
 
     private static func load(into state: AppState) {
-        // The store prepends, so insert oldest first to keep newest traffic on top.
-        for request in makeRequests().reversed() {
-            state.store.upsert(request)
+        var stress = false
+        let started = Date()
+        if let count = DevLaunchOptions.stressCount {
+            stress = true
+            // QA mode: bypass the default 2 000-entry ring so large-traffic behaviour can be
+            // measured. The store prepends, so insert oldest first.
+            state.store.capacity = max(count, state.store.capacity)
+            let buildStart = Date()
+            let generated = makeStressRequests(count: count)
+            let buildMs = Int(Date().timeIntervalSince(buildStart) * 1000)
+            let upsertStart = Date()
+            state.store.loadBatch(generated)
+            let upsertMs = Int(Date().timeIntervalSince(upsertStart) * 1000)
+            let line = "[stress] generated \(generated.count) rows in \(buildMs) ms; "
+                + "loaded in \(upsertMs) ms\n"
+            FileHandle.standardError.write(Data(line.utf8))
+        } else {
+            // The store prepends, so insert oldest first to keep newest traffic on top.
+            for request in makeRequests().reversed() {
+                state.store.upsert(request)
+            }
+        }
+        if stress {
+            let loadMs = Int(Date().timeIntervalSince(started) * 1000)
+
+            let filterStart = Date()
+            let filtered = state.filteredRequests
+            let filterMs = Int(Date().timeIntervalSince(filterStart) * 1000)
+
+            let summaryStart = Date()
+            let clients = state.clientSummaries.count
+            let domains = state.domainSummaries.count
+            let summaryMs = Int(Date().timeIntervalSince(summaryStart) * 1000)
+
+            stressProbe(state: state)
+            let line = "[stress] loaded \(state.store.requests.count) rows in \(loadMs) ms; "
+                + "filteredRequests \(filtered.count) in \(filterMs) ms; "
+                + "summaries (\(clients) clients, \(domains) domains) in \(summaryMs) ms\n"
+            FileHandle.standardError.write(Data(line.utf8))
         }
         if let filter = DevLaunchOptions.initialTypeFilter {
             state.typeFilter = filter
@@ -86,6 +127,114 @@ enum SampleTraffic {
     }
 
     // MARK: Requests
+
+    /// Measures the main-thread cost of the operations a user triggers while a large
+    /// capture buffer is loaded (layout passes, filtering, selection).
+    private static func stressProbe(state: AppState) {
+        guard let window = NSApp.mainWindow ?? NSApp.windows.first, let content = window.contentView else {
+            return
+        }
+
+        func measure(_ label: String, _ body: () -> Void) -> Int {
+            let started = Date()
+            body()
+            content.layoutSubtreeIfNeeded()
+            content.displayIfNeeded()
+            return Int(Date().timeIntervalSince(started) * 1000)
+        }
+
+        var report: [String] = []
+        report.append("initial layout \(measure("initial") {}) ms")
+        report.append("filter 'github' \(measure("filter") { state.searchText = "github" }) ms")
+        report.append("clear filter \(measure("clear") { state.searchText = "" }) ms")
+
+        let items = state.filteredRequests
+        if let target = items.dropFirst(items.count / 2).first {
+            report.append("select middle row \(measure("select") { state.selectionID = target.id }) ms")
+        }
+        report.append("deselect \(measure("deselect") { state.selectionID = nil }) ms")
+        report.append("counts \(measure("counts") { _ = state.filteredRequests.count; _ = state.allRequests.count }) ms")
+
+        report.append("footprint \(currentFootprintMB()) MB")
+        FileHandle.standardError.write(Data("[stress-probe] \(report.joined(separator: " | "))\n".utf8))
+    }
+
+    /// Physical memory footprint of the app, in MB.
+    private static func currentFootprintMB() -> Int {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { rebound in
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), rebound, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return 0 }
+        return Int(Double(info.phys_footprint) / 1_048_576)
+    }
+
+    private static func makeStressRequests(count: Int) -> [CapturedRequest] {
+        let domains = [
+            "api.github.com", "api.stripe.com", "cdn.jsdelivr.net", "www.apple.com",
+            "cdn.example.com", "api.example.com", "fonts.gstatic.com", "analytics.example.com",
+            "api.segment.io", "app.example.com", "www.google.com", "chat.openai.com",
+            "mcs.doubao.com", "www.baidu.com", "play.google.com", "api.linear.app",
+        ]
+        let clients: [(String, Int32, String)] = [
+            ("Safari", 1201, "/Applications/Safari.app/Contents/MacOS/Safari"),
+            ("Google Chrome", 1202, "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+            ("curl", 1203, "/usr/bin/curl"),
+            ("Slack", 1204, "/Applications/Slack.app/Contents/MacOS/Slack"),
+        ]
+        let kinds: [(String, String)] = [
+            ("GET", "application/json"),
+            ("POST", "application/json"),
+            ("GET", "text/html; charset=utf-8"),
+            ("GET", "text/css"),
+            ("GET", "application/javascript"),
+            ("GET", "image/png"),
+            ("GET", "font/woff2"),
+            ("GET", "application/wasm"),
+        ]
+        let statuses = [200, 200, 200, 200, 304, 404, 500, 201]
+
+        var requests: [CapturedRequest] = []
+        requests.reserveCapacity(count)
+        for index in 0..<count {
+            let domain = domains[index % domains.count]
+            let client = clients[index % clients.count]
+            let kind = kinds[index % kinds.count]
+            let status = statuses[index % statuses.count]
+            let isJSON = kind.1.contains("json")
+            let body: Data? = isJSON && index % 3 == 0
+                ? Data("[{\"index\": \(index), \"ok\": true, \"name\": \"row-\(index)\"}]".utf8)
+                : nil
+            let request = self.request(
+                kind.0,
+                "https://\(domain)/v1/resource/\(index)?page=\(index / 50)&client=\(client.0.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "app")",
+                status: status,
+                duration: Double(index % 900) / 1000,
+                secondsAgo: Double(count - index),
+                requestHeaders: headers([
+                    ("Host", domain),
+                    ("User-Agent", "\(client.0)/\(index % 100)"),
+                    ("Accept", "*/*"),
+                ]),
+                responseHeaders: headers([
+                    ("Server", "nginx"),
+                    ("Content-Type", kind.1),
+                    ("Content-Length", "\(body?.count ?? (index % 2048))"),
+                ]),
+                responseBody: body,
+                client: client.0,
+                clientPID: client.1,
+                clientAppName: client.0,
+                clientAppPath: client.2,
+                isWebSocket: false
+            )
+            requests.append(request)
+        }
+        return requests
+    }
 
     private static func makeRequests() -> [CapturedRequest] {
         let image = previewImageData()

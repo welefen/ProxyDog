@@ -207,12 +207,13 @@ python3 scripts/check_localization.py
 ./scripts/screenshot.sh /tmp/proxydog.png
 ```
 
-开发调试时可以载入一组示例流量，便于在没有真实请求时检查界面（`--sample-tab body` 会打开 Body 页，`--sample-request N` 选中第 N 条）：
+开发调试时可以载入一组示例流量，便于在没有真实请求时检查界面（`--sample-tab body` 会打开 Body 页，`--sample-request N` 选中第 N 条）。压力测试可以用 `--sample-stress N` 一次载入 N 条模拟请求（会临时放宽 2000 条的内存上限，并在 stderr 打印加载/过滤/布局耗时与内存占用）：
 
 ```bash
 defaults write com.proxydog.app app.onboardingCompleted -bool true
 ./build/ProxyDog.app/Contents/MacOS/ProxyDog --sample-traffic
 ./build/ProxyDog.app/Contents/MacOS/ProxyDog --sample-traffic --sample-tab body
+./build/ProxyDog.app/Contents/MacOS/ProxyDog --sample-traffic --sample-stress 10000   # 大量数据压力测试
 ```
 
 ## 已知限制
