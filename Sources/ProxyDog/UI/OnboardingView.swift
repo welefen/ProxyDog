@@ -3,7 +3,7 @@ import SwiftUI
 
 /// First-run onboarding: a single composed page that shows the welcome highlights,
 /// the root-certificate setup and the ready-to-use details at once. Closing the sheet
-/// or choosing "Skip setup" marks onboarding as dismissed.
+/// marks onboarding as dismissed, the primary button completes the setup.
 struct OnboardingView: View {
     @EnvironmentObject private var state: AppState
     @Environment(\.dismiss) private var dismiss
@@ -11,33 +11,31 @@ struct OnboardingView: View {
     var body: some View {
         VStack(spacing: 0) {
             chrome
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Welcome to ProxyDog")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(DSColor.textPrimary)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Welcome to ProxyDog")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(DSColor.textPrimary)
 
-                    VStack(alignment: .leading, spacing: DS.Space.x3) {
-                        factRow(symbol: "lock.shield", text: "Local HTTPS interception through a root certificate")
-                        factRow(symbol: "internaldrive", text: "Captured traffic stays on this Mac")
-                        factRow(symbol: "square.and.arrow.up", text: "Copy as curl or export as HAR")
-                    }
-                    .padding(.top, DS.Space.x4)
-
-                    sectionDivider
-                    certificateBlock
-                    sectionDivider
-                    readyBlock
+                VStack(alignment: .leading, spacing: DS.Space.x3) {
+                    factRow(symbol: "lock.shield", text: "Local HTTPS interception through a root certificate")
+                    factRow(symbol: "internaldrive", text: "Captured traffic stays on this Mac")
+                    factRow(symbol: "square.and.arrow.up", text: "Copy as curl or export as HAR")
                 }
-                .padding(.horizontal, DS.Space.x6)
-                .padding(.top, DS.Space.x3)
-                .padding(.bottom, DS.Space.x5)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .scrollIndicators(.hidden)
-            footer
+                .padding(.top, DS.Space.x4)
+
+            sectionDivider
+            certificateBlock
+            sectionDivider
+            readyBlock
         }
-        .frame(width: 560, height: 620)
+        .padding(.horizontal, DS.Space.x6)
+        .padding(.top, DS.Space.x3)
+        .padding(.bottom, DS.Space.x5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+        footer
+        }
+        .frame(width: 560)
         .background(DSColor.chrome)
         .onAppear {
             state.refreshCertificateStatus()
@@ -201,7 +199,6 @@ struct OnboardingView: View {
                 .fill(DSColor.border)
                 .frame(height: 1)
             HStack(spacing: DS.Space.x3) {
-                quietButton("Skip setup", action: skipSetup)
                 Spacer(minLength: 0)
                 Button(action: finish) {
                     Text("Done")
@@ -223,15 +220,6 @@ struct OnboardingView: View {
         }
     }
 
-    private func quietButton(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(DS.Typography.ui(12))
-                .foregroundStyle(DSColor.textSecondary)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
 
     // MARK: - Derived state
 
