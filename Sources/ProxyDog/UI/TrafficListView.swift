@@ -127,16 +127,24 @@ struct TrafficListView: View {
             }
             .frame(height: 32)
             .background(DSColor.base)
-            .onAppear { scrollToSelectedTypeFilter(proxy) }
+            .onAppear { scrollToSelectedTypeFilter(proxy, animated: false) }
             .onChange(of: state.typeFilter) { _, _ in
-                scrollToSelectedTypeFilter(proxy)
+                scrollToSelectedTypeFilter(proxy, animated: true)
             }
         }
     }
 
-    private func scrollToSelectedTypeFilter(_ proxy: ScrollViewProxy) {
+    private func scrollToSelectedTypeFilter(_ proxy: ScrollViewProxy, animated: Bool) {
         DispatchQueue.main.async {
-            proxy.scrollTo(state.typeFilter.id, anchor: .center)
+            // Centering the newly selected chip is a horizontal move; ease it instead of
+            // snapping, which reads as a jarring jump.
+            if animated {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo(state.typeFilter.id, anchor: .center)
+                }
+            } else {
+                proxy.scrollTo(state.typeFilter.id, anchor: .center)
+            }
         }
     }
 
