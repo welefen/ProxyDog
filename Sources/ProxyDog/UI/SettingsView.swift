@@ -217,7 +217,8 @@ struct SettingsView: View {
                             .frame(width: 56)
                             .padding(.horizontal, DS.Space.x2)
                             .padding(.vertical, 5)
-                            .background(fieldBackground(isFocused: portFocused))
+                            .background(fieldBackground(isFocused: portFocused, isEnabled: state.isSystemProxyEnabled))
+                            .disabled(!state.isSystemProxyEnabled)
                             .onSubmit(commitPort)
                             .onChange(of: portText) { _, newValue in
                                 let filtered = String(newValue.filter(\.isNumber).prefix(5))
@@ -232,6 +233,7 @@ struct SettingsView: View {
                             help: String(localized: "Restart proxy"),
                             action: { state.restartProxy() }
                         )
+                        .disabled(!state.isSystemProxyEnabled)
                     }
                 }
                 SettingsHairline()
