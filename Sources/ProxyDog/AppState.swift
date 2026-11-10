@@ -241,12 +241,7 @@ final class AppState: ObservableObject {
         var host = host
         var port = port
         var kind = requestedKind
-        // Turning the switch on with an empty address: use the detected system proxy first.
-        if enabled, host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, kind == .httpConnect,
-           let detected = detectSystemUpstreamProxy() {
-            host = detected.host
-            port = detected.port
-        }
+        // Enable first, fill later: an empty or incomplete address just means "no upstream".
         let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
         let previousHost = settings.upstreamHost(for: kind)
         let previousPort = settings.upstreamPort(for: kind)
@@ -257,21 +252,14 @@ final class AppState: ObservableObject {
             settings.setUpstreamAddress(host: previousHost, port: previousPort, kind: kind)
         }
 
-        if enabled {
-            guard !trimmedHost.isEmpty else {
-                rollback()
-                return String(localized: "Enter the host of the upstream proxy.")
-            }
-            guard (1...65535).contains(port) else {
-                rollback()
-                return String(localized: "Port must be between 1 and 65535.")
-            }
+        // An empty or incomplete address is not an error: the upstream is simply ignored
+        // until both host and port are valid. Only a proxy loop is rejected.
+        if enabled, !trimmedHost.isEmpty, (1...65535).contains(port) {
             let candidate = UpstreamProxy(kind: kind, host: trimmedHost, port: port)
-            if candidate.isLoopback, candidate.port == settings.port {
-                rollback()
-                return String(localized: "The upstream proxy cannot be ProxyDog itself.")
-            }
-            if candidate.isLoopback, settings.socksProxyEnabled, candidate.port == settings.socksProxyPort {
+            let isOwnPort = candidate.isLoopback && candidate.port == settings.port
+            let isOwnSocksPort = candidate.isLoopback && settings.socksProxyEnabled
+                && candidate.port == settings.socksProxyPort
+            if isOwnPort || isOwnSocksPort {
                 rollback()
                 return String(localized: "The upstream proxy cannot be ProxyDog itself.")
             }
