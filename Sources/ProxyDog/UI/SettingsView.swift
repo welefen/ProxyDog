@@ -112,7 +112,7 @@ struct SettingsView: View {
                         }
                     SettingsIconButton(
                         systemName: "arrow.clockwise",
-                        help: "Restart proxy",
+                        help: String(localized: "Restart proxy"),
                         action: { state.restartProxy() }
                     )
                 }
@@ -220,7 +220,7 @@ struct SettingsView: View {
                         .disabled(!upstreamAddressAvailable)
                     SettingsIconButton(
                         systemName: "arrow.down.to.line",
-                        help: "Fill from system proxy",
+                        help: String(localized: "Fill from system proxy"),
                         action: fillUpstreamFromSystem
                     )
                     .disabled(!upstreamAddressAvailable)
@@ -357,20 +357,20 @@ struct SettingsView: View {
                         if state.isCertificateTrusted {
                             SettingsIconButton(
                                 systemName: "trash",
-                                help: "Remove certificate trust",
+                                help: String(localized: "Remove certificate trust"),
                                 action: { state.removeCertificate() }
                             )
                         } else {
                             SettingsIconButton(
                                 systemName: "arrow.down.circle",
-                                help: "Install root certificate",
+                                help: String(localized: "Install root certificate"),
                                 tint: DSColor.accent,
                                 action: { state.installCertificate() }
                             )
                         }
                         SettingsIconButton(
                             systemName: "square.and.arrow.up",
-                            help: "Export root certificate",
+                            help: String(localized: "Export root certificate"),
                             action: { state.presentCertificateExportPanel() }
                         )
                     }
@@ -723,7 +723,7 @@ private struct SettingsHairline: View {
 
 private struct SettingsIconButton: View {
     let systemName: String
-    let help: LocalizedStringKey
+    let help: String
     var tint: Color = DSColor.textSecondary
     let action: () -> Void
 
@@ -736,7 +736,7 @@ private struct SettingsIconButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(help)
+        .fastTooltip(help)
         .accessibilityLabel(help)
     }
 }

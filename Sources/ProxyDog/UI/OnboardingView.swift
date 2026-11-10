@@ -48,7 +48,7 @@ struct OnboardingView: View {
     private var chrome: some View {
         HStack {
             Spacer(minLength: 0)
-            OnboardingIconButton(systemName: "xmark", help: "Close setup") {
+            OnboardingIconButton(systemName: "xmark", help: String(localized: "Close setup")) {
                 skipSetup()
             }
         }
@@ -89,13 +89,13 @@ struct OnboardingView: View {
                         .font(DS.Typography.ui(12))
                         .foregroundStyle(state.isCertificateTrusted ? DSColor.textPrimary : DSColor.textSecondary)
                     if state.isCertificateTrusted {
-                        OnboardingIconButton(systemName: "arrow.clockwise", help: "Refresh certificate") {
+                        OnboardingIconButton(systemName: "arrow.clockwise", help: String(localized: "Refresh certificate")) {
                             state.refreshCertificateStatus()
                         }
                     } else {
                         OnboardingIconButton(
                             systemName: "arrow.down.circle",
-                            help: "Install root certificate",
+                            help: String(localized: "Install root certificate"),
                             tint: DSColor.accent
                         ) {
                             state.installCertificate()
@@ -133,7 +133,7 @@ struct OnboardingView: View {
                         Text(verbatim: proxyAddress)
                             .font(DS.Typography.mono(12))
                             .foregroundStyle(DSColor.textPrimary)
-                        OnboardingIconButton(systemName: "doc.on.doc", help: "Copy proxy address") {
+                        OnboardingIconButton(systemName: "doc.on.doc", help: String(localized: "Copy proxy address")) {
                             copyProxyAddress()
                         }
                     }
@@ -281,7 +281,7 @@ private struct OnboardingHairline: View {
 
 private struct OnboardingIconButton: View {
     let systemName: String
-    let help: LocalizedStringKey
+    let help: String
     var tint: Color = DSColor.textSecondary
     let action: () -> Void
 
@@ -294,7 +294,7 @@ private struct OnboardingIconButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(help)
+        .fastTooltip(help)
         .accessibilityLabel(help)
     }
 }

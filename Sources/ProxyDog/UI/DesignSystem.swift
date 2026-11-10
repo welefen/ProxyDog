@@ -356,7 +356,10 @@ struct PDIconButton: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            PDCursorTooltip.shared.hide()
+            action()
+        } label: {
             Image(systemName: symbol)
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(isEnabled ? tint : DSColor.textMuted.opacity(0.55))
@@ -369,7 +372,7 @@ struct PDIconButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .help(help)
+        .fastTooltip(help)
         .accessibilityLabel(help)
     }
 }
@@ -393,7 +396,7 @@ struct PDSettingsIconButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .help("Settings")
+        .fastTooltip(String(localized: "Settings"))
         .accessibilityLabel("Settings")
     }
 }
