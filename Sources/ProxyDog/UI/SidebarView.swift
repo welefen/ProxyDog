@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Sidebar
 
-/// Quiet navigation column: traffic scope, hosts, and the proxy footer.
+/// Quiet navigation column: traffic scope and host filtering.
 struct SidebarView: View {
     @EnvironmentObject private var state: AppState
 
@@ -18,7 +18,6 @@ struct SidebarView: View {
                 .padding(.top, DS.Space.x1)
                 .padding(.bottom, DS.Space.x4)
             }
-            footer
         }
         .background(DSColor.chrome)
         .overlay(alignment: .trailing) { PDHairline(vertical: true) }
@@ -104,113 +103,6 @@ struct SidebarView: View {
             .padding(.top, DS.Space.x2)
             .padding(.bottom, DS.Space.x1)
             .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    // MARK: Footer
-
-    private var footer: some View {
-        VStack(spacing: 0) {
-            PDHairline()
-            HStack(spacing: DS.Space.x2) {
-                PDStatusDot(color: proxyDotColor)
-                statusLabel
-                Spacer(minLength: DS.Space.x1)
-                if !state.isCertificateTrusted {
-                    PDIconButton(
-                        symbol: "exclamationmark.triangle",
-                        help: String(localized: "Root certificate is not trusted. Click to install."),
-                        role: .warning,
-                        size: 24
-                    ) {
-                        state.installCertificate()
-                    }
-                }
-                PDIconButton(
-                    symbol: state.isProxyRunning ? "power.circle.fill" : "power",
-                    help: state.isProxyRunning
-                        ? String(localized: "Stop proxy")
-                        : String(localized: "Start proxy"),
-                    role: state.isProxyRunning ? .accent : .normal,
-                    size: 24
-                ) {
-                    state.toggleProxy()
-                }
-                PDSettingsIconButton(size: 24)
-            }
-            .padding(.horizontal, DS.Space.x2)
-            .frame(height: 44)
-        }
-        .background(DSColor.chrome)
-    }
-
-    private var statusLabel: some View {
-        let isAddress = state.isProxyRunning && !state.store.isPaused
-        return Text(statusText)
-            .font(isAddress ? DS.Typography.mono(10.5) : DS.Typography.ui(10.5, .medium))
-            .foregroundStyle(statusColor)
-            .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .help(statusHelp)
-            .accessibilityLabel(statusAccessibilityLabel)
-    }
-
-    private var proxyDotColor: Color {
-        if case .failed = state.proxyStatus { return DSColor.red }
-        if state.isProxyRunning {
-            return state.store.isPaused ? DSColor.amber : DSColor.green
-        }
-        if case .starting = state.proxyStatus { return DSColor.amber }
-        return DSColor.textMuted
-    }
-
-    private var statusText: String {
-        if case .failed = state.proxyStatus { return String(localized: "Failed") }
-        if state.isProxyRunning {
-            if state.store.isPaused { return String(localized: "Paused") }
-            return "127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
-        }
-        if case .starting = state.proxyStatus { return String(localized: "Starting") }
-        return String(localized: "Stopped")
-    }
-
-    private var statusColor: Color {
-        if case .failed = state.proxyStatus { return DSColor.red }
-        if state.isProxyRunning {
-            return state.store.isPaused ? DSColor.amber : DSColor.textSecondary
-        }
-        if case .starting = state.proxyStatus { return DSColor.amber }
-        return DSColor.textMuted
-    }
-
-    private var statusHelp: String {
-        if case .failed(let message) = state.proxyStatus { return message }
-        if state.isProxyRunning {
-            if state.store.isPaused {
-                return String(localized: "Capture paused. Resume from the toolbar.")
-            }
-            return String(
-                format: String(localized: "Listening on %@"),
-                "127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
-            )
-        }
-        return String(localized: "Start the proxy to capture traffic")
-    }
-
-    private var statusAccessibilityLabel: String {
-        if case .failed = state.proxyStatus {
-            return String(format: String(localized: "Proxy failed. %@"), statusHelp)
-        }
-        if state.isProxyRunning {
-            if state.store.isPaused {
-                return String(localized: "Capture paused")
-            }
-            return String(
-                format: String(localized: "Listening on %@"),
-                "127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
-            )
-        }
-        return String(localized: "Proxy stopped")
     }
 }
 
