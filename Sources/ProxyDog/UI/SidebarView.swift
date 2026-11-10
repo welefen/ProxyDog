@@ -21,6 +21,14 @@ struct SidebarView: View {
         }
         .background(DSColor.chrome)
         .overlay(alignment: .trailing) { PDHairline(vertical: true) }
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: SidebarWidthPreferenceKey.self,
+                    value: proxy.size.width
+                )
+            }
+        )
     }
 
     // MARK: Header

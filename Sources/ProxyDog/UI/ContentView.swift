@@ -5,6 +5,7 @@ import SwiftUI
 /// status strip along the bottom.
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
+    @State private var sidebarWidth: CGFloat = DS.Metric.sidebarIdeal
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,7 +33,12 @@ struct ContentView: View {
             .navigationTitle("")
             .toolbarBackground(DSColor.chrome, for: .windowToolbar)
 
-            StatusBarView()
+            StatusBarView(leadingInset: sidebarWidth)
+        }
+        .onPreferenceChange(SidebarWidthPreferenceKey.self) { width in
+            if width > 0 {
+                sidebarWidth = width
+            }
         }
         .background(DSColor.base)
         .sheet(isPresented: $state.isOnboardingPresented) {

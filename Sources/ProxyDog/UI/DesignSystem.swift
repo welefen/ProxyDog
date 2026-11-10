@@ -1,6 +1,17 @@
 import AppKit
 import SwiftUI
 
+// MARK: - Layout preferences
+
+/// Reports the live sidebar column width so window-wide chrome (the status bar) can align
+/// its content with the traffic columns instead of the sidebar.
+struct SidebarWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 // MARK: - Design tokens
 //
 // One cool-tinted graphite neutral ramp for every surface, border and text role,

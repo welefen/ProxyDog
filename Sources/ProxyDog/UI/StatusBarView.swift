@@ -6,6 +6,8 @@ import SwiftUI
 /// certificate state and the listen address.
 struct StatusBarView: View {
     @EnvironmentObject private var state: AppState
+    /// Sidebar width, so counts line up with the traffic list instead of the sidebar.
+    var leadingInset: CGFloat = 0
 
     var body: some View {
         HStack(spacing: DS.Space.x4) {
@@ -30,7 +32,8 @@ struct StatusBarView: View {
             certificateStatus
             addressButton
         }
-        .padding(.horizontal, DS.Space.x3)
+        .padding(.leading, leadingInset + DS.Space.x3)
+        .padding(.trailing, DS.Space.x3)
         .frame(height: DS.Metric.statusBarHeight)
         .background(DSColor.chrome)
         .overlay(alignment: .top) { PDHairline() }
