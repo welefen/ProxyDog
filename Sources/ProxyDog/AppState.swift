@@ -86,9 +86,6 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
         refreshCertificateStatus()
-        // Pre-fill the upstream proxy from whatever proxy is already running on this Mac
-        // so the user never has to type the host/port by hand.
-        autoFillUpstreamProxyIfEmpty()
         if settings.systemProxyEnabled {
             setSystemProxy(enabled: true)
         }
@@ -264,8 +261,8 @@ final class AppState: ObservableObject {
         return detected
     }
 
-    /// Fills the upstream fields from the system proxy when they are still empty. Called on
-    /// launch so the settings show sensible defaults instead of empty placeholders.
+    /// Fills the upstream fields from the system proxy when they are still empty. Called
+    /// when the settings pane opens so it shows the detected proxy instead of empty fields.
     @discardableResult
     func autoFillUpstreamProxyIfEmpty() -> Bool {
         let hostEmpty = settings.upstreamProxyHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
