@@ -157,3 +157,7 @@
 "Show all" = "Show all";
 "Show less" = "Show less";
 "Showing all of %@" = "Showing all of %@";
+
+/* Media preview */
+"This media format cannot be previewed; showing raw bytes" = "This media format cannot be previewed; showing raw bytes";
+"Captured up to the 2 MB limit; playback may be incomplete" = "Captured up to the 2 MB limit; playback may be incomplete";

@@ -338,7 +338,8 @@ private struct BodySectionView: View {
     @ViewBuilder
     private func noticeBar(for data: Data) -> some View {
         let truncatedAtLimit = data.count >= AppDefaults.maxBodyBytes
-        let displayTruncated = data.count > Self.displayLimit
+        let isTextualBody = [.json, .javascript, .html, .xml, .css, .text, .form].contains(contentKind)
+        let displayTruncated = data.count > Self.displayLimit && isTextualBody
         let compressionNotice = isUndecodableCompressed
 
         if truncatedAtLimit || displayTruncated || compressionNotice {
@@ -426,7 +427,11 @@ private struct BodySectionView: View {
                 }
             case .javascript, .html, .xml, .css, .text, .form:
                 MonoTextBodyView(text: displayText(from: data))
-            case .font, .audio, .video, .binary:
+            case .video:
+                MediaBodyView(data: data, contentType: contentType, isVideo: true)
+            case .audio:
+                MediaBodyView(data: data, contentType: contentType, isVideo: false)
+            case .font, .binary:
                 HexDumpView(data: data)
             }
         }
