@@ -221,6 +221,29 @@ private struct BodySectionView: View {
                     .monospacedDigit()
             }
 
+            // The headers still show the wire `Content-Encoding`; the captured copy is
+            // already inflated, so make that explicit instead of looking inconsistent.
+            if hasBody,
+               let encoding = contentEncoding,
+               BodyDecompression.canDecode(contentEncoding: encoding) {
+                Text(String(
+                    format: String(localized: "%@ decoded"),
+                    encoding.lowercased()
+                ))
+                .font(DS.Typography.ui(10))
+                .foregroundStyle(DSColor.textMuted)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(
+                    RoundedRectangle(cornerRadius: DS.Radius.xs, style: .continuous)
+                        .fill(DSColor.sunken)
+                )
+                .help(String(
+                    format: String(localized: "Captured body was decompressed from %@"),
+                    encoding.lowercased()
+                ))
+            }
+
             Spacer(minLength: DS.Space.x2)
 
             if isJSON && hasBody && !isUndecodableCompressed {

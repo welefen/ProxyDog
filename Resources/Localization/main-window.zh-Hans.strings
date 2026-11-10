@@ -150,3 +150,7 @@
 
 /* Compressed bodies */
 "%@ compressed payload; decoding is not supported yet, showing raw bytes" = "内容使用 %@ 压缩，暂不支持解码，以下为原始字节";
+
+/* Body decode marker */
+"%@ decoded" = "%@ 已解压";
+"Captured body was decompressed from %@" = "抓包正文已从 %@ 解压";

@@ -84,6 +84,8 @@
 "Copy header" = "Copy header";
 
 /* Body */
+"%@ decoded" = "%@ decoded";
+"Captured body was decompressed from %@" = "Captured body was decompressed from %@";
 "Request body" = "Request body";
 "Response body" = "Response body";
 "No request body" = "No request body";
