@@ -115,7 +115,9 @@ struct StatusBarView: View {
     }
 
     private var addressButton: some View {
-        StatusBarAddressButton(port: state.settings.port)
+        // Show the port the listener actually bound (the engine may fall back when
+        // the configured port is busy), not just the configured preference.
+        StatusBarAddressButton(port: state.proxyStatus.port ?? state.settings.port)
     }
 }
 

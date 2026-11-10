@@ -8,7 +8,9 @@ struct TrafficEmptyStateView: View {
     @EnvironmentObject private var state: AppState
     @State private var didCopy = false
 
-    private var listenAddress: String { "127.0.0.1:\(state.settings.port)" }
+    private var listenAddress: String {
+        "127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
+    }
 
     var body: some View {
         VStack(spacing: 0) {

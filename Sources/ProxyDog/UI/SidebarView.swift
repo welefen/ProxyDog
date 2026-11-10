@@ -108,7 +108,7 @@ struct SidebarView: View {
             PDHairline()
             HStack(spacing: DS.Space.x2) {
                 PDStatusDot(color: proxyDotColor)
-                statusSummary
+                statusLabel
                 Spacer(minLength: DS.Space.x1)
                 if !state.isCertificateTrusted {
                     PDIconButton(
@@ -121,9 +121,9 @@ struct SidebarView: View {
                     }
                 }
                 PDIconButton(
-                    symbol: "power",
+                    symbol: state.isProxyRunning ? "power.circle.fill" : "power",
                     help: state.isProxyRunning ? "Stop proxy" : "Start proxy",
-                    role: state.isProxyRunning ? .normal : .accent,
+                    role: state.isProxyRunning ? .accent : .normal,
                     size: 24
                 ) {
                     state.toggleProxy()
@@ -136,23 +136,16 @@ struct SidebarView: View {
         .background(DSColor.chrome)
     }
 
-    private var statusSummary: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(statusHeadline)
-                .font(DS.Typography.ui(10.5, .medium))
-                .foregroundStyle(statusHeadlineColor)
-                .lineLimit(1)
-            if let addressLine {
-                Text(addressLine)
-                    .font(DS.Typography.mono(10.5))
-                    .foregroundStyle(DSColor.textSecondary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-            }
-        }
-        .help(statusHelp)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(statusHeadline + (addressLine.map { ", \($0)" } ?? ""))
+    private var statusLabel: some View {
+        let isAddress = state.isProxyRunning && !state.store.isPaused
+        return Text(statusText)
+            .font(isAddress ? DS.Typography.mono(10.5) : DS.Typography.ui(10.5, .medium))
+            .foregroundStyle(statusColor)
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .help(statusHelp)
+            .accessibilityLabel(statusAccessibilityLabel)
     }
 
     private var proxyDotColor: Color {
@@ -164,45 +157,44 @@ struct SidebarView: View {
         return DSColor.textMuted
     }
 
-    private var statusHeadline: String {
-        if case .failed = state.proxyStatus { return "Proxy failed" }
+    private var statusText: String {
+        if case .failed = state.proxyStatus { return "Failed" }
         if state.isProxyRunning {
-            return state.store.isPaused ? "Capture paused" : "Listening on"
+            if state.store.isPaused { return "Paused" }
+            return "127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
         }
-        if case .starting = state.proxyStatus { return "Starting…" }
-        return "Proxy stopped"
+        if case .starting = state.proxyStatus { return "Starting" }
+        return "Stopped"
     }
 
-    private var statusHeadlineColor: Color {
+    private var statusColor: Color {
         if case .failed = state.proxyStatus { return DSColor.red }
         if state.isProxyRunning {
-            return state.store.isPaused ? DSColor.amber : DSColor.textMuted
+            return state.store.isPaused ? DSColor.amber : DSColor.textSecondary
         }
         if case .starting = state.proxyStatus { return DSColor.amber }
         return DSColor.textMuted
     }
 
-    private var addressLine: String? {
-        let port = state.proxyStatus.port ?? state.settings.port
-        if state.isProxyRunning || isStarting {
-            return "127.0.0.1:\(port)"
-        }
-        return nil
-    }
-
-    private var isStarting: Bool {
-        if case .starting = state.proxyStatus { return true }
-        return false
-    }
-
     private var statusHelp: String {
         if case .failed(let message) = state.proxyStatus { return message }
         if state.isProxyRunning {
-            return state.store.isPaused
-                ? "Captures are paused. Resume from the toolbar."
-                : "The proxy is listening on 127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
+            if state.store.isPaused {
+                return "Capture paused. Resume from the toolbar."
+            }
+            return "Listening on 127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
         }
         return "Start the proxy to capture traffic"
+    }
+
+    private var statusAccessibilityLabel: String {
+        if case .failed = state.proxyStatus {
+            return "Proxy failed. \(statusHelp)"
+        }
+        if state.isProxyRunning {
+            return state.store.isPaused ? "Capture paused" : "Listening on 127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
+        }
+        return "Proxy stopped"
     }
 }
 

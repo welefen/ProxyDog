@@ -99,7 +99,6 @@ enum DSColor {
     static let sunken = pdAdaptive(pdColor(0xECEEF2), pdColor(0x131519))
     static let hover = pdAdaptive(pdColor(0xEEF1F5), pdColor(0x23282F))
     static let selection = pdAdaptive(pdColor(0xE3E9F2), pdColor(0x2A313A))
-    static let highlight = pdAdaptive(pdColor(0xF0F4FB), pdColor(0x1F242B))
 
     // Hairlines and dithered borders.
     static let border = pdAdaptive(pdColor(0xE1E5EB), pdColor(0x2C3139))
@@ -177,14 +176,6 @@ enum PDFormat {
 
     static func clockTime(_ date: Date) -> String { clockFormatter.string(from: date) }
 
-    /// Compact clock time for the traffic list (seconds only).
-    static func shortTime(_ date: Date) -> String {
-        String(clockTime(date).prefix(8))
-    }
-
-    static func percent(_ fraction: Double) -> String {
-        String(format: "%.0f%%", fraction * 100)
-    }
 }
 
 // MARK: - Status helpers
@@ -612,11 +603,6 @@ struct PDPlaceholder: View {
 // MARK: - Row hover helper
 
 extension View {
-    /// Tracks hover and yields the state so rows can step their surface quietly.
-    func pdOnHover(_ action: @escaping (Bool) -> Void) -> some View {
-        onHover { action($0) }
-    }
-
     /// Conditional text selection (the two TextSelectability types cannot be used
     /// in a ternary).
     @ViewBuilder

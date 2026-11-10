@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 /// Root state of the app: settings, captured traffic, the proxy engine and all the
@@ -21,6 +22,8 @@ final class AppState: ObservableObject {
 
     private let sink: MainActorCaptureSink
     private var hasBootstrapped = false
+    private var storeCancellable: AnyCancellable?
+    private var settingsCancellable: AnyCancellable?
 
     convenience init() {
         self.init(settings: AppSettings(), store: CaptureStore())
@@ -41,6 +44,20 @@ final class AppState: ObservableObject {
         proxy.onStatusChange = { [weak self] status in
             Task { @MainActor in
                 self?.proxyStatus = status
+            }
+        }
+
+        // AppState is the single object the views observe, so changes published by
+        // the store (new captures) and settings (port, appearance) have to be
+        // forwarded or the window would never repaint live traffic.
+        storeCancellable = store.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.objectWillChange.send()
+            }
+        }
+        settingsCancellable = settings.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.objectWillChange.send()
             }
         }
     }
@@ -85,14 +102,17 @@ final class AppState: ObservableObject {
     var isProxyRunning: Bool { proxyStatus.isRunning }
 
     func startProxy() {
-        guard !proxyStatus.isRunning else { return }
+        // Ask the engine itself, not the published copy: status callbacks are async.
+        guard !proxy.status.isRunning else { return }
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
+        proxyStatus = .starting
         proxy.start()
         Analytics.shared.track("proxy_started", properties: ["port": String(settings.port)])
     }
 
     func stopProxy() {
+        proxyStatus = .stopped
         proxy.stop()
         Analytics.shared.track("proxy_stopped")
     }
@@ -106,13 +126,33 @@ final class AppState: ObservableObject {
     }
 
     func restartProxy() {
+        let shouldRestart = proxy.status.isRunning || proxyStatus.isRunning
         proxy.stop()
-        startProxy()
+        guard shouldRestart else {
+            proxyStatus = .stopped
+            return
+        }
+        proxy.port = settings.port
+        proxy.sslProxyingEnabled = settings.sslProxyingEnabled
+        proxyStatus = .starting
+        proxy.start()
     }
 
     func applyPort(_ port: Int) {
+        guard port > 0, port < 65_536 else {
+            errorMessage = "Port must be between 1 and 65535."
+            return
+        }
+        let wasRunning = proxy.status.isRunning || proxyStatus.isRunning
         settings.port = port
-        if proxyStatus.isRunning {
+        if wasRunning {
+            restartProxy()
+        }
+    }
+
+    func applySSLProxying(_ enabled: Bool) {
+        settings.sslProxyingEnabled = enabled
+        if proxy.status.isRunning || proxyStatus.isRunning {
             restartProxy()
         }
     }

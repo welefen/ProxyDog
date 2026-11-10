@@ -86,9 +86,9 @@ struct TrafficListView: View {
                 .padding(.horizontal, DS.Space.x1)
 
             PDIconButton(
-                symbol: "power",
+                symbol: state.isProxyRunning ? "power.circle.fill" : "power",
                 help: state.isProxyRunning ? "Stop proxy" : "Start proxy",
-                role: state.isProxyRunning ? .normal : .accent
+                role: state.isProxyRunning ? .accent : .normal
             ) {
                 state.toggleProxy()
             }

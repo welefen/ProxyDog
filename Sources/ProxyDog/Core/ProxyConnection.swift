@@ -112,6 +112,15 @@ enum ProxyWire {
         return ResolvedTarget(scheme: defaultScheme, host: host, port: port, path: path)
     }
 
+    /// True for IPv4/IPv6 literal hosts (which must not be used as TLS SNI names).
+    static func isIPAddress(_ host: String) -> Bool {
+        var ipv4 = in_addr()
+        var ipv6 = in6_addr()
+        return host.withCString { pointer in
+            inet_pton(AF_INET, pointer, &ipv4) == 1 || inet_pton(AF_INET6, pointer, &ipv6) == 1
+        }
+    }
+
     static func clientSignature(from headers: HTTPHeaders) -> String? {
         guard let userAgent = headers.first(name: "User-Agent")?.trimmingCharacters(in: .whitespacesAndNewlines),
               !userAgent.isEmpty
@@ -619,6 +628,14 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     private var clientWantsClose = false
     private var isTunnel = false
 
+    /// HTTP/1.1 pipelining: requests received while another exchange is still in flight are
+    /// buffered (bounded) and replayed once the previous response completes. Sequential
+    /// keep-alive requests do not take this path.
+    private var bufferingPipelinedRequest = false
+    private var pendingPipelinedParts: [HTTPServerRequestPart] = []
+    private var pendingPipelinedBytes = 0
+    private let maxPipelinedBytes = 4 * 1024 * 1024
+
     init(
         sink: CaptureSink,
         connectTarget: ProxyConnectTarget?,
@@ -641,7 +658,29 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         guard !isTunnel else { return }
-        switch Self.unwrapInboundIn(data) {
+        route(Self.unwrapInboundIn(data))
+    }
+
+    private func route(_ part: HTTPServerRequestPart) {
+        if bufferingPipelinedRequest {
+            bufferPipelined(part)
+            return
+        }
+        if let state = exchange {
+            if state.requestEnded {
+                // A new request head arrived while the previous response is still in flight.
+                bufferingPipelinedRequest = true
+                bufferPipelined(part)
+            } else {
+                process(part)
+            }
+            return
+        }
+        process(part)
+    }
+
+    private func process(_ part: HTTPServerRequestPart) {
+        switch part {
         case .head(let head):
             handleHead(head)
         case .body(let body):
@@ -649,6 +688,61 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         case .end(let trailers):
             handleEnd(trailers)
         }
+    }
+
+    private func bufferPipelined(_ part: HTTPServerRequestPart) {
+        switch part {
+        case .head(let head):
+            pendingPipelinedBytes += head.headers.reduce(0) { $0 + $1.name.utf8.count + $1.value.utf8.count + 4 }
+        case .body(let body):
+            pendingPipelinedBytes += body.readableBytes
+        case .end:
+            break
+        }
+        pendingPipelinedParts.append(part)
+        if pendingPipelinedBytes > maxPipelinedBytes {
+            pendingPipelinedParts.removeAll()
+            pendingPipelinedBytes = 0
+            bufferingPipelinedRequest = false
+            channel?.close(promise: nil)
+        }
+    }
+
+    /// Replays the next complete pipelined request once the previous response has been sent.
+    private func drainPipelinedRequests() {
+        guard exchange == nil, !pendingPipelinedParts.isEmpty else {
+            bufferingPipelinedRequest = false
+            return
+        }
+        var completeCount = pendingPipelinedParts.count
+        for (index, part) in pendingPipelinedParts.enumerated() {
+            if case .end = part {
+                completeCount = index + 1
+                break
+            }
+        }
+        let parts = Array(pendingPipelinedParts.prefix(completeCount))
+        pendingPipelinedParts.removeFirst(completeCount)
+        pendingPipelinedBytes = pendingPipelinedParts.reduce(0) { total, part in
+            switch part {
+            case .head(let head):
+                return total + head.headers.reduce(0) { $0 + $1.name.utf8.count + $1.value.utf8.count + 4 }
+            case .body(let body):
+                return total + body.readableBytes
+            case .end:
+                return total
+            }
+        }
+        bufferingPipelinedRequest = !pendingPipelinedParts.isEmpty
+        for part in parts {
+            process(part)
+        }
+    }
+
+    private func clearPipelinedRequests() {
+        pendingPipelinedParts.removeAll()
+        pendingPipelinedBytes = 0
+        bufferingPipelinedRequest = false
     }
 
     func channelInactive(context: ChannelHandlerContext) {
@@ -770,7 +864,9 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
                     }
                     let sslHandler: NIOSSLClientHandler
                     do {
-                        sslHandler = try NIOSSLClientHandler(context: context, serverHostname: host)
+                        // IP literals must not be sent as SNI (NIOSSL throws for them).
+                        let serverHostname = ProxyWire.isIPAddress(host) ? nil : host
+                        sslHandler = try NIOSSLClientHandler(context: context, serverHostname: serverHostname)
                     } catch {
                         return eventLoop.makeFailedFuture(error)
                     }
@@ -850,10 +946,12 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         sink.captureDidUpdate(state.snapshot(state: .completed))
         closeUpstream()
         if !keepAlive {
+            clearPipelinedRequests()
             let future = finalWrite ?? channel.eventLoop.makeSucceededVoidFuture()
             future.whenComplete { _ in channel.close(promise: nil) }
         } else {
             channel.setOption(ChannelOptions.autoRead, value: true).whenFailure { _ in }
+            drainPipelinedRequests()
         }
     }
 
@@ -861,6 +959,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         guard exchange === state, let channel else { return }
         exchange = nil
         clientWantsClose = false
+        clearPipelinedRequests()
         sink.captureDidUpdate(state.snapshot(state: .failed, error: message))
         closeUpstream()
         if responseStarted {

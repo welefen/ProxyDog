@@ -39,7 +39,6 @@ struct ContentView: View {
             OnboardingView()
                 .environmentObject(state)
         }
-        .preferredColorScheme(DevLaunchOptions.appearanceOverride)
         .onAppear {
             SampleTraffic.bootstrapIfRequested(state: state)
         }

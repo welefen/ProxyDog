@@ -28,24 +28,6 @@ enum DevLaunchOptions {
         }
     }
 
-    static var initialBodySide: BodySide? {
-        switch value(for: "--sample-side") {
-        case "request": return .request
-        case "response": return .response
-        default: return nil
-        }
-    }
-
-    static var initialRawBody: Bool { arguments.contains("--sample-raw") }
-
-    static var appearanceOverride: ColorScheme? {
-        switch value(for: "--ui-appearance") {
-        case "dark": return .dark
-        case "light": return .light
-        default: return nil
-        }
-    }
-
     private static func value(for flag: String) -> String? {
         let prefix = flag + "="
         guard let argument = arguments.first(where: { $0.hasPrefix(prefix) }) else { return nil }

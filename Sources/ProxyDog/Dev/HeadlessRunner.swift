@@ -61,6 +61,10 @@ enum HeadlessRunner {
         let sslEnabled = !arguments.contains("--no-ssl")
         let exitAfter = Double(flagValue("--exit-after") ?? "")
 
+        if arguments.contains("--selftest") {
+            exit(Self.runSelfTest(port: port) ? 0 : 1)
+        }
+
         let ca = CertificateAuthority.shared
         do {
             try ca.prepareIfNeeded()
@@ -103,5 +107,115 @@ enum HeadlessRunner {
             }
         }
         dispatchMain()
+    }
+}
+
+extension HeadlessRunner {
+    /// Verifies the pieces of the app that cannot be exercised through the GUI in a
+    /// headless environment: certificate generation, HAR export and system proxy
+    /// state detection. Prints one JSON line per check and returns overall success.
+    static func runSelfTest(port: Int) -> Bool {
+        var failures = 0
+
+        func check(_ name: String, _ body: () throws -> String) {
+            do {
+                let detail = try body()
+                print("{\"type\":\"selftest\",\"check\":\"\(name)\",\"ok\":true,\"detail\":\"\(detail)\"}")
+            } catch {
+                failures += 1
+                print("{\"type\":\"selftest\",\"check\":\"\(name)\",\"ok\":false,\"detail\":\"\(error.localizedDescription)\"}")
+            }
+        }
+
+        let ca = CertificateAuthority.shared
+
+        check("certificate-authority") {
+            try ca.prepareIfNeeded()
+            _ = try ca.serverTLSContext(forHost: "example.com")
+            let exists = FileManager.default.fileExists(atPath: ca.rootCertificateURL.path)
+            guard exists else { throw ProxyError.certificateUnavailable }
+            return "root=ca.crt leaf=example.com"
+        }
+
+        check("har-export") {
+            let requests: [CapturedRequest] = [
+                CapturedRequest(
+                    method: "GET",
+                    scheme: "https",
+                    host: "api.example.com",
+                    port: 443,
+                    path: "/v1/users?page=2",
+                    intercepted: true,
+                    requestHeaders: [HeaderField(name: "Accept", value: "application/json")],
+                    statusCode: 200,
+                    responseHeaders: [HeaderField(name: "Content-Type", value: "application/json")],
+                    responseBody: Data("{\"ok\":true}".utf8),
+                    state: .completed
+                ),
+                CapturedRequest(
+                    method: "POST",
+                    scheme: "http",
+                    host: "localhost",
+                    port: 3000,
+                    path: "/v1/session",
+                    requestHeaders: [HeaderField(name: "Content-Type", value: "application/x-www-form-urlencoded")],
+                    requestBody: Data("user=dev&token=abc".utf8),
+                    statusCode: 401,
+                    responseHeaders: [HeaderField(name: "Content-Type", value: "text/plain")],
+                    responseBody: Data("unauthorized".utf8),
+                    state: .completed
+                ),
+            ]
+            let data = try HARExporter.makeHAR(requests: requests)
+            guard let har = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let log = har["log"] as? [String: Any],
+                  let entries = log["entries"] as? [[String: Any]],
+                  entries.count == 2
+            else {
+                throw ProxyError.notImplemented
+            }
+            return "entries=\(entries.count) bytes=\(data.count)"
+        }
+
+        check("curl-export") {
+            let request = CapturedRequest(
+                method: "POST",
+                scheme: "https",
+                host: "httpbin.org",
+                port: 443,
+                path: "/post",
+                requestHeaders: [HeaderField(name: "Authorization", value: "Bearer secret")],
+                requestBody: Data("{\"a\":1}".utf8)
+            )
+            let command = CurlExporter.curlCommand(for: request)
+            guard command.contains("curl"), !command.contains("Bearer secret") else {
+                throw ProxyError.notImplemented
+            }
+            return "sensitive headers excluded"
+        }
+
+        check("system-proxy-state") {
+            let enabled = SystemProxy.isEnabled(port: port)
+            return "enabled=\(enabled)"
+        }
+
+        check("settings-persistence") {
+            try MainActor.assumeIsolated {
+                let suite = "com.proxydog.selftest.\(UUID().uuidString)"
+                let defaults = UserDefaults(suiteName: suite)!
+                let settings = AppSettings(defaults: defaults)
+                settings.port = 9123
+                settings.appearance = .dark
+                let reloaded = AppSettings(defaults: defaults)
+                defaults.removePersistentDomain(forName: suite)
+                guard reloaded.port == 9123, reloaded.appearance == .dark else {
+                    throw ProxyError.notImplemented
+                }
+                return "port=\(reloaded.port) appearance=\(reloaded.appearance.rawValue)"
+            }
+        }
+
+        print("{\"type\":\"selftest\",\"done\":true,\"failures\":\(failures)}")
+        return failures == 0
     }
 }
