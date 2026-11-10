@@ -14,6 +14,9 @@ final class AppState: ObservableObject {
     let breakpoints: BreakpointRuleStore
     /// Breakpoint sessions waiting for the user's decision (shown as a sheet).
     @Published var pendingBreakpoints: [BreakpointPayload] = []
+    /// Pre-filled rule drafts opened from the traffic list context menu.
+    @Published var rewriteRuleDraft: RewriteRule?
+    @Published var breakpointRuleDraft: BreakpointRule?
     let proxy: ProxyServer
 
     @Published private(set) var proxyStatus: ProxyServer.Status = .stopped
@@ -96,6 +99,29 @@ final class AppState: ObservableObject {
                 self?.store.ignoresOwnTraffic = value
             }
         }
+    }
+
+    // MARK: - Rule drafts
+
+    /// Opens the rewrite editor pre-filled for `request`, matching its exact URL.
+    func beginRewriteRule(for request: CapturedRequest) {
+        var rule = RewriteRule()
+        rule.name = RuleDraft.suggestedName(for: request)
+        rule.method = request.method
+        rule.urlPattern = RuleDraft.literalPattern(for: request.urlString)
+        rule.action = .modifyResponse
+        rewriteRuleDraft = rule
+    }
+
+    /// Opens the breakpoint editor pre-filled for `request`, pausing on its request phase.
+    func beginBreakpointRule(for request: CapturedRequest) {
+        var rule = BreakpointRule()
+        rule.name = RuleDraft.suggestedName(for: request)
+        rule.method = request.method
+        rule.urlPattern = RuleDraft.literalPattern(for: request.urlString)
+        rule.breakOnRequest = true
+        rule.breakOnResponse = false
+        breakpointRuleDraft = rule
     }
 
     // MARK: - Breakpoints

@@ -198,3 +198,7 @@
 "Resume" = "放行";
 "Drop" = "丢弃";
 "%lld more waiting" = "还有 %lld 个等待处理";
+
+/* Context menu rules */
+"Rewrite this URL…" = "重写此地址…";
+"Breakpoint this URL…" = "为此地址打断点…";

@@ -219,6 +219,13 @@ struct TrafficListView: View {
                                 listFocused = true
                             }
                             Divider()
+                            Button("Rewrite this URL…") {
+                                state.beginRewriteRule(for: request)
+                            }
+                            Button("Breakpoint this URL…") {
+                                state.beginBreakpointRule(for: request)
+                            }
+                            Divider()
                             Button("Delete", role: .destructive) {
                                 delete(request.id)
                             }

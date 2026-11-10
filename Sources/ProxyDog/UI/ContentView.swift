@@ -45,6 +45,12 @@ struct ContentView: View {
             OnboardingView()
                 .environmentObject(state)
         }
+        .sheet(item: $state.rewriteRuleDraft) { rule in
+            RewriteRuleEditorView(rule: rule, isNew: true, store: state.rewriteRules)
+        }
+        .sheet(item: $state.breakpointRuleDraft) { rule in
+            BreakpointRuleEditorView(rule: rule, isNew: true, store: state.breakpoints)
+        }
         .sheet(item: Binding(
             get: { state.pendingBreakpoints.first },
             set: { _ in }
@@ -57,6 +63,7 @@ struct ContentView: View {
             SampleTraffic.bootstrapIfRequested(state: state)
             SampleTraffic.injectSampleBreakpointIfRequested(state: state)
             SampleTraffic.runDevProbesIfNeeded()
+            SampleTraffic.presentSampleRuleDraftIfRequested(state: state)
         }
     }
 }

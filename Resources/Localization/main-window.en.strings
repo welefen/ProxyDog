@@ -196,3 +196,7 @@
 "Resume" = "Resume";
 "Drop" = "Drop";
 "%lld more waiting" = "%lld more waiting";
+
+/* Context menu rules */
+"Rewrite this URL…" = "Rewrite this URL…";
+"Breakpoint this URL…" = "Breakpoint this URL…";

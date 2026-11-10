@@ -55,6 +55,11 @@ enum DevLaunchOptions {
         arguments.contains("--analytics-probe")
     }
 
+    /// QA: opens the rewrite/breakpoint editor pre-filled from the first sample request.
+    static var sampleRuleDraft: String? {
+        value(for: "--sample-rule-draft")
+    }
+
     /// Stress-test mode: number of synthetic captures to load (e.g. `--sample-stress 10000`).
     static var stressCount: Int? {
         value(for: "--sample-stress").flatMap(Int.init)
@@ -94,6 +99,19 @@ enum SampleTraffic {
                 FileHandle.standardError.write(Data("[probe] self request finished\n".utf8))
             }.resume()
             FileHandle.standardError.write(Data("[probe] sent self request probe\n".utf8))
+        }
+    }
+
+    /// QA helper: present a pre-filled rule editor without going through the context menu.
+    static func presentSampleRuleDraftIfRequested(state: AppState) {
+        guard let kind = DevLaunchOptions.sampleRuleDraft,
+              let request = state.filteredRequests.first else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            switch kind {
+            case "rewrite": state.beginRewriteRule(for: request)
+            case "breakpoint": state.beginBreakpointRule(for: request)
+            default: break
+            }
         }
     }
 
