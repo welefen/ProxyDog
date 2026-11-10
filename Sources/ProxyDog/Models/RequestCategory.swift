@@ -21,21 +21,22 @@ enum RequestCategory: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     var id: String { rawValue }
 
-    /// Short chip label, localized.
+    /// Short chip label. These stay in English in every language: they mirror the Chrome
+    /// DevTools filter bar and are technical terms (Doc/CSS/JS/Media/…), not UI prose.
     var label: String {
         switch self {
-        case .all: return String(localized: "All")
-        case .fetchXHR: return String(localized: "Fetch/XHR")
-        case .document: return String(localized: "Doc")
+        case .all: return "All"
+        case .fetchXHR: return "Fetch/XHR"
+        case .document: return "Doc"
         case .css: return "CSS"
         case .javascript: return "JS"
-        case .font: return String(localized: "Font")
-        case .image: return String(localized: "Img")
-        case .media: return String(localized: "Media")
-        case .manifest: return String(localized: "Manifest")
-        case .socket: return String(localized: "Socket")
+        case .font: return "Font"
+        case .image: return "Img"
+        case .media: return "Media"
+        case .manifest: return "Manifest"
+        case .socket: return "Socket"
         case .wasm: return "Wasm"
-        case .other: return String(localized: "Other")
+        case .other: return "Other"
         }
     }
 
