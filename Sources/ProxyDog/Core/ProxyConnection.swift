@@ -198,6 +198,9 @@ final class ExchangeState {
     let clientSignature: String?
     let isUpgradeRequest: Bool
 
+    /// Local app that opened the client connection, once attribution resolved.
+    var clientProcess: ClientProcess?
+
     var requestBody = Data()
     private(set) var requestBytesReceived = 0
     var requestEnded = false
@@ -266,7 +269,10 @@ final class ExchangeState {
             state: state,
             errorMessage: error,
             isPinned: false,
-            clientSignature: clientSignature
+            clientSignature: clientSignature,
+            clientPID: clientProcess?.pid,
+            clientAppName: clientProcess?.attributedAppName,
+            clientAppPath: clientProcess?.executablePath
         )
         if state == .completed || state == .failed {
             captured.finishedAt = Date()
@@ -297,6 +303,8 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
     private var extraBytes: ByteBuffer?
     private var channel: Channel?
     private var finished = false
+    /// Process that owns this client connection (attributed once per connection).
+    private let clientIdentity = ClientIdentity()
 
     private let maxHeadBytes = 256 * 1024
 
@@ -314,6 +322,27 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
 
     func handlerAdded(context: ChannelHandlerContext) {
         channel = context.channel
+    }
+
+    func channelActive(context: ChannelHandlerContext) {
+        attributeClientProcess(context: context)
+        context.fireChannelActive()
+    }
+
+    /// Resolves the local app from the client's ephemeral port (one libproc scan per
+    /// connection, off the event loop). Late results are patched onto existing captures.
+    private func attributeClientProcess(context: ChannelHandlerContext) {
+        guard let peerPort = context.channel.remoteAddress?.port else { return }
+        let listenPort = context.channel.localAddress?.port ?? 0
+        let identity = clientIdentity
+        let eventLoop = context.eventLoop
+        ClientProcessAttributor.shared.attribute(
+            peerPort: UInt16(clamping: peerPort),
+            listenPort: UInt16(clamping: listenPort),
+            eventLoop: eventLoop
+        ) { process in
+            identity.resolve(process)
+        }
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -431,7 +460,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
                     )
                 }
                 .whenFailure { error in
-                    let request = CapturedRequest(
+                    var request = CapturedRequest(
                         startedAt: startedAt,
                         method: "CONNECT",
                         scheme: "https",
@@ -442,7 +471,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
                         state: .failed,
                         errorMessage: ProxyWire.readableError(error)
                     )
-                    self.sink.captureDidUpdate(request)
+                    self.emitCapture(request)
                     channel.close(promise: nil)
                 }
         }
@@ -477,7 +506,8 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             intercepted: true,
             responseEncoder: responseEncoder,
             requestDecoderWrapper: decoderWrapper,
-            upstreamProxyProvider: upstreamProxyProvider
+            upstreamProxyProvider: upstreamProxyProvider,
+            clientIdentity: clientIdentity
         )
 
         return pipeline.removeHandler(self)
@@ -513,7 +543,8 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             intercepted: false,
             responseEncoder: responseEncoder,
             requestDecoderWrapper: decoderWrapper,
-            upstreamProxyProvider: upstreamProxyProvider
+            upstreamProxyProvider: upstreamProxyProvider,
+            clientIdentity: clientIdentity
         )
 
         return channel.setOption(ChannelOptions.autoRead, value: false)
@@ -586,7 +617,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
                         intercepted: false,
                         state: .tunneled
                     )
-                    frontend.sink.captureDidUpdate(request)
+                    frontend.emitCapture(request)
                 }
             }
             .whenFailure { error in
@@ -607,7 +638,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
                     state: .failed,
                     errorMessage: message
                 )
-                frontend.sink.captureDidUpdate(request)
+                frontend.emitCapture(request)
                 var output = channel.allocator.buffer(capacity: 64)
                 output.writeString("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
                 channel.writeAndFlush(output).whenComplete { _ in
@@ -617,6 +648,22 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
     }
 
     // MARK: Helpers
+
+    /// Emits a capture with client-process attribution, re-emitting a patched snapshot if
+    /// the libproc probe finishes later.
+    private func emitCapture(_ request: CapturedRequest) {
+        var attributed = request
+        attributed.applyClientProcess(clientIdentity.current)
+        sink.captureDidUpdate(attributed)
+
+        guard clientIdentity.current == nil, let eventLoop = channel?.eventLoop else { return }
+        clientIdentity.observe(on: eventLoop) { [weak self] process in
+            guard let self, let process else { return }
+            var patched = request
+            patched.applyClientProcess(process)
+            self.sink.captureDidUpdate(patched)
+        }
+    }
 
     private func respondRaw(context: ChannelHandlerContext, head: String) {
         var output = context.channel.allocator.buffer(capacity: head.utf8.count)
@@ -801,6 +848,8 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     private let intercepted: Bool
     /// Resolved per exchange so a running server picks up a changed upstream proxy.
     private let upstreamProxyProvider: @Sendable () -> UpstreamProxy?
+    /// Local app that owns this client connection (attributed once per connection).
+    private let clientIdentity: ClientIdentity
 
     let responseEncoder: HTTPResponseEncoder
     let requestDecoderWrapper: ByteToMessageHandler<HTTPRequestDecoder>
@@ -813,6 +862,11 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     private var upstreamResponseDecoderWrapper: ByteToMessageHandler<HTTPResponseDecoder>?
     private var clientWantsClose = false
     private var isTunnel = false
+    /// Most recent finished capture of this connection, kept so a late process probe can
+    /// still patch (and re-emit) it.
+    private var lastCompletedCapture: CapturedRequest?
+    /// WebSocket capture session, when the connection was upgraded to WebSocket.
+    private var webSocketSession: WebSocketCaptureSession?
 
     /// HTTP/1.1 pipelining: requests received while another exchange is still in flight are
     /// buffered (bounded) and replayed once the previous response completes. Sequential
@@ -829,7 +883,8 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         intercepted: Bool,
         responseEncoder: HTTPResponseEncoder,
         requestDecoderWrapper: ByteToMessageHandler<HTTPRequestDecoder>,
-        upstreamProxyProvider: @Sendable @escaping () -> UpstreamProxy? = { nil }
+        upstreamProxyProvider: @Sendable @escaping () -> UpstreamProxy? = { nil },
+        clientIdentity: ClientIdentity = ClientIdentity()
     ) {
         self.sink = sink
         self.connectTarget = connectTarget
@@ -838,10 +893,14 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         self.responseEncoder = responseEncoder
         self.requestDecoderWrapper = requestDecoderWrapper
         self.upstreamProxyProvider = upstreamProxyProvider
+        self.clientIdentity = clientIdentity
     }
 
     func handlerAdded(context: ChannelHandlerContext) {
         channel = context.channel
+        clientIdentity.observe(on: context.eventLoop) { [weak self] process in
+            self?.applyClientProcess(process)
+        }
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -983,6 +1042,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             isUpgradeRequest: isUpgrade
         )
         exchange = state
+        state.clientProcess = clientIdentity.current
         sink.captureDidUpdate(state.snapshot(state: .pending))
         channel?.setOption(ChannelOptions.autoRead, value: false).whenFailure { _ in }
         openUpstream(state: state, head: head)
@@ -1229,7 +1289,9 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         guard exchange === state, let channel else { return }
         exchange = nil
         clientWantsClose = false
-        sink.captureDidUpdate(state.snapshot(state: .completed))
+        let completed = state.snapshot(state: .completed)
+        lastCompletedCapture = completed
+        sink.captureDidUpdate(completed)
         closeUpstream()
         if !keepAlive {
             clearPipelinedRequests()
@@ -1246,7 +1308,9 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         exchange = nil
         clientWantsClose = false
         clearPipelinedRequests()
-        sink.captureDidUpdate(state.snapshot(state: .failed, error: message))
+        let failed = state.snapshot(state: .failed, error: message)
+        lastCompletedCapture = failed
+        sink.captureDidUpdate(failed)
         closeUpstream()
         if responseStarted {
             channel.close(promise: nil)
@@ -1265,6 +1329,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         let webSocket = Self.isWebSocketUpgrade(state: state, responseHead: responseHead)
         var completed = state.snapshot(state: .completed)
         completed.isWebSocket = webSocket
+        lastCompletedCapture = completed
         sink.captureDidUpdate(completed)
 
         // For WebSocket upgrades both tunnel directions get a frame parser that reports
@@ -1279,6 +1344,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         } else {
             session = nil
         }
+        webSocketSession = session
 
         guard let relay, let encoder = upstreamRequestEncoder, let decoderWrapper = upstreamResponseDecoderWrapper else {
             session?.flushFinal()
@@ -1344,6 +1410,24 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             .first { $0.name.caseInsensitiveCompare("Upgrade") == .orderedSame }?
             .value.lowercased() ?? ""
         return requestUpgrade.contains("websocket")
+    }
+
+    // MARK: Client attribution
+
+    /// Applies a (possibly late) process attribution to the live exchange, the last finished
+    /// capture and any WebSocket capture session.
+    private func applyClientProcess(_ process: ClientProcess?) {
+        guard let process else { return }
+        if let state = exchange {
+            state.clientProcess = process
+            sink.captureDidUpdate(state.snapshot(state: .pending))
+        }
+        if var last = lastCompletedCapture {
+            last.applyClientProcess(process)
+            lastCompletedCapture = last
+            sink.captureDidUpdate(last)
+        }
+        webSocketSession?.applyClientProcess(process)
     }
 
     // MARK: Helpers

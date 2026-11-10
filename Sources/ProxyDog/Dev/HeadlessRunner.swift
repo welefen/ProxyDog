@@ -42,6 +42,9 @@ final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
         if let duration = request.duration { payload["duration_ms"] = Int(duration * 1000) }
         if let error = request.errorMessage { payload["error"] = error }
         if let contentType = request.responseContentType { payload["content_type"] = contentType }
+        if let app = request.clientAppName { payload["client_app"] = app }
+        if let pid = request.clientPID { payload["client_pid"] = pid }
+        if let path = request.clientAppPath { payload["client_path"] = path }
         if request.isWebSocket { payload["websocket"] = true }
         if !request.webSocketMessages.isEmpty { payload["ws_messages"] = request.webSocketMessages.count }
 

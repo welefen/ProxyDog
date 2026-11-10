@@ -8,6 +8,7 @@
 - **实时请求列表**：方法、状态码、大小、耗时、协议类型图标；域名分组、失败标记、收藏（Pinned）。
 - **请求详情**：Overview（URL、客户端、耗时、大小、解密状态）、Headers（请求/响应表头，点击复制）、Body（JSON 树、文本、图片预览、二进制 Hex、Pretty/Raw 切换）、Messages（WebSocket 消息）。
 - **WebSocket 调试**：抓取 101 升级握手，按帧解析双向消息（文本/二进制/ping/pong/关闭、分片重组），wss 自动解密；详情页「消息」标签实时追加，可查看每条消息内容。
+- **请求归属**：通过 libproc 反查发起连接的本地进程，详情页显示是哪个 App（含 PID，可看可执行路径），并保留原始 User-Agent。
 - **检索与筛选**：全文搜索、按域名过滤、Chrome DevTools 风格的类型筛选（Fetch/XHR、Doc、CSS、JS、Font、Img、Media、Manifest、Socket、Wasm、Other）、暂停/恢复抓包、清空、单条删除、收藏。
 - **导出**：HAR 1.2 文件导出、复制为 cURL。
 - **系统代理**：一键设置/关闭 macOS 系统 HTTP/HTTPS 代理（需要管理员授权）。
@@ -109,6 +110,18 @@ curl -x http://127.0.0.1:8889 https://example.com/
 curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 ```
 
+## 请求来自哪个 App
+
+代理只看到 TCP 连接，ProxyDog 会反查是哪个本地进程打开了这条连接：
+
+- 详情页「概览」里显示 **客户端**（App 名，如 Safari）、**进程**（PID，悬停可看可执行路径）和 **User-Agent**。
+- 通过 `libproc` 枚举本机进程的 TCP socket 与客户端源端口匹配，不需要额外权限，也不需要安装驱动；从 helper 进程（如 WebKit 网络进程）会向上找到所属的 `.app` 包名。
+- 归属是异步解析的：请求先出现，App 信息随后补上；浏览器等长连接会复用连接，开销很小。
+
+![请求归属](Docs/screenshots/client-app.png)
+
+限制：只能看到**当前用户**的进程（root 守护进程可能显示为空）；通过其他机器/设备转到本机代理的流量没有本地进程可言；静态链接或无 socket 归属的极端情况可能无法识别。
+
 ## WebSocket 调试
 
 `ws://` 与 `wss://` 都支持：
@@ -164,6 +177,9 @@ Support/                     # Info.plist、应用图标、AppConfig.plist(.exam
 # 上游代理（代理链）测试：内置本地双协议代理（HTTP CONNECT + SOCKS5）
 ./scripts/test_upstream.sh
 UPSTREAM_REAL=127.0.0.1:1235 ./scripts/test_upstream.sh   # 再用真实 VPN 的 HTTP 代理跑一遍
+
+# 请求归属测试：curl / Python 客户端 / MITM / SOCKS5 连接都能识别出 App
+./scripts/test_attribution.sh
 
 # WebSocket 测试：ws/wss 握手、MITM 解密、双向消息解析、分片重组、1MB 截断
 ./scripts/test_websocket.sh

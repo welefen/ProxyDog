@@ -143,3 +143,7 @@
 "Other" = "其他";
 "No requests match this filter" = "没有符合筛选的请求";
 "Clear filter" = "清除筛选";
+
+/* Client attribution */
+"Process" = "进程";
+"User-Agent" = "User-Agent";

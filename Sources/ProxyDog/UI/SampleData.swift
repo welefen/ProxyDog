@@ -149,7 +149,10 @@ enum SampleTraffic {
                 "permissions": ["admin": false, "push": true, "pull": true],
             ]),
             pinned: true,
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -201,7 +204,10 @@ enum SampleTraffic {
                     ],
                 ],
             ]),
-            client: "ProxyDog/1.0"
+            client: "ProxyDog/1.0",
+            clientPID: 5678,
+            clientAppName: "ProxyDog",
+            clientAppPath: "/Applications/ProxyDog.app/Contents/MacOS/ProxyDog"
         ))
 
         // WebSocket exchange (101 + live message stream); index 2 in the sample list.
@@ -232,6 +238,9 @@ enum SampleTraffic {
                 ("X-Request-Id", "req_7c3d9f12"),
             ]),
             client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari",
             isWebSocket: true
         )
         socket.webSocketMessages = webSocketMessages(startedAt: socket.startedAt)
@@ -260,7 +269,10 @@ enum SampleTraffic {
                 "documentation_url": "https://docs.github.com/rest/users/users",
                 "status": "401",
             ]),
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -288,7 +300,10 @@ enum SampleTraffic {
                     "request_id": "req_8f21c4a9e7b3",
                 ]
             ]),
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -337,7 +352,10 @@ enum SampleTraffic {
             exports.createElement = createElement;
             //# sourceMappingURL=index.js.map
             """.utf8),
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -381,7 +399,10 @@ enum SampleTraffic {
             </body>
             </html>
             """.utf8),
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -405,7 +426,10 @@ enum SampleTraffic {
                 ("X-Amz-Cf-Id", "F7h2Ks9Lm4Qp8Rt1Vw6Yz3Nb5Xc0Dg"),
             ]),
             responseBody: image,
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -428,7 +452,10 @@ enum SampleTraffic {
                 ("Cache-Control", "public, max-age=3600"),
             ]),
             responseBody: mediaBody,
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -450,7 +477,10 @@ enum SampleTraffic {
                 ("Cache-Control", "public, max-age=31536000, immutable"),
             ]),
             responseBody: wasmBody,
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -473,7 +503,10 @@ enum SampleTraffic {
                 ("Access-Control-Allow-Origin", "*"),
             ]),
             responseBody: binaryBody,
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -511,7 +544,10 @@ enum SampleTraffic {
                 "event": "app_launched",
                 "properties": ["appearance": "system", "ssl_enabled": true],
             ]),
-            client: "ProxyDog/1.0"
+            client: "ProxyDog/1.0",
+            clientPID: 5678,
+            clientAppName: "ProxyDog",
+            clientAppPath: "/Applications/ProxyDog.app/Contents/MacOS/ProxyDog"
         ))
 
         requests.append(request(
@@ -526,7 +562,10 @@ enum SampleTraffic {
                 ("Accept", "application/json"),
             ]),
             intercepted: false,
-            client: "node-fetch/3.3.2"
+            client: "node-fetch/3.3.2",
+            clientPID: 8891,
+            clientAppName: "node",
+            clientAppPath: "/usr/local/bin/node"
         ))
 
         requests.append(request(
@@ -547,7 +586,10 @@ enum SampleTraffic {
                 ("Cache-Control", "no-store"),
                 ("X-Request-Id", "req_1d8c4b2a"),
             ]),
-            client: "ProxyDog/1.0"
+            client: "ProxyDog/1.0",
+            clientPID: 5678,
+            clientAppName: "ProxyDog",
+            clientAppPath: "/Applications/ProxyDog.app/Contents/MacOS/ProxyDog"
         ))
 
         requests.append(request(
@@ -575,7 +617,10 @@ enum SampleTraffic {
                     "retry_after": 30,
                 ]
             ]),
-            client: "Safari 17.4"
+            client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari"
         ))
 
         requests.append(request(
@@ -595,7 +640,10 @@ enum SampleTraffic {
                 ("Location", "https://example.com/"),
                 ("Cache-Control", "max-age=3600"),
             ]),
-            client: "curl/8.4.0"
+            client: "curl/8.4.0",
+            clientPID: 4412,
+            clientAppName: "curl",
+            clientAppPath: "/usr/bin/curl"
         ))
 
         requests.append(request(
@@ -609,6 +657,9 @@ enum SampleTraffic {
                 ("Accept", "application/json"),
             ]),
             client: "Safari 17.4",
+            clientPID: 1234,
+            clientAppName: "Safari",
+            clientAppPath: "/Applications/Safari.app/Contents/MacOS/Safari",
             error: "Could not resolve host: nodename nor servname provided, or not known"
         ))
 
@@ -631,6 +682,9 @@ enum SampleTraffic {
         intercepted: Bool = true,
         pinned: Bool = false,
         client: String? = nil,
+        clientPID: Int32? = nil,
+        clientAppName: String? = nil,
+        clientAppPath: String? = nil,
         error: String? = nil,
         isWebSocket: Bool = false,
         webSocketMessages: [WebSocketMessage] = []
@@ -664,6 +718,9 @@ enum SampleTraffic {
             errorMessage: error,
             isPinned: pinned,
             clientSignature: client,
+            clientPID: clientPID,
+            clientAppName: clientAppName,
+            clientAppPath: clientAppPath,
             webSocketMessages: webSocketMessages,
             isWebSocket: isWebSocket
         )

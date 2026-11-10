@@ -404,6 +404,20 @@ final class WebSocketCaptureSession: @unchecked Sendable {
         }
     }
 
+    /// Applies a late client-process attribution to the base capture and re-emits it.
+    func applyClientProcess(_ process: ClientProcess?) {
+        guard let process else { return }
+        lock.lock()
+        var updated = request
+        updated.applyClientProcess(process)
+        request = updated
+        if !finished {
+            dirty = true
+            scheduleFlushLocked()
+        }
+        lock.unlock()
+    }
+
     /// Publishes the final snapshot (safe to call multiple times).
     func flushFinal() {
         lock.lock()

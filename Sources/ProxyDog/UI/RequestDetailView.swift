@@ -181,6 +181,16 @@ private struct OverviewTab: View {
                     if let client = request.clientAppName {
                         DetailFieldRow(label: String(localized: "Client"), value: client)
                     }
+                    if let pid = request.clientPID {
+                        processRow(pid: pid)
+                    }
+                    if let userAgent = request.userAgent {
+                        DetailFieldRow(
+                            label: String(localized: "User-Agent"),
+                            value: userAgent,
+                            lineLimit: 3
+                        )
+                    }
                     if !request.isWebSocket {
                         DetailFieldRow(
                             label: String(localized: "Body size"),
@@ -250,6 +260,32 @@ private struct OverviewTab: View {
                 content()
             }
         }
+    }
+
+    /// Local process that opened the connection; hovering reveals the executable path.
+    @ViewBuilder
+    private func processRow(pid: Int32) -> some View {
+        if let path = request.clientAppPath, !path.isEmpty {
+            processRowContent(pid: pid)
+                .help(path)
+        } else {
+            processRowContent(pid: pid)
+        }
+    }
+
+    private func processRowContent(pid: Int32) -> some View {
+        HStack(alignment: .center, spacing: DS.Space.x3) {
+            Text(String(localized: "Process"))
+                .font(DS.Typography.ui(11.5))
+                .foregroundStyle(DSColor.textSecondary)
+                .frame(width: 104, alignment: .leading)
+            Text(String(format: "pid %lld", Int64(pid)))
+                .font(DS.Typography.mono(11.5))
+                .foregroundStyle(DSColor.textSecondary)
+                .monospacedDigit()
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: 20)
     }
 
     private var webSocketConnected: Bool {

@@ -42,7 +42,14 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
     var state: CaptureState
     var errorMessage: String?
     var isPinned: Bool
+    /// User-Agent-derived client signature (e.g. "Safari/605.1.15"), when present.
     var clientSignature: String?
+    /// PID of the local process that opened the connection, when attribution succeeded.
+    var clientPID: Int32?
+    /// Display name of the local app, e.g. "Safari" (resolved through libproc).
+    var clientAppName: String?
+    /// Executable path of the local app, when known.
+    var clientAppPath: String?
 
     /// Captured WebSocket messages, in arrival order (empty for non-WebSocket exchanges).
     var webSocketMessages: [WebSocketMessage]
@@ -68,6 +75,9 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         errorMessage: String? = nil,
         isPinned: Bool = false,
         clientSignature: String? = nil,
+        clientPID: Int32? = nil,
+        clientAppName: String? = nil,
+        clientAppPath: String? = nil,
         webSocketMessages: [WebSocketMessage] = [],
         isWebSocket: Bool = false
     ) {
@@ -88,6 +98,9 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         self.errorMessage = errorMessage
         self.isPinned = isPinned
         self.clientSignature = clientSignature
+        self.clientPID = clientPID
+        self.clientAppName = clientAppName
+        self.clientAppPath = clientAppPath
         self.webSocketMessages = webSocketMessages
         self.isWebSocket = isWebSocket
     }
@@ -154,7 +167,8 @@ extension CapturedRequest {
         state == .failed || (statusCode.map { $0 >= 400 } ?? false)
     }
 
-    var clientAppName: String? {
+    /// User-Agent signature shown as a separate "User-Agent" row in the inspector.
+    var userAgent: String? {
         guard let clientSignature, !clientSignature.isEmpty else { return nil }
         return clientSignature
     }

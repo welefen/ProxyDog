@@ -9,6 +9,10 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.27.0"),
     ],
     targets: [
+        .target(
+            name: "ProcessProbe",
+            path: "Sources/ProcessProbe"
+        ),
         .executableTarget(
             name: "ProxyDog",
             dependencies: [
@@ -16,6 +20,7 @@ let package = Package(
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOSSL", package: "swift-nio-ssl"),
+                "ProcessProbe",
             ],
             path: "Sources/ProxyDog"
         )

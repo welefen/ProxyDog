@@ -343,6 +343,8 @@ final class SOCKS5ListenerHandler: ChannelInboundHandler, RemovableChannelHandle
     private let sink: CaptureSink
     private let certificateAuthority: CertificateAuthority
     private let upstreamProxyProvider: @Sendable () -> UpstreamProxy?
+    /// Local app that owns this SOCKS5 client connection (attributed once per connection).
+    private let clientIdentity = ClientIdentity()
 
     private var channel: Channel?
     private var context: ChannelHandlerContext?
@@ -374,6 +376,25 @@ final class SOCKS5ListenerHandler: ChannelInboundHandler, RemovableChannelHandle
         self.context = context
         timeoutTask = context.eventLoop.scheduleTask(in: handshakeTimeout) { [weak self] in
             self?.abortForTimeout()
+        }
+    }
+
+    func channelActive(context: ChannelHandlerContext) {
+        attributeClientProcess(context: context)
+        context.fireChannelActive()
+    }
+
+    private func attributeClientProcess(context: ChannelHandlerContext) {
+        guard let peerPort = context.channel.remoteAddress?.port else { return }
+        let listenPort = context.channel.localAddress?.port ?? 0
+        let identity = clientIdentity
+        let eventLoop = context.eventLoop
+        ClientProcessAttributor.shared.attribute(
+            peerPort: UInt16(clamping: peerPort),
+            listenPort: UInt16(clamping: listenPort),
+            eventLoop: eventLoop
+        ) { process in
+            identity.resolve(process)
         }
     }
 
@@ -562,7 +583,7 @@ final class SOCKS5ListenerHandler: ChannelInboundHandler, RemovableChannelHandle
                     state: .failed,
                     errorMessage: message
                 )
-                self.sink.captureDidUpdate(request)
+                self.emitCapture(request, eventLoop: context.eventLoop)
                 self.sendSOCKSReply(SOCKS5.replyCode(for: error), closeAfter: true)
             }
         }
@@ -608,7 +629,8 @@ final class SOCKS5ListenerHandler: ChannelInboundHandler, RemovableChannelHandle
                         intercepted: true,
                         responseEncoder: responseEncoder,
                         requestDecoderWrapper: decoderWrapper,
-                        upstreamProxyProvider: self.upstreamProxyProvider
+                        upstreamProxyProvider: self.upstreamProxyProvider,
+                        clientIdentity: self.clientIdentity
                     )
                     let serverHandler = NIOSSLServerHandler(context: tlsContext)
                     return channel.pipeline.removeHandler(self)
@@ -645,7 +667,8 @@ final class SOCKS5ListenerHandler: ChannelInboundHandler, RemovableChannelHandle
             intercepted: false,
             responseEncoder: responseEncoder,
             requestDecoderWrapper: decoderWrapper,
-            upstreamProxyProvider: upstreamProxyProvider
+            upstreamProxyProvider: upstreamProxyProvider,
+            clientIdentity: clientIdentity
         )
 
         channel.setOption(ChannelOptions.autoRead, value: false)
@@ -701,6 +724,22 @@ final class SOCKS5ListenerHandler: ChannelInboundHandler, RemovableChannelHandle
     }
 
     // MARK: Helpers
+
+    /// Emits a capture with client-process attribution, re-emitting a patched snapshot if
+    /// the libproc probe finishes later.
+    private func emitCapture(_ request: CapturedRequest, eventLoop: EventLoop) {
+        var attributed = request
+        attributed.applyClientProcess(clientIdentity.current)
+        sink.captureDidUpdate(attributed)
+
+        guard clientIdentity.current == nil else { return }
+        clientIdentity.observe(on: eventLoop) { [weak self] process in
+            guard let self, let process else { return }
+            var patched = request
+            patched.applyClientProcess(process)
+            self.sink.captureDidUpdate(patched)
+        }
+    }
 
     private func sendSOCKSReply(_ reply: UInt8, closeAfter: Bool) {
         sendRaw([0x05, reply, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], closeAfter: closeAfter)
