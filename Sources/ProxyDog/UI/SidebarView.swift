@@ -35,20 +35,21 @@ struct SidebarView: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(spacing: DS.Space.x2) {
-            AppBrandIcon(size: 22)
+        HStack(spacing: DS.Space.x2 + 2) {
+            AppBrandIcon(size: 30)
             Text("ProxyDog")
-                .font(DS.Typography.ui(13.5, .semibold))
+                .font(DS.Typography.ui(16, .semibold))
                 .foregroundStyle(DSColor.textPrimary)
             Text(AppInfo.versionLabel)
-                .font(DS.Typography.ui(10))
+                .font(DS.Typography.ui(11))
                 .foregroundStyle(DSColor.textMuted)
                 .monospacedDigit()
+                .padding(.leading, 1)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, DS.Space.x3)
-        .padding(.top, DS.Space.x2)
-        .padding(.bottom, DS.Space.x3)
+        .padding(.top, DS.Space.x3)
+        .padding(.bottom, DS.Space.x4)
     }
 
     // MARK: Sections
