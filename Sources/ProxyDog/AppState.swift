@@ -62,8 +62,12 @@ final class AppState: ObservableObject {
             DispatchQueue.main.async {
                 self?.objectWillChange.send()
             }
+            Task { @MainActor in
+                self?.syncFaviconRoute()
+            }
         }
         store.ignoresOwnTraffic = settings.ignoreOwnTraffic
+        syncFaviconRoute()
         ignoreOwnTrafficCancellable = settings.$ignoreOwnTraffic.sink { [weak self] value in
             Task { @MainActor in
                 self?.store.ignoresOwnTraffic = value
@@ -366,6 +370,17 @@ final class AppState: ObservableObject {
             isSystemProxyEnabled = false
             errorMessage = error.localizedDescription
         }
+        syncFaviconRoute()
+    }
+
+    /// Favicons are fetched by the app itself; route them the same way the proxy reaches
+    /// the internet (upstream proxy, then system proxy, then direct) so icons for sites
+    /// that need the VPN are reachable without looping through ProxyDog.
+    private func syncFaviconRoute() {
+        FaviconStore.shared.updateRoute(
+            upstream: upstreamProxyFromSettings(),
+            ownPort: settings.port
+        )
     }
 
     func refreshSystemProxyState() {
