@@ -199,8 +199,7 @@ struct RewriteRuleEditorView: View {
             }
             RewriteHairline()
             RewriteEditorRow(label: "Method", hint: "Empty matches any method.") {
-                RewriteTextField(text: methodBinding, mono: true, alignment: .leading)
-                    .frame(width: 90)
+                PDMethodPicker(method: methodBinding)
             }
             RewriteHairline()
             RewriteEditorRow(label: "URL pattern", hint: "Matched against the full URL; regular expression or plain text.") {

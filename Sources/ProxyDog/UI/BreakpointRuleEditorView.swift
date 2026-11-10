@@ -202,8 +202,7 @@ struct BreakpointRuleEditorView: View {
             }
             BreakpointHairline()
             BreakpointEditorRow(label: "Method", hint: "Empty matches any method.") {
-                BreakpointTextField(text: methodBinding, mono: true)
-                    .frame(width: 90)
+                PDMethodPicker(method: methodBinding)
             }
             BreakpointHairline()
             BreakpointEditorRow(label: "URL pattern", hint: "Matched against the full URL; regular expression or plain text.") {

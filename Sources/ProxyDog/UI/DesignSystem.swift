@@ -667,3 +667,74 @@ extension View {
         }
     }
 }
+
+/// Compact dropdown for an HTTP method filter. The empty value means "any method".
+struct PDMethodPicker: View {
+    @Binding var method: String
+    @State private var isPresented = false
+
+    static let options = ["", "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+
+    private var currentLabel: String {
+        method.isEmpty ? String(localized: "Any method") : method
+    }
+
+    var body: some View {
+        Button {
+            isPresented.toggle()
+        } label: {
+            HStack(spacing: DS.Space.x2) {
+                Text(currentLabel)
+                    .font(DS.Typography.mono(12))
+                    .foregroundStyle(method.isEmpty ? DSColor.textMuted : DSColor.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8.5, weight: .semibold))
+                    .foregroundStyle(DSColor.textMuted)
+            }
+            .padding(.horizontal, DS.Space.x2)
+            .frame(width: 112, height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                    .fill(DSColor.raised)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                            .strokeBorder(DSColor.border, lineWidth: 1)
+                    )
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Self.options, id: \.self) { option in
+                    let selected = option == method
+                    Button {
+                        method = option
+                        isPresented = false
+                    } label: {
+                        HStack(spacing: DS.Space.x2) {
+                            Text(option.isEmpty ? String(localized: "Any method") : option)
+                                .font(DS.Typography.mono(12))
+                                .foregroundStyle(DSColor.textPrimary)
+                            Spacer(minLength: 0)
+                            if selected {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(DSColor.accent)
+                            }
+                        }
+                        .padding(.horizontal, DS.Space.x2)
+                        .frame(height: 26)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(4)
+            .frame(width: 150)
+        }
+        .accessibilityLabel("Method")
+    }
+}

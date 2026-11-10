@@ -157,3 +157,4 @@
 "Turn on HTTP proxy first." = "请先开启 HTTP 代理";
 "Turn on SOCKS5 proxy first." = "请先开启 SOCKS5 代理";
 "Fill from system SOCKS5 proxy" = "从系统 SOCKS 代理填入";
+"Any method" = "任意方法";
