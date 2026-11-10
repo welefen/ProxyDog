@@ -154,3 +154,8 @@
 /* Body decode marker */
 "%@ decoded" = "%@ 已解压";
 "Captured body was decompressed from %@" = "抓包正文已从 %@ 解压";
+
+/* Body viewer */
+"Show all" = "显示全部";
+"Show less" = "收起";
+"Showing all of %@" = "已显示全部（共 %@）";

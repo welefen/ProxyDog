@@ -155,6 +155,9 @@ private struct BodySectionView: View {
 
     @State private var showsRaw = false
     @State private var didCopy = false
+    /// When the captured body is larger than `displayLimit` the viewer starts trimmed;
+    /// the notice offers "Show all" to render the whole payload on demand.
+    @State private var showsFullBody = false
 
     private var data: Data? {
         side == .request ? request.requestBody : request.responseBody
@@ -204,6 +207,9 @@ private struct BodySectionView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: hasBody ? .infinity : nil, alignment: .top)
         .background(hasBody ? DSColor.raised : DSColor.base)
+        .onChange(of: request.id) { _, _ in
+            showsFullBody = false
+        }
     }
 
     // MARK: Header
@@ -347,10 +353,27 @@ private struct BodySectionView: View {
                     noticeRow(String(localized: "Body captured up to the 2 MB limit"))
                 }
                 if displayTruncated {
-                    noticeRow(String(
-                        format: String(localized: "Showing the first 512 KB of %@"),
-                        PDFormat.bytes(data.count)
-                    ))
+                    if showsFullBody {
+                        noticeRow(
+                            String(
+                                format: String(localized: "Showing all of %@"),
+                                PDFormat.bytes(data.count)
+                            ),
+                            actionTitle: String(localized: "Show less")
+                        ) {
+                            showsFullBody = false
+                        }
+                    } else {
+                        noticeRow(
+                            String(
+                                format: String(localized: "Showing the first 512 KB of %@"),
+                                PDFormat.bytes(data.count)
+                            ),
+                            actionTitle: String(localized: "Show all")
+                        ) {
+                            showsFullBody = true
+                        }
+                    }
                 }
                 PDHairline()
             }
@@ -359,12 +382,28 @@ private struct BodySectionView: View {
     }
 
     private func noticeRow(_ text: String) -> some View {
+        noticeRow(text, actionTitle: nil, action: nil)
+    }
+
+    private func noticeRow(
+        _ text: String,
+        actionTitle: String?,
+        action: (() -> Void)?
+    ) -> some View {
         HStack(spacing: DS.Space.x1 + 2) {
             Image(systemName: "info.circle")
                 .font(.system(size: 10, weight: .medium))
             Text(text)
                 .font(DS.Typography.ui(10.5))
             Spacer(minLength: 0)
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.plain)
+                    .font(DS.Typography.ui(10.5, .medium))
+                    .foregroundStyle(DSColor.accent)
+                    .contentShape(Rectangle())
+                    .help(actionTitle)
+            }
         }
         .foregroundStyle(DSColor.textMuted)
         .padding(.horizontal, DS.Space.x3)
@@ -406,7 +445,12 @@ private struct BodySectionView: View {
     }
 
     private func displayText(from data: Data) -> String {
-        let limited = data.count > Self.displayLimit ? data.prefix(Self.displayLimit) : data
+        let limited: Data
+        if data.count > Self.displayLimit && !showsFullBody {
+            limited = data.prefix(Self.displayLimit)
+        } else {
+            limited = data
+        }
         if let text = String(data: limited, encoding: .utf8) {
             return text
         }
@@ -417,7 +461,7 @@ private struct BodySectionView: View {
 
     private func copyBody() {
         guard let data else { return }
-        if let text = String(data: data.prefix(Self.displayLimit), encoding: .utf8) {
+        if let text = String(data: data, encoding: .utf8) {
             PDPasteboard.copy(text)
         } else {
             PDPasteboard.copy(data.base64EncodedString())

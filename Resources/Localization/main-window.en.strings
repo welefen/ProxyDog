@@ -152,3 +152,8 @@
 
 /* Compressed bodies */
 "%@ compressed payload; decoding is not supported yet, showing raw bytes" = "%@ compressed payload; decoding is not supported yet, showing raw bytes";
+
+/* Body viewer */
+"Show all" = "Show all";
+"Show less" = "Show less";
+"Showing all of %@" = "Showing all of %@";
