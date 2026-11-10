@@ -251,7 +251,7 @@ struct SettingsView: View {
                 SettingsHairline()
                 SettingsRow(
                     title: "Upstream proxy",
-                    hint: "Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts."
+                    hint: "Sends outbound traffic through an existing proxy such as a VPN client. The HTTP address is used when filled, otherwise SOCKS5; ProxyDog still captures and decrypts."
                 ) {
                     Toggle("", isOn: Binding(
                         get: { settings.upstreamProxyEnabled },
@@ -265,24 +265,8 @@ struct SettingsView: View {
                 }
                 SettingsHairline()
                 SettingsRow(
-                    title: "Upstream protocol",
-                    hint: "Both addresses are stored; the selected protocol is used."
-                ) {
-                    PDSegmented(
-                        items: UpstreamProxyKind.allCases.map { kind in
-                            PDSegmented<UpstreamProxyKind>.Item(value: kind, label: kind.label)
-                        },
-                        selection: Binding(
-                            get: { settings.upstreamProxyKind },
-                            set: { applyUpstreamKindChange($0) }
-                        )
-                    )
-                    .disabled(!settings.upstreamProxyEnabled)
-                }
-                SettingsHairline()
-                SettingsRow(
                     title: "HTTP upstream",
-                    errorText: settings.upstreamProxyKind == .httpConnect ? upstreamError : nil
+                    errorText: settings.effectiveUpstreamKind == .httpConnect ? upstreamError : nil
                 ) {
                     HStack(spacing: DS.Space.x2) {
                         TextField(detectedUpstreamHost, text: $upstreamHTTPHostText)
@@ -370,7 +354,7 @@ struct SettingsView: View {
                 SettingsHairline()
                 SettingsRow(
                     title: "SOCKS5 upstream",
-                    errorText: settings.upstreamProxyKind == .socks5 ? upstreamError : nil
+                    errorText: settings.effectiveUpstreamKind == .socks5 ? upstreamError : nil
                 ) {
                     HStack(spacing: DS.Space.x2) {
                         TextField("127.0.0.1", text: $upstreamSOCKSHostText)
@@ -642,7 +626,7 @@ struct SettingsView: View {
         upstreamHTTPPortFocused = false
         upstreamSOCKSHostFocused = false
         upstreamSOCKSPortFocused = false
-        let kind = settings.upstreamProxyKind
+        let kind = settings.effectiveUpstreamKind
         if let error = state.applyUpstreamProxy(
             enabled: enabled,
             host: settings.upstreamHost(for: kind),
@@ -657,41 +641,20 @@ struct SettingsView: View {
         syncUpstreamFields()
     }
 
-    private func applyUpstreamKindChange(_ kind: UpstreamProxyKind) {
-        guard kind != settings.upstreamProxyKind else { return }
-        if let error = state.applyUpstreamProxy(
-            enabled: settings.upstreamProxyEnabled,
-            host: settings.upstreamHost(for: kind),
-            port: settings.upstreamPort(for: kind),
-            kind: kind
-        ) {
-            // Nothing is applied on failure; the segmented control falls back to the
-            // protocol that is still selected in settings.
-            upstreamError = error
-            return
-        }
-        upstreamError = nil
-        syncUpstreamFields()
-    }
-
     private func commitUpstreamAddress(_ kind: UpstreamProxyKind) {
-        guard settings.upstreamProxyEnabled else { return }
         let host = hostText(for: kind)
         let port = parsedPort(for: kind)
-        if settings.upstreamProxyKind == kind {
-            if let error = state.applyUpstreamProxy(enabled: true, host: host, port: port, kind: kind) {
-                upstreamError = error
-                syncUpstreamFields(for: kind)
-                return
-            }
-            upstreamError = nil
-            syncUpstreamFields(for: kind)
+        if let error = state.applyUpstreamProxy(
+            enabled: settings.upstreamProxyEnabled,
+            host: host,
+            port: port,
+            kind: kind
+        ) {
+            upstreamError = error
         } else {
-            // Pre-fill the address of the protocol that is not in use yet.
-            settings.setUpstreamAddress(host: host, port: port, kind: kind)
             upstreamError = nil
-            syncUpstreamFields(for: kind)
         }
+        syncUpstreamFields()
     }
 
     private func fillUpstreamFromSystem() {

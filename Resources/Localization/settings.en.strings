@@ -142,3 +142,6 @@
 
 /* Certificate actions */
 "Export the root certificate file for other devices" = "Export the root certificate file for other devices";
+
+/* Upstream hint */
+"Sends outbound traffic through an existing proxy such as a VPN client. The HTTP address is used when filled, otherwise SOCKS5; ProxyDog still captures and decrypts." = "Sends outbound traffic through an existing proxy such as a VPN client. The HTTP address is used when filled, otherwise SOCKS5; ProxyDog still captures and decrypts.";

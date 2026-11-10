@@ -229,14 +229,14 @@ final class AppState: ObservableObject {
     /// the configuration is invalid (nothing is applied in that case).
     @discardableResult
     func applyUpstreamProxy(enabled: Bool, host: String, port: Int) -> String? {
-        applyUpstreamProxy(enabled: enabled, host: host, port: port, kind: settings.upstreamProxyKind)
+        applyUpstreamProxy(enabled: enabled, host: host, port: port, kind: settings.effectiveUpstreamKind)
     }
 
     @discardableResult
-    func applyUpstreamProxy(enabled: Bool, host: String, port: Int, kind: UpstreamProxyKind) -> String? {
+    func applyUpstreamProxy(enabled: Bool, host: String, port: Int, kind requestedKind: UpstreamProxyKind) -> String? {
         var host = host
         var port = port
-        var kind = kind
+        var kind = requestedKind
         // Turning the switch on with an empty address: use the detected system proxy first.
         if enabled, host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
            let detected = detectSystemUpstreamProxy() {
@@ -245,30 +245,50 @@ final class AppState: ObservableObject {
             kind = .httpConnect
         }
         let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        let previousHost = settings.upstreamHost(for: kind)
+        let previousPort = settings.upstreamPort(for: kind)
+        let previousEnabled = settings.upstreamProxyEnabled
+        let previousKind = settings.upstreamProxyKind
+
+        // Store the edited address first; the protocol in use is derived from what is filled.
+        settings.setUpstreamAddress(host: trimmedHost, port: port, kind: kind)
+        let effectiveKind = settings.effectiveUpstreamKind
+        func rollback() {
+            settings.setUpstreamAddress(host: previousHost, port: previousPort, kind: kind)
+            settings.upstreamProxyKind = previousKind
+            settings.upstreamProxyEnabled = previousEnabled
+        }
+
         if enabled {
-            guard !trimmedHost.isEmpty else {
+            let effectiveHost = settings.upstreamHost(for: effectiveKind)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let effectivePort = settings.upstreamPort(for: effectiveKind)
+            guard !effectiveHost.isEmpty else {
+                rollback()
                 return String(localized: "Enter the host of the upstream proxy.")
             }
-            guard (1...65535).contains(port) else {
+            guard (1...65535).contains(effectivePort) else {
+                rollback()
                 return String(localized: "Port must be between 1 and 65535.")
             }
-            let candidate = UpstreamProxy(kind: kind, host: trimmedHost, port: port)
+            let candidate = UpstreamProxy(kind: effectiveKind, host: effectiveHost, port: effectivePort)
             if candidate.isLoopback, candidate.port == settings.port {
+                rollback()
                 return String(localized: "The upstream proxy cannot be ProxyDog itself.")
             }
             if candidate.isLoopback, settings.socksProxyEnabled, candidate.port == settings.socksProxyPort {
+                rollback()
                 return String(localized: "The upstream proxy cannot be ProxyDog itself.")
             }
         }
 
-        let changed = settings.upstreamProxyEnabled != enabled
-            || settings.upstreamHost(for: kind) != trimmedHost
-            || settings.upstreamPort(for: kind) != port
-            || settings.upstreamProxyKind != kind
+        let changed = previousEnabled != enabled
+            || previousKind != effectiveKind
+            || settings.upstreamHost(for: effectiveKind) != previousHost
+            || settings.upstreamPort(for: effectiveKind) != previousPort
 
         settings.upstreamProxyEnabled = enabled
-        settings.upstreamProxyKind = kind
-        settings.setUpstreamAddress(host: trimmedHost, port: port, kind: kind)
+        settings.upstreamProxyKind = effectiveKind
         proxy.upstreamProxy = upstreamProxyFromSettings()
 
         if changed, proxy.status.isRunning || proxyStatus.isRunning {
@@ -331,11 +351,13 @@ final class AppState: ObservableObject {
     /// when the settings pane opens so it shows the detected proxy instead of empty fields.
     @discardableResult
     func autoFillUpstreamProxyIfEmpty() -> Bool {
-        let hostEmpty = settings.upstreamHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || settings.upstreamPort <= 0
-        guard hostEmpty, let detected = detectSystemUpstreamProxy() else { return false }
-        settings.upstreamProxyKind = .httpConnect
+        let httpEmpty = settings.upstreamHTTPHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || settings.upstreamHTTPPort <= 0
+        let socksEmpty = settings.upstreamSOCKSHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || settings.upstreamSOCKSPort <= 0
+        guard httpEmpty, socksEmpty, let detected = detectSystemUpstreamProxy() else { return false }
         settings.setUpstreamAddress(host: detected.host, port: detected.port, kind: .httpConnect)
+        settings.upstreamProxyKind = settings.effectiveUpstreamKind
         return true
     }
 
@@ -344,15 +366,15 @@ final class AppState: ObservableObject {
     @discardableResult
     func detectUpstreamProxyFromSystem() -> Bool {
         guard let detected = detectSystemUpstreamProxy() else { return false }
-        settings.upstreamProxyKind = .httpConnect
         settings.setUpstreamAddress(host: detected.host, port: detected.port, kind: .httpConnect)
+        settings.upstreamProxyKind = settings.effectiveUpstreamKind
         return true
     }
 
     /// Current upstream configuration derived from settings, nil when disabled/invalid.
     func upstreamProxyFromSettings() -> UpstreamProxy? {
         guard settings.upstreamProxyEnabled else { return nil }
-        let kind = settings.upstreamProxyKind
+        let kind = settings.effectiveUpstreamKind
         let host = settings.upstreamHost(for: kind).trimmingCharacters(in: .whitespacesAndNewlines)
         let port = settings.upstreamPort(for: kind)
         guard !host.isEmpty, (1...65535).contains(port) else { return nil }

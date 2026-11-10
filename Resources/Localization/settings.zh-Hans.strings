@@ -142,3 +142,6 @@
 
 /* Certificate actions */
 "Export the root certificate file for other devices" = "导出根证书文件（可安装到 iPhone 等其它设备）";
+
+/* Upstream hint */
+"Sends outbound traffic through an existing proxy such as a VPN client. The HTTP address is used when filled, otherwise SOCKS5; ProxyDog still captures and decrypts." = "通过已有的 HTTP 或 SOCKS5 代理（例如 VPN 客户端）出站；填写了 HTTP 上游就优先用它，否则使用 SOCKS5 上游。ProxyDog 仍然负责抓包与解密。";

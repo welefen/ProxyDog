@@ -99,6 +99,16 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(upstreamProxyKind.rawValue, forKey: Key.upstreamKind) }
     }
 
+    /// Protocol used for chaining: an HTTP address wins when present, otherwise SOCKS5.
+    /// Both addresses can stay stored; the switch is implicit so there is no protocol picker.
+    var effectiveUpstreamKind: UpstreamProxyKind {
+        let httpHost = upstreamHTTPHost.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !httpHost.isEmpty, (1...65535).contains(upstreamHTTPPort) { return .httpConnect }
+        let socksHost = upstreamSOCKSHost.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !socksHost.isEmpty, (1...65535).contains(upstreamSOCKSPort) { return .socks5 }
+        return upstreamProxyKind
+    }
+
     /// Address of the currently selected upstream protocol.
     var upstreamHost: String {
         upstreamProxyKind == .httpConnect ? upstreamHTTPHost : upstreamSOCKSHost
