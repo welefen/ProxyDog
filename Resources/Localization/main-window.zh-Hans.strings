@@ -202,3 +202,4 @@
 /* Context menu rules */
 "Rewrite this URL…" = "重写此地址…";
 "Breakpoint this URL…" = "为此地址打断点…";
+"Rewrite rules and breakpoints" = "重写规则和断点";

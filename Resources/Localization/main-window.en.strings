@@ -200,3 +200,4 @@
 /* Context menu rules */
 "Rewrite this URL…" = "Rewrite this URL…";
 "Breakpoint this URL…" = "Breakpoint this URL…";
+"Rewrite rules and breakpoints" = "Rewrite rules and breakpoints";
