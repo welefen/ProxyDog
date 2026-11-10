@@ -26,6 +26,10 @@ Body 详情：JSON 树与 Pretty/Raw 切换。
 
 ![请求详情](Docs/screenshots/request-body.png)
 
+类型筛选：Chrome DevTools 风格，按 Fetch/XHR、文档、CSS、JS、字体、图片、媒体、清单、Socket、Wasm、其他筛选。
+
+![类型筛选](Docs/screenshots/type-filter.png)
+
 WebSocket 消息：101 握手、双向消息列表、载荷（文本/JSON/二进制 Hex）查看。
 
 ![WebSocket](Docs/screenshots/websocket.png)
