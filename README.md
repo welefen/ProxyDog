@@ -63,7 +63,7 @@ Body 详情：JSON 树与 Pretty/Raw 切换。
 
 ```bash
 curl -x http://127.0.0.1:8888 http://example.com/
-curl -k -x http://127.0.0.1:8888 https://example.com/   # -k：curl 尚未信任 ProxyDog 根证书
+curl -x http://127.0.0.1:8888 https://example.com/    # 未安装根证书时 curl 需要加 -k
 ```
 
 抓到的请求会实时出现在列表中，点击任意一条查看详情。
@@ -71,7 +71,7 @@ curl -k -x http://127.0.0.1:8888 https://example.com/   # -k：curl 尚未信任
 ## 根证书
 
 - 位置：`~/Library/Application Support/ProxyDog/Certificates/ca.crt`
-- 安装 / 移除：设置页 → Certificate；安装需要管理员授权，走系统标准授权弹窗。
+- 安装 / 移除：设置页 → Certificate；安装会把证书加入登录钥匙串并写入用户信任域，系统会弹出标准授权弹窗。如果安装后仍显示「未受信任」，可在「钥匙串访问」中把 `ProxyDog Root CA` 手动设为「始终信任」，然后回到应用点一次刷新。
 - 证书仅用于本机抓包调试，卸载应用后建议在「钥匙串访问」中删除该根证书。
 
 ## 数据埋点

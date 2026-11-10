@@ -1,6 +1,7 @@
 import Darwin
 import Foundation
 import NIOSSL
+import Security
 
 /// Generates and stores the ProxyDog root CA plus per-host leaf certificates used
 /// for TLS interception, and knows whether the root is trusted by the system.
@@ -91,29 +92,23 @@ final class CertificateAuthority: @unchecked Sendable {
 
     // MARK: - Keychain trust
 
-    /// Whether the root certificate is installed as a trusted root in the system keychain.
+    /// Whether the root certificate is trusted right now.
+    ///
+    /// Evaluated in-process with the Security framework (the same path Safari and
+    /// `URLSession` use), so user-domain *and* admin-domain trust settings are honoured.
+    /// `security verify-cert` is only kept as a fallback probe.
     func isTrustedInKeychain() -> Bool {
+        // 1) User-domain trust settings list our CA. This is what `security
+        //    add-trusted-cert` writes first and it is the signal Proxyman/Charles leave
+        //    behind, so check it before evaluating a full chain.
+        if userTrustSettingsContainRoot() { return true }
+
         guard let probe = probeLeafCertificatePath() else { return false }
 
-        // Cheap first pass: is our CA installed in a keychain at all?
-        var installed = false
-        let keychains = [
-            "/Library/Keychains/System.keychain",
-            (NSHomeDirectory() as NSString).appendingPathComponent("Library/Keychains/login.keychain-db"),
-        ]
-        for keychain in keychains {
-            guard let result = try? ProcessRunner.run(
-                "/usr/bin/security",
-                ["find-certificate", "-c", Self.rootCommonName, "-a", keychain]
-            ) else { continue }
-            if result.succeeded, result.combinedOutput.contains(Self.rootCommonName) {
-                installed = true
-                break
-            }
-        }
-        guard installed else { return false }
+        // 2) Chain evaluation through the Security framework (honours both trust domains).
+        if Self.evaluateServerTrust(forCertificateAt: probe) { return true }
 
-        // Verify a leaf signed by our CA using the keychain trust settings.
+        // 3) Shell fallback for exotic keychain setups.
         guard let verify = try? ProcessRunner.run(
             "/usr/bin/security",
             ["verify-cert", "-c", probe.path, "-p", "ssl"]
@@ -121,21 +116,105 @@ final class CertificateAuthority: @unchecked Sendable {
         return verify.succeeded
     }
 
-    /// Adds the root certificate to the system keychain as a trusted root (asks for admin rights).
+    /// True when the root certificate appears in the user trust settings.
+    private func userTrustSettingsContainRoot() -> Bool {
+        guard let result = try? ProcessRunner.run("/usr/bin/security", ["dump-trust-settings"]) else {
+            return false
+        }
+        return result.succeeded && result.combinedOutput.contains(Self.rootCommonName)
+    }
+
+    /// Builds a chain for the probe leaf and evaluates it against the keychains, which
+    /// is what the rest of the system does when a TLS connection is checked.
+    static func evaluateServerTrust(forCertificateAt url: URL) -> Bool {
+        guard
+            let data = try? Data(contentsOf: url),
+            let certificate = SecCertificateCreateWithData(nil, data as CFData)
+        else { return false }
+        let policy = SecPolicyCreateSSL(true, nil)
+        var trust: SecTrust?
+        guard SecTrustCreateWithCertificates(certificate as CFTypeRef, policy, &trust) == errSecSuccess,
+              let trust
+        else { return false }
+        SecTrustSetNetworkFetchAllowed(trust, false)
+        var error: CFError?
+        return SecTrustEvaluateWithError(trust, &error)
+    }
+
+    /// Installs the root certificate as a trusted root.
+    ///
+    /// Strategy 1 mirrors Proxyman/Charles: import the certificate into the login
+    /// keychain and add *user-domain* trust settings. macOS asks for authentication in
+    /// its own security dialog; this is the path that `SecTrust` honours for the
+    /// logged-in user and it does not depend on a privileged helper.
+    ///
+    /// Strategy 2 is the old admin-domain install in `System.keychain`, still useful on
+    /// machines where the user-domain path is unavailable. The error reported to the UI
+    /// contains the output of both attempts so failures are diagnosable.
     func requestInstallTrust() throws {
         try prepareIfNeeded()
+
+        var failures: [String] = []
+
+        if let loginKeychain = Self.loginKeychainPath() {
+            do {
+                let result = try ProcessRunner.run("/usr/bin/security", [
+                    "add-trusted-cert",
+                    "-r", "trustRoot",
+                    "-k", loginKeychain,
+                    rootCertificateURL.path,
+                ])
+                if result.succeeded, waitForTrust() {
+                    return
+                }
+                if !result.succeeded {
+                    failures.append(Self.describe(result, command: "security add-trusted-cert (user keychain)"))
+                } else {
+                    failures.append("The certificate was imported into the login keychain but macOS still reports it as untrusted.")
+                }
+            } catch {
+                failures.append("security add-trusted-cert (user keychain): \(error.localizedDescription)")
+            }
+        } else {
+            failures.append("The login keychain could not be found.")
+        }
+
         let cert = ProcessRunner.shellQuote(rootCertificateURL.path)
         let command = [
             "set -e",
             "/usr/bin/security remove-trusted-cert -d \(cert) 2>/dev/null || true",
             "/usr/bin/security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain \(cert)",
         ].joined(separator: "; ")
-        try ProcessRunner.runAdminShell(command)
+        do {
+            try ProcessRunner.runAdminShell(command)
+            if waitForTrust() {
+                return
+            }
+            failures.append("The admin-domain install finished but the certificate is still reported as untrusted.")
+        } catch {
+            failures.append("security add-trusted-cert (system keychain): \(error.localizedDescription)")
+        }
+
+        throw ProxyError.authorizationFailed(failures.joined(separator: "\n"))
     }
 
-    /// Removes the trust setting again.
+
+    /// Removes the trust setting again (user domain first, then admin domain).
     func removeTrust() throws {
         try prepareIfNeeded()
+
+        if let loginKeychain = Self.loginKeychainPath() {
+            _ = try? ProcessRunner.run("/usr/bin/security", [
+                "remove-trusted-cert",
+                rootCertificateURL.path,
+            ])
+            _ = try? ProcessRunner.run("/usr/bin/security", [
+                "delete-certificate",
+                "-c", Self.rootCommonName,
+                loginKeychain,
+            ])
+        }
+
         let cert = ProcessRunner.shellQuote(rootCertificateURL.path)
         let name = ProcessRunner.shellQuote(Self.rootCommonName)
         let command = [
@@ -144,6 +223,33 @@ final class CertificateAuthority: @unchecked Sendable {
             "true",
         ].joined(separator: "; ")
         try ProcessRunner.runAdminShell(command)
+    }
+
+    /// Path of the login keychain of the current user.
+    private static func loginKeychainPath() -> String? {
+        let path = (NSHomeDirectory() as NSString).appendingPathComponent("Library/Keychains/login.keychain-db")
+        return FileManager.default.fileExists(atPath: path) ? path : nil
+    }
+
+    /// Trust settings are applied by a helper process; give the keychain a moment to
+    /// reflect them before telling the UI the install failed.
+    private func waitForTrust(attempts: Int = 8) -> Bool {
+        for _ in 0..<attempts {
+            if isTrustedInKeychain() {
+                return true
+            }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        return false
+    }
+
+    /// Human readable one-liner from a failed `security` invocation.
+    private static func describe(_ result: ProcessResult, command: String) -> String {
+        let output = result.combinedOutput
+        if output.isEmpty {
+            return "\(command) failed with exit code \(result.status)."
+        }
+        return "\(command): \(output)"
     }
 
     /// Exports the root certificate for manual installation (e.g. on another machine).

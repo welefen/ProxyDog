@@ -195,21 +195,45 @@ final class AppState: ObservableObject {
     }
 
     func installCertificate() {
-        do {
-            try CertificateAuthority.shared.requestInstallTrust()
-            refreshCertificateStatus()
-            Analytics.shared.track("certificate_installed")
-        } catch {
-            errorMessage = error.localizedDescription
+        // The install can block on a system authentication dialog, so it runs off the
+        // main actor and only hops back for the UI update / error alert.
+        Task {
+            do {
+                try await Task.detached { try CertificateAuthority.shared.requestInstallTrust() }.value
+                refreshCertificateStatus()
+                Analytics.shared.track("certificate_installed")
+            } catch {
+                errorMessage = error.localizedDescription
+                presentCertificateInstallFailure(error)
+            }
+        }
+    }
+
+    /// Certificate installation goes through several macOS security layers, so when it
+    /// fails the reason has to be visible instead of silently leaving the UI untrusted.
+    private func presentCertificateInstallFailure(_ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = String(localized: "Could not install the root certificate")
+        alert.informativeText = [
+            error.localizedDescription,
+            String(localized: "You can also double-click the certificate, open it in Keychain Access and set it to Always Trust."),
+        ].joined(separator: "\n\n")
+        alert.addButton(withTitle: String(localized: "OK"))
+        alert.addButton(withTitle: String(localized: "Reveal certificate"))
+        if alert.runModal() == .alertSecondButtonReturn {
+            NSWorkspace.shared.activateFileViewerSelecting([rootCertificateURL])
         }
     }
 
     func removeCertificate() {
-        do {
-            try CertificateAuthority.shared.removeTrust()
-            refreshCertificateStatus()
-        } catch {
-            errorMessage = error.localizedDescription
+        Task {
+            do {
+                try await Task.detached { try CertificateAuthority.shared.removeTrust() }.value
+                refreshCertificateStatus()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 

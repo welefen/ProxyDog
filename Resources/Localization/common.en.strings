@@ -11,6 +11,10 @@
 "Export HAR…" = "Export HAR…";
 
 /* Panels and errors */
+"Could not install the root certificate" = "Could not install the root certificate";
+"You can also double-click the certificate, open it in Keychain Access and set it to Always Trust." = "You can also double-click the certificate, open it in Keychain Access and set it to Always Trust.";
+"Reveal certificate" = "Reveal certificate";
+"OK" = "OK";
 "Export HAR" = "Export HAR";
 "Export Root Certificate" = "Export Root Certificate";
 "Port must be between 1 and 65535." = "Port must be between 1 and 65535.";

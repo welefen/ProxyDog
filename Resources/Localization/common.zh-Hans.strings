@@ -11,6 +11,10 @@
 "Export HAR…" = "导出 HAR…";
 
 /* Panels and errors */
+"Could not install the root certificate" = "无法安装根证书";
+"You can also double-click the certificate, open it in Keychain Access and set it to Always Trust." = "也可以双击该证书，在「钥匙串访问」中打开并把信任设置为「始终信任」。";
+"Reveal certificate" = "在访达中显示证书";
+"OK" = "好";
 "Export HAR" = "导出 HAR";
 "Export Root Certificate" = "导出根证书";
 "Port must be between 1 and 65535." = "端口必须在 1 到 65535 之间。";
