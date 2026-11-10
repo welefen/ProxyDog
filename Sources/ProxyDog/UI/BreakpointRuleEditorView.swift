@@ -19,15 +19,12 @@ struct BreakpointsSectionView: View {
                 .padding(.horizontal, DS.Space.x4)
                 .padding(.vertical, DS.Space.x3)
 
-            BreakpointHairline()
-
-            if store.rules.isEmpty {
-                emptyState
-            } else {
+            if !store.rules.isEmpty {
+                BreakpointHairline()
                 rulesList
+                BreakpointHairline()
             }
 
-            BreakpointHairline()
             addButton
         }
         .sheet(item: $editingRule) { rule in
@@ -113,22 +110,7 @@ struct BreakpointsSectionView: View {
             )
     }
 
-    // MARK: - Empty state and add action
-
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("No breakpoints yet")
-                .font(DS.Typography.ui(12))
-                .foregroundStyle(DSColor.textPrimary)
-            Text("Add a breakpoint to pause matching requests or responses.")
-                .font(DS.Typography.ui(11))
-                .foregroundStyle(DSColor.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, DS.Space.x4)
-        .padding(.vertical, DS.Space.x3)
-    }
+    // MARK: - Add action
 
     private var addButton: some View {
         Button {

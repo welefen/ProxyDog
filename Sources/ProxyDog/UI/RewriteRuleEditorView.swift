@@ -19,15 +19,12 @@ struct RewriteRulesSectionView: View {
                 .padding(.horizontal, DS.Space.x4)
                 .padding(.vertical, DS.Space.x3)
 
-            RewriteHairline()
-
-            if store.rules.isEmpty {
-                emptyState
-            } else {
+            if !store.rules.isEmpty {
+                RewriteHairline()
                 rulesList
+                RewriteHairline()
             }
 
-            RewriteHairline()
             addButton
         }
         .sheet(item: $editingRule) { rule in
@@ -108,22 +105,7 @@ struct RewriteRulesSectionView: View {
             )
     }
 
-    // MARK: - Empty state and add action
-
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("No rules yet")
-                .font(DS.Typography.ui(12))
-                .foregroundStyle(DSColor.textPrimary)
-            Text("Add a rule to redirect requests or patch request and response bodies.")
-                .font(DS.Typography.ui(11))
-                .foregroundStyle(DSColor.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, DS.Space.x4)
-        .padding(.vertical, DS.Space.x3)
-    }
+    // MARK: - Add action
 
     private var addButton: some View {
         Button {
