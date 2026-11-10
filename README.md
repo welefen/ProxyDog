@@ -2,8 +2,6 @@
 
 原生 macOS HTTP/HTTPS 抓包调试工具，界面与工作流参考 Proxyman。使用 Swift + SwiftUI + SwiftNIO 编写，无需 Xcode 工程即可构建。
 
-![主界面](Docs/screenshots/main-window.png)
-
 ## 功能
 
 - **HTTP / HTTPS 抓包**：本地 HTTP 代理监听 `127.0.0.1:8888`，通过本地根证书对 HTTPS 做 TLS 解密（MITM），明文与加密流量统一展示。
