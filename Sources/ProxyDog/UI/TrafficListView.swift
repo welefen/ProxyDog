@@ -50,6 +50,8 @@ struct TrafficListView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        // Search and the list actions live in one leading group so the buttons hug the
+        // search field instead of being pushed to the window's trailing edge.
         ToolbarItem(placement: .navigation) {
             HStack(spacing: DS.Space.x2) {
                 PDLiveDot(
@@ -57,49 +59,53 @@ struct TrafficListView: View {
                     color: captureDotColor,
                     idleColor: state.store.isPaused && state.isProxyRunning ? DSColor.amber : DSColor.textMuted
                 )
+
                 PDSearchField(
                     text: $state.searchText,
                     isFocused: $searchFocused,
                     placeholder: String(localized: "Search requests"),
-                    width: 220
+                    width: 340
                 )
+
+                Rectangle()
+                    .fill(DSColor.border)
+                    .frame(width: 1, height: 14)
+                    .padding(.horizontal, DS.Space.x1)
+
+                PDIconButton(
+                    symbol: state.store.isPaused ? "play.fill" : "pause.fill",
+                    help: state.store.isPaused
+                        ? String(localized: "Resume capturing")
+                        : String(localized: "Pause capturing"),
+                    role: state.store.isPaused ? .warning : .normal
+                ) {
+                    state.togglePause()
+                }
+
+                PDIconButton(symbol: "trash", help: String(localized: "Clear traffic")) {
+                    state.clearRequests()
+                }
+
+                PDIconButton(symbol: "square.and.arrow.up", help: String(localized: "Export HAR")) {
+                    state.presentHARExportPanel()
+                }
+
+                Rectangle()
+                    .fill(DSColor.border)
+                    .frame(width: 1, height: 14)
+                    .padding(.horizontal, DS.Space.x1)
+
+                PDIconButton(
+                    symbol: state.isProxyRunning ? "power.circle.fill" : "power",
+                    help: state.isProxyRunning
+                        ? String(localized: "Stop proxy")
+                        : String(localized: "Start proxy"),
+                    role: state.isProxyRunning ? .accent : .normal
+                ) {
+                    state.toggleProxy()
+                }
             }
             .padding(.trailing, DS.Space.x2)
-        }
-
-        ToolbarItemGroup(placement: .primaryAction) {
-            PDIconButton(
-                symbol: state.store.isPaused ? "play.fill" : "pause.fill",
-                help: state.store.isPaused
-                    ? String(localized: "Resume capturing")
-                    : String(localized: "Pause capturing"),
-                role: state.store.isPaused ? .warning : .normal
-            ) {
-                state.togglePause()
-            }
-
-            PDIconButton(symbol: "trash", help: String(localized: "Clear traffic")) {
-                state.clearRequests()
-            }
-
-            PDIconButton(symbol: "square.and.arrow.up", help: String(localized: "Export HAR")) {
-                state.presentHARExportPanel()
-            }
-
-            Rectangle()
-                .fill(DSColor.border)
-                .frame(width: 1, height: 14)
-                .padding(.horizontal, DS.Space.x1)
-
-            PDIconButton(
-                symbol: state.isProxyRunning ? "power.circle.fill" : "power",
-                help: state.isProxyRunning
-                    ? String(localized: "Stop proxy")
-                    : String(localized: "Start proxy"),
-                role: state.isProxyRunning ? .accent : .normal
-            ) {
-                state.toggleProxy()
-            }
         }
     }
 
