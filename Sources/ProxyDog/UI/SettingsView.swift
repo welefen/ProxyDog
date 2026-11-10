@@ -16,10 +16,6 @@ struct SettingsView: View {
     @State private var portError: String?
     @FocusState private var portFocused: Bool
 
-    @State private var analyticsKey: String = ""
-    @State private var analyticsError: String?
-    @FocusState private var analyticsFocused: Bool
-
     @State private var language: AppLanguage = AppLanguage.stored
 
     var body: some View {
@@ -29,7 +25,6 @@ struct SettingsView: View {
                     connectionSection
                     appearanceSection
                     certificateSection
-                    analyticsSection
                 }
                 .padding(.horizontal, DS.Space.x5)
                 .padding(.top, DS.Space.x5)
@@ -38,7 +33,7 @@ struct SettingsView: View {
             }
             versionFooter
         }
-        .frame(width: 560, height: 720)
+        .frame(width: 560, height: 600)
         .onAppear {
             syncFromSettings()
             // Do not steal keyboard focus into the port field when the pane opens.
@@ -50,9 +45,6 @@ struct SettingsView: View {
         }
         .onChange(of: settings.port) { _, newValue in
             if !portFocused { portText = String(newValue) }
-        }
-        .onChange(of: settings.aptabaseAppKey) { _, newValue in
-            if !analyticsFocused { analyticsKey = newValue }
         }
     }
 
@@ -233,35 +225,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Analytics
-
-    private var analyticsSection: some View {
-        SettingsSection(title: "Analytics") {
-            SettingsRow(
-                title: "Aptabase app key",
-                hint: "Optional. Anonymous usage events only; leave empty to disable.",
-                errorText: analyticsError
-            ) {
-                TextField("A-US-XXXXXXXX", text: $analyticsKey)
-                    .textFieldStyle(.plain)
-                    .font(DS.Typography.mono(12))
-                    .foregroundStyle(DSColor.textPrimary)
-                    .focused($analyticsFocused)
-                    .frame(width: 170)
-                    .padding(.horizontal, DS.Space.x2)
-                    .padding(.vertical, 5)
-                    .background(fieldBackground(isFocused: analyticsFocused))
-                    .onSubmit(commitAnalyticsKey)
-                    .onChange(of: analyticsFocused) { _, focused in
-                        if !focused { commitAnalyticsKey() }
-                    }
-                    .onChange(of: analyticsKey) { _, _ in
-                        if analyticsError != nil { analyticsError = nil }
-                    }
-            }
-        }
-    }
-
     // MARK: - Footer
 
     private var versionFooter: some View {
@@ -320,9 +283,7 @@ struct SettingsView: View {
 
     private func syncFromSettings() {
         portText = String(settings.port)
-        analyticsKey = settings.aptabaseAppKey
         portError = nil
-        analyticsError = nil
         language = AppLanguage.stored
         state.refreshCertificateStatus()
         state.refreshSystemProxyState()
@@ -340,27 +301,6 @@ struct SettingsView: View {
         if port != settings.port {
             state.applyPort(port)
         }
-    }
-
-    private func commitAnalyticsKey() {
-        let trimmed = analyticsKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        analyticsKey = trimmed
-        if trimmed != settings.aptabaseAppKey {
-            settings.aptabaseAppKey = trimmed
-            Analytics.shared.configure(appKey: trimmed)
-        }
-        if trimmed.isEmpty || looksLikeAppKey(trimmed) {
-            analyticsError = nil
-        } else {
-            analyticsError = String(localized: "Keys look like A-US-… or A-EU-….")
-        }
-    }
-
-    private func looksLikeAppKey(_ key: String) -> Bool {
-        let parts = key.split(separator: "-")
-        guard parts.count >= 2, parts[0].uppercased() == "A" else { return false }
-        let region = parts[1].uppercased()
-        return region == "US" || region == "EU"
     }
 
     private func fieldBackground(isFocused: Bool) -> some View {

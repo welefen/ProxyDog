@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// First-run onboarding sheet: a short four step wizard (welcome, certificate,
-/// analytics key, ready). Every step has one primary action and a quiet way to skip
-/// it; closing the sheet skips the whole setup.
+/// First-run onboarding sheet: a short three step wizard (welcome, certificate,
+/// ready). Every step has one primary action and a quiet way to skip it; closing the
+/// sheet skips the whole setup.
 struct OnboardingView: View {
     @EnvironmentObject private var state: AppState
     @Environment(\.dismiss) private var dismiss
@@ -11,15 +11,12 @@ struct OnboardingView: View {
     private enum Step: Int, CaseIterable, Identifiable {
         case welcome
         case certificate
-        case analytics
         case ready
 
         var id: Int { rawValue }
     }
 
     @State private var step: Step = .welcome
-    @State private var appKey: String = ""
-    @FocusState private var keyFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,7 +30,6 @@ struct OnboardingView: View {
         .frame(width: 520, height: 430)
         .background(DSColor.chrome)
         .onAppear {
-            appKey = state.settings.aptabaseAppKey
             state.refreshCertificateStatus()
             state.refreshSystemProxyState()
         }
@@ -102,8 +98,6 @@ struct OnboardingView: View {
             welcomeStep
         case .certificate:
             certificateStep
-        case .analytics:
-            analyticsStep
         case .ready:
             readyStep
         }
@@ -175,63 +169,6 @@ struct OnboardingView: View {
                 .font(DS.Typography.ui(11))
                 .foregroundStyle(DSColor.textMuted)
                 .padding(.top, DS.Space.x3)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var analyticsStep: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Anonymous usage")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(DSColor.textPrimary)
-            Text("Aptabase receives anonymous events such as launches and exports. Captured traffic is never included. This is optional and can be skipped.")
-                .font(DS.Typography.ui(13))
-                .foregroundStyle(DSColor.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.x2)
-
-            Text("App key")
-                .font(DS.Typography.ui(11, .semibold))
-                .foregroundStyle(DSColor.textSecondary)
-                .padding(.top, DS.Space.x5)
-                .padding(.bottom, DS.Space.x2)
-
-            OnboardingCard {
-                HStack(spacing: DS.Space.x2) {
-                    TextField("A-US-XXXXXXXX", text: $appKey)
-                        .textFieldStyle(.plain)
-                        .font(DS.Typography.mono(12))
-                        .foregroundStyle(DSColor.textPrimary)
-                        .focused($keyFocused)
-                    OnboardingIconButton(systemName: "doc.on.clipboard", help: "Paste app key") {
-                        pasteAppKey()
-                    }
-                }
-                .padding(.horizontal, DS.Space.x3)
-                .padding(.vertical, DS.Space.x2)
-            }
-
-            HStack(spacing: DS.Space.x1) {
-                Text("Get a key at")
-                    .font(DS.Typography.ui(11))
-                    .foregroundStyle(DSColor.textSecondary)
-                Button {
-                    if let url = URL(string: "https://aptabase.com") {
-                        NSWorkspace.shared.open(url)
-                    }
-                } label: {
-                    HStack(spacing: 2) {
-                        Text(verbatim: "aptabase.com")
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 9, weight: .semibold))
-                    }
-                    .font(DS.Typography.ui(11))
-                    .foregroundStyle(DSColor.accent)
-                }
-                .buttonStyle(.plain)
-                .help("Open aptabase.com")
-            }
-            .padding(.top, DS.Space.x3)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -366,7 +303,7 @@ struct OnboardingView: View {
 
     private var primaryTitle: LocalizedStringKey {
         switch step {
-        case .welcome, .certificate, .analytics:
+        case .welcome, .certificate:
             return "Continue"
         case .ready:
             return "Done"
@@ -389,9 +326,6 @@ struct OnboardingView: View {
         switch step {
         case .welcome, .certificate:
             advance()
-        case .analytics:
-            keyFocused = false
-            advance()
         case .ready:
             finish()
         }
@@ -406,28 +340,19 @@ struct OnboardingView: View {
 
     private func goBack() {
         guard let previous = Step(rawValue: step.rawValue - 1) else { return }
-        keyFocused = false
         withAnimation(.easeInOut(duration: 0.16)) {
             step = previous
         }
     }
 
     private func finish() {
-        keyFocused = false
-        state.completeOnboarding(appKey: appKey)
+        state.completeOnboarding()
         dismiss()
     }
 
     private func skipSetup() {
-        keyFocused = false
         state.dismissOnboarding()
         dismiss()
-    }
-
-    private func pasteAppKey() {
-        let pasteboard = NSPasteboard.general
-        guard let value = pasteboard.string(forType: .string) else { return }
-        appKey = value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func copyProxyAddress() {

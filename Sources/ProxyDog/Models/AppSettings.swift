@@ -31,7 +31,6 @@ final class AppSettings: ObservableObject {
     private enum Key {
         static let port = "proxy.port"
         static let appearance = "ui.appearance"
-        static let aptabaseKey = "analytics.aptabaseKey"
         static let onboarding = "app.onboardingCompleted"
         static let sslEnabled = "proxy.sslProxyingEnabled"
         static let systemProxy = "proxy.systemProxyEnabled"
@@ -46,10 +45,6 @@ final class AppSettings: ObservableObject {
 
     @Published var appearance: Appearance {
         didSet { defaults.set(appearance.rawValue, forKey: Key.appearance) }
-    }
-
-    @Published var aptabaseAppKey: String {
-        didSet { defaults.set(aptabaseAppKey, forKey: Key.aptabaseKey) }
     }
 
     @Published var hasCompletedOnboarding: Bool {
@@ -69,13 +64,8 @@ final class AppSettings: ObservableObject {
         let storedPort = defaults.integer(forKey: Key.port)
         self.port = storedPort > 0 ? storedPort : AppDefaults.proxyPort
         self.appearance = Appearance(rawValue: defaults.string(forKey: Key.appearance) ?? "") ?? .system
-        self.aptabaseAppKey = defaults.string(forKey: Key.aptabaseKey) ?? ""
         self.hasCompletedOnboarding = defaults.bool(forKey: Key.onboarding)
         self.sslProxyingEnabled = defaults.object(forKey: Key.sslEnabled) as? Bool ?? true
         self.systemProxyEnabled = defaults.bool(forKey: Key.systemProxy)
-    }
-
-    var analyticsEnabled: Bool {
-        !aptabaseAppKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }

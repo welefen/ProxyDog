@@ -6,3 +6,5 @@
 build/
 .swiftpm/
 *.xcuserstate
+# Local build configuration (Aptabase key etc.)
+Support/AppConfig.plist

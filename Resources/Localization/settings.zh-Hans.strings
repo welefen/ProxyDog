@@ -4,7 +4,6 @@
 "Connection" = "连接";
 "Appearance" = "外观";
 "Certificate" = "证书";
-"Analytics" = "埋点";
 
 /* Settings · connection */
 "Proxy port" = "代理端口";
@@ -37,9 +36,6 @@
 "Export root certificate" = "导出根证书";
 
 /* Settings · analytics */
-"Aptabase app key" = "Aptabase App Key";
-"Optional. Anonymous usage events only; leave empty to disable." = "可选，仅上报匿名使用事件，留空则不启用。";
-"Keys look like A-US-… or A-EU-…." = "Key 形如 A-US-… 或 A-EU-…。";
 
 /* Onboarding · welcome */
 "Welcome to ProxyDog" = "欢迎使用 ProxyDog";
@@ -54,12 +50,6 @@
 "You can remove the certificate at any time in Settings." = "之后可随时在设置中移除该证书。";
 
 /* Onboarding · analytics */
-"Anonymous usage" = "匿名使用数据";
-"Aptabase receives anonymous events such as launches and exports. Captured traffic is never included. This is optional and can be skipped." = "Aptabase 仅接收启动、导出等匿名事件，绝不包含抓取到的流量。此项可选，可以跳过。";
-"App key" = "App Key";
-"Paste app key" = "粘贴 App Key";
-"Get a key at" = "获取 Key：";
-"Open aptabase.com" = "打开 aptabase.com";
 
 /* Onboarding · ready */
 "You are all set" = "一切就绪";

@@ -68,8 +68,8 @@ final class AppState: ObservableObject {
         guard !hasBootstrapped else { return }
         hasBootstrapped = true
 
-        Analytics.shared.configure(appKey: settings.aptabaseAppKey)
-        if settings.analyticsEnabled {
+        Analytics.shared.configure(appKey: AppConfig.aptabaseAppKey)
+        if AppConfig.isAnalyticsEnabled {
             Analytics.shared.track("app_launched", properties: [
                 "appearance": settings.appearance.rawValue,
                 "ssl_enabled": String(settings.sslProxyingEnabled),
@@ -329,14 +329,9 @@ final class AppState: ObservableObject {
 
     // MARK: - Onboarding
 
-    func completeOnboarding(appKey: String) {
-        settings.aptabaseAppKey = appKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    func completeOnboarding() {
         settings.hasCompletedOnboarding = true
         isOnboardingPresented = false
-        Analytics.shared.configure(appKey: settings.aptabaseAppKey)
-        if settings.analyticsEnabled {
-            Analytics.shared.track("app_launched")
-        }
         refreshCertificateStatus()
     }
 

@@ -4,7 +4,6 @@
 "Connection" = "Connection";
 "Appearance" = "Appearance";
 "Certificate" = "Certificate";
-"Analytics" = "Analytics";
 
 /* Settings · connection */
 "Proxy port" = "Proxy port";
@@ -37,9 +36,6 @@
 "Export root certificate" = "Export root certificate";
 
 /* Settings · analytics */
-"Aptabase app key" = "Aptabase app key";
-"Optional. Anonymous usage events only; leave empty to disable." = "Optional. Anonymous usage events only; leave empty to disable.";
-"Keys look like A-US-… or A-EU-…." = "Keys look like A-US-… or A-EU-….";
 
 /* Onboarding · welcome */
 "Welcome to ProxyDog" = "Welcome to ProxyDog";
@@ -54,12 +50,6 @@
 "You can remove the certificate at any time in Settings." = "You can remove the certificate at any time in Settings.";
 
 /* Onboarding · analytics */
-"Anonymous usage" = "Anonymous usage";
-"Aptabase receives anonymous events such as launches and exports. Captured traffic is never included. This is optional and can be skipped." = "Aptabase receives anonymous events such as launches and exports. Captured traffic is never included. This is optional and can be skipped.";
-"App key" = "App key";
-"Paste app key" = "Paste app key";
-"Get a key at" = "Get a key at";
-"Open aptabase.com" = "Open aptabase.com";
 
 /* Onboarding · ready */
 "You are all set" = "You are all set";
