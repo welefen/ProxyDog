@@ -269,15 +269,18 @@ final class CertificateAuthority: @unchecked Sendable {
     ///
     /// - Warning: this blocks while `openssl` runs on first use of a host. Prefer
     ///   `tlsContext(forHost:completion:)` from event-loop code.
-    func serverTLSContext(forHost host: String) throws -> NIOSSLContext {
+    func serverTLSContext(forHost host: String, applicationProtocols: [String] = ["http/1.1"]) throws -> NIOSSLContext {
+        let cacheKey = Self.cacheKey(host: host, applicationProtocols: applicationProtocols)
         lock.lock()
-        let cached = contextCache[host]
+        let cached = contextCache[cacheKey]
         lock.unlock()
         if let cached { return cached }
 
-        let context = try workQueue.sync { try makeContextLocked(host: host) }
+        let context = try workQueue.sync {
+            try makeContextLocked(host: host, applicationProtocols: applicationProtocols)
+        }
         lock.lock()
-        contextCache[host] = context
+        contextCache[cacheKey] = context
         lock.unlock()
         return context
     }
@@ -285,8 +288,20 @@ final class CertificateAuthority: @unchecked Sendable {
     /// Asynchronous variant that never blocks the caller's thread (leaf generation runs
     /// on the CA's serial queue and shells out to `openssl`).
     func tlsContext(forHost host: String, completion: @escaping @Sendable (Result<NIOSSLContext, Error>) -> Void) {
+        tlsContext(forHost: host, applicationProtocols: ["http/1.1"], completion: completion)
+    }
+
+    /// Asynchronous TLS server context with an explicit ALPN protocol list. The cache is keyed
+    /// by host + protocol list, so the HTTP/1.1-only context (SOCKS5 listener) and the
+    /// h2-capable context (HTTP-proxy MITM) can coexist.
+    func tlsContext(
+        forHost host: String,
+        applicationProtocols: [String],
+        completion: @escaping @Sendable (Result<NIOSSLContext, Error>) -> Void
+    ) {
+        let cacheKey = Self.cacheKey(host: host, applicationProtocols: applicationProtocols)
         lock.lock()
-        let cached = contextCache[host]
+        let cached = contextCache[cacheKey]
         lock.unlock()
         if let cached {
             completion(.success(cached))
@@ -296,9 +311,9 @@ final class CertificateAuthority: @unchecked Sendable {
         workQueue.async {
             let result: Result<NIOSSLContext, Error>
             do {
-                let context = try self.makeContextLocked(host: host)
+                let context = try self.makeContextLocked(host: host, applicationProtocols: applicationProtocols)
                 self.lock.lock()
-                self.contextCache[host] = context
+                self.contextCache[cacheKey] = context
                 self.lock.unlock()
                 result = .success(context)
             } catch {
@@ -306,6 +321,10 @@ final class CertificateAuthority: @unchecked Sendable {
             }
             completion(result)
         }
+    }
+
+    private static func cacheKey(host: String, applicationProtocols: [String]) -> String {
+        "\(host)|\(applicationProtocols.joined(separator: ","))"
     }
 
     // MARK: - Private implementation
@@ -379,7 +398,7 @@ final class CertificateAuthority: @unchecked Sendable {
         try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: rootKeyURL.path)
     }
 
-    private func makeContextLocked(host: String) throws -> NIOSSLContext {
+    private func makeContextLocked(host: String, applicationProtocols: [String]) throws -> NIOSSLContext {
         try prepareLocked()
 
         let paths = leafPaths(for: host)
@@ -405,8 +424,9 @@ final class CertificateAuthority: @unchecked Sendable {
             certificateChain: chain.map { .certificate($0) },
             privateKey: .privateKey(key)
         )
-        // We only ever speak HTTP/1.1 over the decrypted channel.
-        configuration.applicationProtocols = ["http/1.1"]
+        // ALPN advertised on the decrypted (client-facing) channel. The HTTP proxy requests
+        // ["h2", "http/1.1"] for MITM; the SOCKS5 listener still asks for HTTP/1.1 only.
+        configuration.applicationProtocols = applicationProtocols
         return try NIOSSLContext(configuration: configuration)
     }
 

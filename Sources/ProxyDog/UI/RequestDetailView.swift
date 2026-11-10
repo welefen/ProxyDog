@@ -177,7 +177,7 @@ private struct OverviewTab: View {
                 section(String(localized: "Request")) {
                     DetailFieldRow(label: String(localized: "Method"), value: request.method)
                     DetailFieldRow(label: String(localized: "URL"), value: request.urlString, lineLimit: 3)
-                    DetailFieldRow(label: String(localized: "Protocol"), value: "HTTP/1.1")
+                    DetailFieldRow(label: String(localized: "Protocol"), value: request.httpVersion)
                     if let client = request.clientAppName {
                         DetailFieldRow(label: String(localized: "Client"), value: client)
                     }

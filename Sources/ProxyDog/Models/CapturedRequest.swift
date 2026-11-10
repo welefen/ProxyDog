@@ -24,6 +24,8 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
     var finishedAt: Date?
 
     var method: String
+    /// Wire protocol of the exchange, e.g. "HTTP/1.1" or "HTTP/2".
+    var httpVersion: String
     var scheme: String
     var host: String
     var port: Int
@@ -61,6 +63,7 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         id: UUID = UUID(),
         startedAt: Date = Date(),
         method: String,
+        httpVersion: String = "HTTP/1.1",
         scheme: String = "https",
         host: String,
         port: Int = 443,
@@ -84,6 +87,7 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         self.id = id
         self.startedAt = startedAt
         self.method = method
+        self.httpVersion = httpVersion
         self.scheme = scheme
         self.host = host
         self.port = port

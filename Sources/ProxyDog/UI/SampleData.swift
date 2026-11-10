@@ -149,6 +149,7 @@ enum SampleTraffic {
                 "permissions": ["admin": false, "push": true, "pull": true],
             ]),
             pinned: true,
+            httpVersion: "HTTP/2",
             client: "Safari 17.4",
             clientPID: 1234,
             clientAppName: "Safari",
@@ -352,6 +353,7 @@ enum SampleTraffic {
             exports.createElement = createElement;
             //# sourceMappingURL=index.js.map
             """.utf8),
+            httpVersion: "HTTP/2",
             client: "Safari 17.4",
             clientPID: 1234,
             clientAppName: "Safari",
@@ -399,6 +401,7 @@ enum SampleTraffic {
             </body>
             </html>
             """.utf8),
+            httpVersion: "HTTP/2",
             client: "Safari 17.4",
             clientPID: 1234,
             clientAppName: "Safari",
@@ -503,6 +506,7 @@ enum SampleTraffic {
                 ("Access-Control-Allow-Origin", "*"),
             ]),
             responseBody: binaryBody,
+            httpVersion: "HTTP/2",
             client: "Safari 17.4",
             clientPID: 1234,
             clientAppName: "Safari",
@@ -681,6 +685,7 @@ enum SampleTraffic {
         responseBody: Data? = nil,
         intercepted: Bool = true,
         pinned: Bool = false,
+        httpVersion: String = "HTTP/1.1",
         client: String? = nil,
         clientPID: Int32? = nil,
         clientAppName: String? = nil,
@@ -704,6 +709,7 @@ enum SampleTraffic {
         var captured = CapturedRequest(
             startedAt: started,
             method: method,
+            httpVersion: httpVersion,
             scheme: scheme,
             host: host,
             port: port,

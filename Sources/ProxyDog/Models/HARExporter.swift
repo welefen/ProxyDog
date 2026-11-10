@@ -67,7 +67,7 @@ enum HARExporter {
         var object: [String: Any] = [
             "method": request.method,
             "url": request.urlString,
-            "httpVersion": "HTTP/1.1",
+            "httpVersion": request.httpVersion,
             "cookies": requestCookies(from: request.requestHeaders),
             "headers": headerObjects(request.requestHeaders, body: request.requestBody),
             "queryString": queryItems(from: request.urlString),
@@ -118,7 +118,7 @@ enum HARExporter {
         return [
             "status": status,
             "statusText": status == 0 ? "" : reasonPhrase(for: status),
-            "httpVersion": "HTTP/1.1",
+            "httpVersion": request.httpVersion,
             "cookies": responseCookies(from: request.responseHeaders),
             "headers": headerObjects(request.responseHeaders, body: request.responseBody),
             "content": content,

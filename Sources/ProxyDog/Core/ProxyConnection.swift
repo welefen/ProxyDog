@@ -197,6 +197,8 @@ final class ExchangeState {
     let requestHeaders: [HeaderField]
     let clientSignature: String?
     let isUpgradeRequest: Bool
+    /// Wire protocol the client used ("HTTP/1.1" or "HTTP/2").
+    var httpVersion: String = "HTTP/1.1"
 
     /// Local app that opened the client connection, once attribution resolved.
     var clientProcess: ClientProcess?
@@ -275,6 +277,7 @@ final class ExchangeState {
             id: id,
             startedAt: startedAt,
             method: method,
+            httpVersion: httpVersion,
             scheme: scheme,
             host: host,
             port: port,
@@ -463,7 +466,9 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
 
         // Establish the leaf certificate without blocking the event loop.
         let promise = channel.eventLoop.makePromise(of: NIOSSLContext.self)
-        certificateAuthority.tlsContext(forHost: host) { result in
+        // HTTP-proxy MITM negotiates h2 or http/1.1 with the client; the SOCKS5 listener keeps
+        // its HTTP/1.1-only context for now.
+        certificateAuthority.tlsContext(forHost: host, applicationProtocols: ["h2", "http/1.1"]) { result in
             promise.completeWith(result)
         }
 
@@ -504,46 +509,33 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
         leftover: ByteBuffer
     ) -> EventLoopFuture<Void> {
         let channel = context.channel
-        let pipeline = channel.pipeline
-
-        let serverHandler: NIOSSLServerHandler
-        do {
-            serverHandler = try NIOSSLServerHandler(context: tlsContext)
-        } catch {
-            return channel.eventLoop.makeFailedFuture(error)
-        }
-
-        var encoderConfiguration = HTTPResponseEncoder.Configuration()
-        encoderConfiguration.automaticallySetFramingHeaders = false
-        let responseEncoder = HTTPResponseEncoder(configuration: encoderConfiguration)
-        let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes)
-        let decoderWrapper = ByteToMessageHandler(requestDecoder)
-        let clientHandler = ClientHTTPHandler(
+        let config = HTTP2MITMConfig(
             sink: sink,
             connectTarget: ProxyConnectTarget(host: host, port: port),
-            scheme: "https",
-            intercepted: true,
-            responseEncoder: responseEncoder,
-            requestDecoderWrapper: decoderWrapper,
             upstreamProxyProvider: upstreamProxyProvider,
             clientIdentity: clientIdentity
         )
 
-        return pipeline.removeHandler(self)
-            .flatMap { pipeline.addHandler(serverHandler, position: .first) }
-            .flatMap { pipeline.addHandler(responseEncoder) }
-            .flatMap { pipeline.addHandler(decoderWrapper) }
-            .flatMap { pipeline.addHandler(clientHandler) }
-            .flatMap { channel.setOption(ChannelOptions.autoRead, value: true) }
-            .map {
-                if leftover.readableBytes > 0 {
-                    channel.pipeline.fireChannelRead(leftover)
-                }
-                if var extra = self.extraBytes, extra.readableBytes > 0 {
-                    self.extraBytes = nil
-                    channel.pipeline.fireChannelRead(extra)
-                }
+        // The TLS handler negotiates ALPN; HTTP2MITM waits for the handshake result and then
+        // installs either the HTTP/2 or the (unchanged) HTTP/1.1 pipeline.
+        return HTTP2MITM.install(
+            channel: channel,
+            removing: self,
+            tlsContext: tlsContext,
+            config: config
+        )
+        .flatMap { channel.setOption(ChannelOptions.autoRead, value: true) }
+        .map {
+            // TLS records read together with the CONNECT head (e.g. a pipelined ClientHello)
+            // are replayed only after the SSL handler exists.
+            if leftover.readableBytes > 0 {
+                channel.pipeline.fireChannelRead(leftover)
             }
+            if var extra = self.extraBytes, extra.readableBytes > 0 {
+                self.extraBytes = nil
+                channel.pipeline.fireChannelRead(extra)
+            }
+        }
     }
 
     private func installHTTPPipeline(context: ChannelHandlerContext, initialBytes: ByteBuffer) -> EventLoopFuture<Void> {

@@ -35,6 +35,7 @@ final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
             "id": request.id.uuidString,
             "state": request.state.rawValue,
             "method": request.method,
+            "http_version": request.httpVersion,
             "url": request.urlString,
             "host": request.host,
             "intercepted": request.intercepted,

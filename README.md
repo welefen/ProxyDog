@@ -4,7 +4,8 @@
 
 ## 功能
 
-- **HTTP / HTTPS 抓包**：本地 HTTP 代理监听 `127.0.0.1:8888`，通过本地根证书对 HTTPS 做 TLS 解密（MITM），明文与加密流量统一展示。
+- **HTTP / HTTPS 抓包**：本地 HTTP 代理监听 `127.0.0.1:8888`，通过本地根证书对 HTTPS 做 TLS 解密（MITM），明文与加密流量统一展示；HTTP/2 通过 ALPN 协商并在抓包中标记（`协议` 行显示 HTTP/2）。
+- **HTTP/2 支持**：浏览器与代理之间用 HTTP/2 通信（单连接多路复用，每个流单独记录），转发到上游时使用 HTTP/1.1（与 Charles 相同的降级策略），因此 h2 站点的请求、响应、压缩正文都能完整抓取；详情页协议行会标注 `HTTP/2`。
 - **实时请求列表**：方法、状态码、大小、耗时、协议类型图标；域名分组、失败标记、收藏（Pinned）。
 - **请求详情**：Overview（URL、客户端、耗时、大小、解密状态）、Headers（请求/响应表头，点击复制）、Body（JSON 树、文本、图片预览、二进制 Hex、Pretty/Raw 切换）、Messages（WebSocket 消息）。
 - **WebSocket 调试**：抓取 101 升级握手，按帧解析双向消息（文本/二进制/ping/pong/关闭、分片重组），wss 自动解密；详情页「消息」标签实时追加，可查看每条消息内容。
@@ -178,6 +179,9 @@ Support/                     # Info.plist、应用图标、AppConfig.plist(.exam
 ./scripts/test_upstream.sh
 UPSTREAM_REAL=127.0.0.1:1235 ./scripts/test_upstream.sh   # 再用真实 VPN 的 HTTP 代理跑一遍
 
+# HTTP/2 测试：ALPN 协商 h2、h2 抓包断言、HTTP/1.1 回退
+./scripts/test_http2.sh
+
 # 请求归属测试：curl / Python 客户端 / MITM / SOCKS5 连接都能识别出 App
 ./scripts/test_attribution.sh
 
@@ -213,9 +217,10 @@ defaults write com.proxydog.app app.onboardingCompleted -bool true
 
 ## 已知限制
 
-- 仅支持 HTTP/1.1：TLS 握手时 ALPN 只协商 `http/1.1`，不支持 HTTP/2 帧解析（浏览器会回退到 HTTP/1.1，抓包内容仍完整）；HTTP/3（QUIC）走 UDP，系统 HTTP 代理不转发，因此不会被抓取。
+- HTTP/2 只做到「客户端侧 h2」：与浏览器之间协商 HTTP/2 并按流抓包，但转发到源站时固定用 HTTP/1.1（不做 h2→h2 端到端），也不支持 HTTP/2 的 Server Push、h2 扩展 CONNECT / WebSocket、trailer 与 1xx 响应展示；SOCKS5 监听端口的 MITM 仍为 HTTP/1.1。
+- HTTP/3（QUIC）暂不支持：QUIC 走 UDP，macOS 的 HTTP/HTTPS 系统代理只转发 TCP，所以浏览器使用代理时会回退到 h2/h1，抓包内容依然完整；但真正基于 QUIC 的流量不会经过 ProxyDog。要拦截 QUIC 需要系统级 UDP 拦截（Network Extension / System Extension + 签名授权）和完整的 QUIC + HTTP/3 协议栈，不属于当前这个纯 App 形态能提供的功能。
 - 上游 TLS 不校验证书，便于抓取自签名证书的开发服务器。
-- WebSocket 不解析 `permessage-deflate` 压缩帧，也不支持 WebSocket over HTTP/2。
+- WebSocket 不解析 `permessage-deflate` 压缩帧，也不支持 WebSocket over HTTP/2（h2 扩展 CONNECT 会以失败记录并在详情中说明）。
 - 单个请求/响应体最多保存 2 MB（超出部分仍然透传，仅不入库）。
 - 关闭系统代理时直接关闭代理开关，不会恢复开启前的原有代理配置。
 
