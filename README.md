@@ -26,27 +26,27 @@ A native, lightweight HTTP/HTTPS debugging proxy for macOS with a Proxyman/Charl
 
 Main window: domains on the left, search + Chrome-style type chips + request list in the middle (each row starts with the app icon that made the request), inspector on the right.
 
-![Request list](Docs/screenshots/main-window.png)
+![Request list](Docs/screenshots/en/main-window.png)
 
 Body inspector: JSON tree with Pretty/Raw toggle.
 
-![Request detail](Docs/screenshots/request-body.png)
+![Request detail](Docs/screenshots/en/request-body.png)
 
 Type filter: Chrome DevTools-style chips for Fetch/XHR, Doc, CSS, JS, Font, Img, Media, Manifest, Socket, Wasm and Other.
 
-![Type filter](Docs/screenshots/type-filter.png)
+![Type filter](Docs/screenshots/en/type-filter.png)
 
 WebSocket messages: the 101 handshake, both directions and payload previews (text/JSON/binary hex).
 
-![WebSocket](Docs/screenshots/websocket.png)
+![WebSocket](Docs/screenshots/en/websocket.png)
 
 Settings: a sidebar with Connection (HTTP proxy, port, upstream proxies, SOCKS5, SSL & certificate), Rules and Appearance.
 
-![Settings](Docs/screenshots/settings.png)
+![Settings](Docs/screenshots/en/settings.png)
 
 First launch: install the root certificate, confirm the proxy address and optionally set the system proxy on a single page.
 
-![Onboarding](Docs/screenshots/onboarding.png)
+![Onboarding](Docs/screenshots/en/onboarding.png)
 
 ## Language
 
@@ -122,7 +122,7 @@ A proxy only sees TCP connections, so ProxyDog resolves the local process that o
 - Attribution is asynchronous: the request appears first and the app information is filled in afterwards. Long-lived browser connections are reused, so the overhead is negligible.
 - ProxyDog's own traffic (analytics, update checks) is detected and hidden by default; turn it off in Settings → Connection → Ignore own requests.
 
-![Request attribution](Docs/screenshots/client-app.png)
+![Request attribution](Docs/screenshots/en/client-app.png)
 
 Limitations: only processes of the **current user** are visible (root daemons may show as empty); traffic forwarded from another machine/device has no local process; statically linked or socket-less edge cases may not be attributable.
 
@@ -154,9 +154,9 @@ The wand icon in the main toolbar opens Settings → Rules. Static rules rewrite
 | Modify request | Regex find/replace on the request body | Batch-change `code:0` to `code:-1` |
 | Modify response | Regex find/replace on the response body | Test the frontend error path for `code:-1` |
 
-![Rewrite settings](Docs/screenshots/rewrite-settings.png)
+![Rewrite settings](Docs/screenshots/en/rewrite-settings.png)
 
-![Rule editor](Docs/screenshots/rewrite-editor.png)
+![Rule editor](Docs/screenshots/en/rewrite-editor.png)
 
 Notes:
 
@@ -169,11 +169,11 @@ Notes:
 
 Unlike always-on rewrite rules, breakpoints **pause once, let you edit, and apply to a single exchange** — handy for trying values temporarily. Configure rules in Settings → Rules → Breakpoints by URL (regex/substring plus optional method) and choose the **request** or **response** phase; “Breakpoint this URL…” in the request context menu creates one quickly (request phase by default):
 
-![Breakpoint settings](Docs/screenshots/breakpoint-settings.png)
+![Breakpoint settings](Docs/screenshots/en/breakpoint-settings.png)
 
 When a rule hits, the main window shows a modal editor with the method, URL, status code and original body. Edit the body and press Resume, or Drop to fail the request. Multiple matches queue up (“N more waiting”):
 
-![Breakpoint editor](Docs/screenshots/breakpoint-editor.png)
+![Breakpoint editor](Docs/screenshots/en/breakpoint-editor.png)
 
 Notes:
 

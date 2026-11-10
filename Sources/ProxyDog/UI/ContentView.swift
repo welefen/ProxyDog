@@ -61,6 +61,7 @@ struct ContentView: View {
                 .id(payload.id)
         }
         .onAppear {
+            SampleTraffic.seedRulesIfRequested(state: state)
             SampleTraffic.bootstrapIfRequested(state: state)
             SampleTraffic.injectSampleBreakpointIfRequested(state: state)
             SampleTraffic.runDevProbesIfNeeded()

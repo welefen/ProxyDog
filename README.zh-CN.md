@@ -26,27 +26,27 @@
 
 主界面：左侧域名导航，中间是搜索框、Chrome 风格的类型筛选条和请求列表（每行最左显示发起请求的 App 图标），右侧详情。
 
-![请求列表](Docs/screenshots/main-window.png)
+![请求列表](Docs/screenshots/zh/main-window.png)
 
 Body 详情：JSON 树与 Pretty/Raw 切换。
 
-![请求详情](Docs/screenshots/request-body.png)
+![请求详情](Docs/screenshots/zh/request-body.png)
 
 类型筛选：Chrome DevTools 风格，按 Fetch/XHR、文档、CSS、JS、字体、图片、媒体、清单、Socket、Wasm、其他筛选。
 
-![类型筛选](Docs/screenshots/type-filter.png)
+![类型筛选](Docs/screenshots/zh/type-filter.png)
 
 WebSocket 消息：101 握手、双向消息列表、载荷（文本/JSON/二进制 Hex）查看。
 
-![WebSocket](Docs/screenshots/websocket.png)
+![WebSocket](Docs/screenshots/zh/websocket.png)
 
 设置页：左侧导航分为连接（HTTP 代理、端口、上游代理/代理链、SOCKS5、SSL 与证书）、规则、外观。
 
-![设置](Docs/screenshots/settings.png)
+![设置](Docs/screenshots/zh/settings.png)
 
 首次启动：一页完成根证书信任、代理地址确认与系统代理设置。
 
-![首次启动](Docs/screenshots/onboarding.png)
+![首次启动](Docs/screenshots/zh/onboarding.png)
 
 ## 语言
 
@@ -124,7 +124,7 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 - 归属是异步解析的：请求先出现，App 信息随后补上；浏览器等长连接会复用连接，开销很小。
 - ProxyDog 自身发出的请求（数据埋点、更新检查等）会被自动识别并忽略，不会出现在列表里；该行为默认为开，可在「设置 → 连接 → 忽略自身请求」中关闭。
 
-![请求归属](Docs/screenshots/client-app.png)
+![请求归属](Docs/screenshots/zh/client-app.png)
 
 限制：只能看到**当前用户**的进程（root 守护进程可能显示为空）；通过其他机器/设备转到本机代理的流量没有本地进程可言；静态链接或无 socket 归属的极端情况可能无法识别。
 
@@ -156,9 +156,9 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 | 修改请求 Modify request | 对请求正文做正则查找/替换 | 把 `code:0` 批量改成 `code:-1` |
 | 修改响应 Modify response | 对响应正文做正则查找/替换 | 测试前端对 `code:-1` 的报错逻辑 |
 
-![重写规则设置](Docs/screenshots/rewrite-settings.png)
+![重写规则设置](Docs/screenshots/zh/rewrite-settings.png)
 
-![规则编辑器](Docs/screenshots/rewrite-editor.png)
+![规则编辑器](Docs/screenshots/zh/rewrite-editor.png)
 
 说明：
 
@@ -171,11 +171,11 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 
 和「一直生效」的重写规则不同，断点是**遇到就停、人工修改、单次生效**，适合临时试各种值。设置 → 断点里按 URL（正则/子串 + 可选方法）配置规则，并选择在**请求阶段**或**响应阶段**暂停；也可以在请求列表右键「为此地址打断点…」快速创建（默认在请求阶段暂停）：
 
-![断点规则设置](Docs/screenshots/breakpoint-settings.png)
+![断点规则设置](Docs/screenshots/zh/breakpoint-settings.png)
 
 命中后主窗口会弹出不可忽略的编辑器，展示方法与 URL、状态码、原始正文；修改正文后点「放行」继续，或点「丢弃」让该请求失败。多个请求同时命中会排队（显示「还有 N 个等待处理」）：
 
-![断点编辑器](Docs/screenshots/breakpoint-editor.png)
+![断点编辑器](Docs/screenshots/zh/breakpoint-editor.png)
 
 说明：
 

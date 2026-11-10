@@ -65,6 +65,11 @@ enum DevLaunchOptions {
         value(for: "--sample-rule-editor")
     }
 
+    /// QA: seeds a couple of rewrite and breakpoint rules for screenshots.
+    static var sampleSeedRules: Bool {
+        arguments.contains("--sample-seed-rules")
+    }
+
     /// QA: opens the rewrite/breakpoint editor pre-filled from the first sample request.
     static var sampleRuleDraft: String? {
         value(for: "--sample-rule-draft")
@@ -137,6 +142,36 @@ enum SampleTraffic {
             case "breakpoint": state.beginBreakpointRule(for: request)
             default: break
             }
+        }
+    }
+
+    /// QA helper: seed sample rewrite/breakpoint rules when the stores are empty.
+    @MainActor static func seedRulesIfRequested(state: AppState) {
+        guard DevLaunchOptions.sampleSeedRules else { return }
+        if state.rewriteRules.rules.isEmpty {
+            state.rewriteRules.add(RewriteRule(
+                name: "Mock user API",
+                method: "GET",
+                urlPattern: "api.example.com/v1/user",
+                action: .replaceResponse,
+                replacementBody: "{\"code\":0,\"data\":{\"name\":\"ProxyDog\"}}"
+            ))
+            state.rewriteRules.add(RewriteRule(
+                name: "Redirect staging",
+                method: "POST",
+                urlPattern: "api.example.com/v1/order",
+                action: .redirect,
+                redirectURL: "https://staging.example.com/v1/order"
+            ))
+        }
+        if state.breakpoints.rules.isEmpty {
+            state.breakpoints.add(BreakpointRule(
+                name: "Pause checkout",
+                method: "POST",
+                urlPattern: "api.example.com/v1/checkout",
+                breakOnRequest: true,
+                breakOnResponse: false
+            ))
         }
     }
 
