@@ -100,6 +100,6 @@ struct SettingsRootView: View {
             .environmentObject(state)
             .environmentObject(settings)
             .preferredColorScheme(settings.appearance.colorScheme)
-            .frame(width: 560)
+            .frame(width: 760)
     }
 }

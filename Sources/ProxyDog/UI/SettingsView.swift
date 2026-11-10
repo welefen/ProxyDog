@@ -34,8 +34,7 @@ struct SettingsView: View {
     @State private var language: AppLanguage = AppLanguage.stored
     @State private var selectedTab: SettingsTab = .connection
 
-    /// The settings pane is tabbed so each group stays a comfortable page instead of one
-    /// very long scroll.
+    /// Left-hand navigation categories of the settings window.
     private enum SettingsTab: String, CaseIterable, Identifiable {
         case connection
         case rules
@@ -52,12 +51,21 @@ struct SettingsView: View {
             case .certificates: return "Certificate"
             }
         }
+
+        var symbol: String {
+            switch self {
+            case .connection: return "network"
+            case .rules: return "slider.horizontal.3"
+            case .appearance: return "circle.lefthalf.filled"
+            case .certificates: return "checkmark.shield"
+            }
+        }
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            tabBar
-            PDHairline()
+        HStack(spacing: 0) {
+            sidebar
+            PDHairline(vertical: true)
             ScrollView {
                 Group {
                     switch selectedTab {
@@ -79,10 +87,19 @@ struct SettingsView: View {
                 .padding(.bottom, DS.Space.x6)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            versionFooter
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 560, height: 700)
+        .frame(width: 760, height: 620)
         .onAppear {
+            // The settings scene restores its previous frame, which can be narrower than the
+            // sidebar + content split; pin the size when the pane appears.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                let target = NSApp.windows.first { window in
+                    window.isVisible && (window.title.contains("设置") || window.title.localizedCaseInsensitiveContains("settings"))
+                }
+                target?.styleMask.remove(.resizable)
+                target?.setContentSize(NSSize(width: 760, height: 620))
+            }
             // Fill the upstream address from whatever proxy is already running so the user
             // never has to type it by hand.
             state.autoFillUpstreamProxyIfEmpty()
@@ -118,33 +135,46 @@ struct SettingsView: View {
 
     // MARK: - Tabs
 
-    private var tabBar: some View {
-        HStack(spacing: DS.Space.x5) {
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 2) {
             ForEach(SettingsTab.allCases) { tab in
-                let isSelected = selectedTab == tab
-                Button {
-                    selectedTab = tab
-                } label: {
-                    Text(tab.label)
-                        .font(DS.Typography.ui(12, isSelected ? .semibold : .regular))
-                        .foregroundStyle(isSelected ? DSColor.textPrimary : DSColor.textSecondary)
-                        .padding(.bottom, DS.Metric.Tabs.textBottomInset)
-                        .frame(height: DS.Metric.tabBarHeight, alignment: .bottom)
-                        .overlay(alignment: .bottom) {
-                            Rectangle()
-                                .fill(isSelected ? DSColor.accent : Color.clear)
-                                .frame(height: DS.Metric.Tabs.indicatorHeight)
-                        }
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                sidebarRow(tab)
             }
             Spacer(minLength: 0)
+            versionFooter
         }
-        .padding(.horizontal, DS.Space.x5)
-        .frame(height: DS.Metric.tabBarHeight)
+        .padding(.horizontal, DS.Space.x2)
+        .padding(.top, DS.Space.x3)
+        .padding(.bottom, DS.Space.x2)
+        .frame(width: 196)
         .background(DSColor.chrome)
+    }
+
+    private func sidebarRow(_ tab: SettingsTab) -> some View {
+        let isSelected = selectedTab == tab
+        return Button {
+            selectedTab = tab
+        } label: {
+            HStack(spacing: DS.Space.x2 + 2) {
+                Image(systemName: tab.symbol)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(isSelected ? DSColor.textSecondary : DSColor.textMuted)
+                    .frame(width: 16)
+                Text(tab.label)
+                    .font(DS.Typography.ui(12, isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? DSColor.textPrimary : DSColor.textSecondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DS.Space.x2)
+            .frame(height: 32)
+            .background(
+                RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                    .fill(isSelected ? DSColor.selection : .clear)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
     private var connectionSection: some View {
