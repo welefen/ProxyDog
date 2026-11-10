@@ -71,26 +71,73 @@ final class FaviconStore: ObservableObject {
     // MARK: Fetching
 
     private func fetchIcon(domain: String) async -> NSImage? {
-        let directCandidates = [
+        if let image = await fetchWellKnownIcon(domain: domain) {
+            return image
+        }
+
+        // Many sites (chatgpt.com, doubao.com, …) only advertise their icon in the HTML.
+        if let image = await fetchIconFromHTML(domain: domain) {
+            return image
+        }
+
+        // Subdomains often have no icon of their own (mcs.doubao.com, chat.deepseek.com);
+        // fall back one level to the registrable domain (doubao.com, deepseek.com).
+        if let parent = Self.parentDomain(of: domain) {
+            if let image = await fetchWellKnownIcon(domain: parent) {
+                return image
+            }
+            if let image = await fetchIconFromHTML(domain: parent) {
+                return image
+            }
+        }
+        return nil
+    }
+
+    private func fetchWellKnownIcon(domain: String) async -> NSImage? {
+        let candidates = [
             "https://\(domain)/favicon.ico",
             "https://\(domain)/favicon.png",
             "https://\(domain)/apple-touch-icon.png",
         ]
-        for urlString in directCandidates {
+        for urlString in candidates {
             if let image = await Self.downloadImage(urlString) {
                 return image
             }
         }
+        return nil
+    }
 
-        // Many sites (chatgpt.com, doubao.com, …) only advertise their icon in the HTML.
-        if let icons = await Self.iconLinks(inHTMLOf: domain) {
-            for urlString in icons.prefix(3) {
-                if let image = await Self.downloadImage(urlString) {
-                    return image
-                }
+    private func fetchIconFromHTML(domain: String) async -> NSImage? {
+        guard let icons = await Self.iconLinks(inHTMLOf: domain) else { return nil }
+        for urlString in icons.prefix(3) {
+            if let image = await Self.downloadImage(urlString) {
+                return image
             }
         }
         return nil
+    }
+
+    /// One level up from a subdomain: `mcs.doubao.com` -> `doubao.com`,
+    /// `chat.bbc.co.uk` -> `bbc.co.uk`. Handles common multi-part public suffixes.
+    static func parentDomain(of host: String) -> String? {
+        var labels = host.lowercased().split(separator: ".").map(String.init)
+        if labels.last?.isEmpty == true { labels.removeLast() }
+        guard labels.count >= 3 else { return nil }
+
+        let multiPartSuffixes: Set<String> = [
+            "com.cn", "net.cn", "org.cn", "gov.cn", "edu.cn", "ac.cn",
+            "co.uk", "org.uk", "ac.uk", "gov.uk",
+            "co.jp", "ne.jp", "or.jp",
+            "com.au", "net.au", "org.au", "co.nz", "net.nz",
+            "co.kr", "or.kr", "com.tw", "com.hk", "com.sg", "com.my", "com.ph", "co.id",
+            "com.br", "com.ar", "com.mx", "com.co", "com.pe", "com.ve",
+            "co.in", "co.za", "com.tr", "com.ru", "com.ua", "com.pl", "com.es",
+        ]
+        let lastTwo = labels.suffix(2).joined(separator: ".")
+        let suffixCount = multiPartSuffixes.contains(lastTwo) ? 2 : 1
+        let baseCount = suffixCount + 1
+        guard labels.count > baseCount else { return nil }
+        return labels.suffix(baseCount).joined(separator: ".")
     }
 
     private static func downloadImage(_ urlString: String) async -> NSImage? {
