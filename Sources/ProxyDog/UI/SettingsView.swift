@@ -37,6 +37,7 @@ struct SettingsView: View {
     @State private var socksError: String?
     @FocusState private var socksPortFocused: Bool
 
+    @ObservedObject private var updater = UpdateManager.shared
     @State private var language: AppLanguage = AppLanguage.stored
     @State private var selectedTab: SettingsTab = .connection
 
@@ -458,6 +459,7 @@ struct SettingsView: View {
     // MARK: - Appearance
 
     private var appearanceSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.x6) {
         SettingsSection(title: "Appearance") {
             SettingsRow(
                 title: "Theme",
@@ -495,6 +497,54 @@ struct SettingsView: View {
                 }
             }
         }
+        SettingsSection(title: "Updates") {
+            SettingsRow(
+                title: "Current version",
+                hint: "Update checks run in the background after launch."
+            ) {
+                Text(verbatim: AppInfo.versionLabel)
+                    .font(DS.Typography.mono(12))
+                    .foregroundStyle(DSColor.textPrimary)
+            }
+            SettingsHairline()
+            SettingsRow(
+                title: "Update status",
+                hintText: updater.statusText
+            ) {
+                if updater.canInstall {
+                    settingsActionButton(String(localized: "Install and restart")) {
+                        updater.installDownloadedUpdate()
+                    }
+                } else {
+                    settingsActionButton(String(localized: "Check for updates")) {
+                        Task { await updater.check(manual: true) }
+                    }
+                    .disabled(updater.phase.isBusy)
+                }
+            }
+        }
+        }
+    }
+
+    @ViewBuilder
+    private func settingsActionButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(verbatim: title)
+                .font(DS.Typography.ui(12, .medium))
+                .foregroundStyle(DSColor.accent)
+                .padding(.horizontal, DS.Space.x2 + 2)
+                .frame(height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                        .fill(DSColor.raised)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                                .strokeBorder(DSColor.border, lineWidth: 1)
+                        )
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Certificate

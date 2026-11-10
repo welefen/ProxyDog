@@ -66,6 +66,11 @@ struct ContentView: View {
             SampleTraffic.injectSampleBreakpointIfRequested(state: state)
             SampleTraffic.runDevProbesIfNeeded()
             SampleTraffic.openSettingsIfRequested(state: state, openSettings: openSettings)
+            if ProcessInfo.processInfo.arguments.contains("--sample-update-check") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    Task { await UpdateManager.shared.check(manual: true) }
+                }
+            }
             SampleTraffic.presentSampleRuleDraftIfRequested(state: state)
         }
     }

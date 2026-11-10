@@ -20,6 +20,7 @@
 - **上游代理（代理链）**：出站流量可以再交给已有的 HTTP CONNECT 或 SOCKS5 代理（例如本机正在运行的 VPN 客户端），抓包解密与 VPN 出网同时生效。
 - **SOCKS5 代理端口**：额外监听 `127.0.0.1:8889`（可修改），只支持 SOCKS5 的 App（如 Telegram）也能指向 ProxyDog 被抓包、解密。
 - **外观与语言**：浅色为默认设计，完整支持深色模式，默认跟随系统；界面内置简体中文与 English，默认跟随系统语言，可在设置中切换（切换后自动重启生效）。
+- **自动更新**：启动后在后台检查 GitHub 上的更新清单（`updates/latest.json`），下载 ZIP 后做 SHA-256 校验与包名/版本校验，点击「安装并重启」即可原地更新；菜单「ProxyDog → 检查更新…」可手动检查，开发构建（`build/` 下）自动跳过。
 - **数据埋点**：使用 Aptabase，App Key 由开发者在构建时配置一次（`Support/AppConfig.plist`，不随仓库提交），最终用户无需填写；不采集任何请求内容。
 
 ## 截图
@@ -193,6 +194,27 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 - 安装 / 移除：设置页 → 连接 → SSL 与证书；安装会把证书加入登录钥匙串并写入用户信任域，系统会弹出标准授权弹窗。如果安装后仍显示「未受信任」，可在「钥匙串访问」中把 `ProxyDog Root CA` 手动设为「始终信任」，然后回到应用点一次刷新。
 - 证书仅用于本机抓包调试，卸载应用后建议在「钥匙串访问」中删除该根证书。
 
+## 自动更新
+
+应用的自动更新是自实现的（与同目录的 TidyMac 项目相同的方案，不依赖 Sparkle）：
+
+1. 启动 3 秒后在后台请求更新清单：`https://api.github.com/repos/welefen/ProxyDog/contents/updates/latest.json?ref=master`，失败时回退到 `https://raw.githubusercontent.com/welefen/ProxyDog/master/updates/latest.json`。
+2. 清单包含 `version`、`downloadURL`、`sha256`、`releaseNotes`；若版本高于当前版本则下载 ZIP 并校验 SHA-256。
+3. 解压后校验应用包名（`com.proxydog.app`）与版本号，暂存新的 `ProxyDog.app`；点击「安装并重启」后由脚本在应用退出后替换旧包并重新启动。
+4. 仅在正式安装的 App 中自动检查（`build/` 下的开发构建会跳过）；也可用环境变量调试：`PROXYDOG_UPDATE_FEED`（自定义清单地址）、`PROXYDOG_CURRENT_VERSION`（覆盖当前版本）、`PROXYDOG_UPDATE_TOKEN`（访问私有仓库）、`PROXYDOG_UPDATE_DEBUG=1`（写日志到 `/tmp/proxydog-update-debug.log`）。
+
+发布新版本：
+
+```bash
+# 1. 修改 Support/Info.plist 里的 CFBundleShortVersionString
+# 2. 生成 dist/ 安装包、updates/ProxyDog-<version>.zip 与 updates/latest.json
+./scripts/publish_update.sh
+# 3. 提交并推送（或直接 ./scripts/publish_update.sh --push，会同时打 tag）
+git add updates scripts && git commit -m "release: ProxyDog <version>" && git push origin master
+```
+
+`package.sh` 只打包（`dist/` 下生成 DMG + ZIP 与 SHA256SUMS），`publish_update.sh` 在打包基础上更新 `updates/` 里的清单。仓库需要是公开的，客户端才能直接下载更新包。
+
 ## 数据埋点
 
 埋点使用 Aptabase。App Key 只在**开发构建时**配置一次：`Support/AppConfig.plist` 中的 `AptabaseAppKey` 由 `scripts/build_app.sh` 注入到 App 包的 `Info.plist`，最终用户的设置页和首次启动页里都没有 Key 输入项。该文件不提交到仓库，留空则埋点完全关闭。
@@ -254,6 +276,10 @@ UPSTREAM_SOCKS_REAL=socks5://127.0.0.1:1234 ./scripts/test_socks.sh   # 再用�
 
 # 校验中英文案完整性
 python3 scripts/check_localization.py
+
+# 打包 / 发布更新（生成 dist 与 updates/latest.json）
+./scripts/package.sh
+./scripts/publish_update.sh
 
 # 生成演示流量 / 重置应用状态 / 截取窗口
 ./scripts/demo_traffic.sh

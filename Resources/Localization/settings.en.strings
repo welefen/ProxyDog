@@ -155,3 +155,31 @@
 "Turn on SOCKS5 proxy first." = "Turn on SOCKS5 proxy first.";
 "Fill from system SOCKS5 proxy" = "Fill from system SOCKS5 proxy";
 "Any method" = "Any method";
+
+/* Updater */
+"Updates" = "Updates";
+"Current version" = "Current version";
+"Update checks run in the background after launch." = "Update checks run in the background after launch.";
+"Update status" = "Update status";
+"Install and restart" = "Install and restart";
+"Check for updates" = "Check for updates";
+"Check for Updates…" = "Check for Updates…";
+"Not checked yet" = "Not checked yet";
+"Checking for updates…" = "Checking for updates…";
+"You’re on the latest version" = "You’re on the latest version";
+"Version %@ is available" = "Version %@ is available";
+"Downloading v%@…" = "Downloading v%@…";
+"v%@ is ready to install" = "v%@ is ready to install";
+"Installing v%@ and restarting…" = "Installing v%@ and restarting…";
+"Update check failed: %@" = "Update check failed: %@";
+"Update download failed: %@" = "Update download failed: %@";
+"Update install failed: %@" = "Update install failed: %@";
+"Cannot write to the app folder. Move ProxyDog to Applications and try again." = "Cannot write to the app folder. Move ProxyDog to Applications and try again.";
+"Could not reach the update feed." = "Could not reach the update feed.";
+"The update download URL is invalid." = "The update download URL is invalid.";
+"Downloading the update failed." = "Downloading the update failed.";
+"The update archive failed its checksum; update aborted." = "The update archive failed its checksum; update aborted.";
+"The update archive does not contain ProxyDog.app." = "The update archive does not contain ProxyDog.app.";
+"The downloaded app is not ProxyDog." = "The downloaded app is not ProxyDog.";
+"The downloaded version does not match the update manifest." = "The downloaded version does not match the update manifest.";
+"Could not extract the update archive: %@" = "Could not extract the update archive: %@";

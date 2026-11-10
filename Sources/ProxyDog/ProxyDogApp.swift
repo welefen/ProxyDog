@@ -4,6 +4,7 @@ import SwiftUI
 struct ProxyDogApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var state = AppState.shared
+    @StateObject private var updater = UpdateManager.shared
 
     var body: some Scene {
         WindowGroup {
@@ -11,7 +12,16 @@ struct ProxyDogApp: App {
         }
         .defaultSize(width: AppDefaults.defaultWindowWidth, height: AppDefaults.defaultWindowHeight)
         .windowToolbarStyle(.unified)
-        .commands { appCommands }
+        .commands {
+            appCommands
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    Task { await updater.check(manual: true) }
+                }
+                .disabled(updater.phase.isBusy)
+            }
+        }
 
         Settings {
             SettingsRootView(state: state, settings: state.settings)
@@ -78,6 +88,7 @@ struct AppRootView: View {
             .environmentObject(state)
             .environmentObject(settings)
             .environmentObject(state.store)
+            .environmentObject(UpdateManager.shared)
             .preferredColorScheme(settings.appearance.colorScheme)
             .frame(
                 minWidth: 980,
@@ -88,6 +99,11 @@ struct AppRootView: View {
                 maxHeight: .infinity
             )
             .onAppear { state.bootstrap() }
+            .task {
+                await UpdateManager.shared.startOnLaunch(
+                    isDemo: ProcessInfo.processInfo.arguments.contains("--sample-traffic")
+                )
+            }
     }
 }
 
@@ -99,6 +115,7 @@ struct SettingsRootView: View {
         SettingsView()
             .environmentObject(state)
             .environmentObject(settings)
+            .environmentObject(UpdateManager.shared)
             .preferredColorScheme(settings.appearance.colorScheme)
             .frame(width: 760)
     }

@@ -20,6 +20,7 @@ A native, lightweight HTTP/HTTPS debugging proxy for macOS with a Proxyman/Charl
 - **Upstream proxies (proxy chaining)**: chain outbound traffic through an existing HTTP or SOCKS5 proxy such as a local VPN client; decryption and VPN egress work at the same time. HTTP and SOCKS5 upstreams are stored and switched independently, one per entry point.
 - **SOCKS5 listener**: an extra listener on `127.0.0.1:8889` (configurable) lets SOCKS5-only apps such as Telegram be captured and decrypted.
 - **Appearance and language**: light-first design with a complete dark mode following the system by default; built-in 简体中文 and English (follows the system language, switchable in Settings with an automatic restart).
+- **Auto-update**: checks the manifest (`updates/latest.json`) on GitHub in the background after launch, downloads the ZIP, verifies its SHA-256 plus bundle identifier/version, then installs in place with one “Install and restart” click. “Check for Updates…” in the app menu triggers a manual check; development builds under `build/` opt out automatically.
 - **Analytics**: Aptabase, with the app key injected at build time (`Support/AppConfig.plist`, gitignored), so end users never see a key field. No request content is collected.
 
 ## Screenshots
@@ -191,6 +192,27 @@ Notes:
 - Install / remove: Settings → Connection → SSL & certificate; installing adds the certificate to the login keychain with user-domain trust and triggers the standard authorization prompt. If it still shows “Not trusted”, set “ProxyDog Root CA” to “Always Trust” in Keychain Access and refresh in the app.
 - The certificate is only for local debugging; remove the root certificate from Keychain Access after uninstalling the app.
 
+## Auto-update
+
+Auto-update is implemented in-app (the same approach as the sibling TidyMac project, no Sparkle):
+
+1. Three seconds after launch the app fetches the manifest from `https://api.github.com/repos/welefen/ProxyDog/contents/updates/latest.json?ref=master`, falling back to `https://raw.githubusercontent.com/welefen/ProxyDog/master/updates/latest.json`.
+2. The manifest contains `version`, `downloadURL`, `sha256` and `releaseNotes`; when the version is newer the ZIP is downloaded and its SHA-256 verified.
+3. The archive is extracted; the bundle identifier (`com.proxydog.app`) and version are verified, and the new `ProxyDog.app` is staged. “Install and restart” swaps it in after the app quits and relaunches it.
+4. Automatic checks only run for installed builds (development builds under `build/` opt out). Debug overrides: `PROXYDOG_UPDATE_FEED`, `PROXYDOG_CURRENT_VERSION`, `PROXYDOG_UPDATE_TOKEN`, and `PROXYDOG_UPDATE_DEBUG=1` (log to `/tmp/proxydog-update-debug.log`).
+
+Publishing a release:
+
+```bash
+# 1. Bump CFBundleShortVersionString in Support/Info.plist
+# 2. Build dist/ artifacts and write updates/ProxyDog-<version>.zip + updates/latest.json
+./scripts/publish_update.sh
+# 3. Commit and push (or ./scripts/publish_update.sh --push to commit and tag)
+git add updates scripts && git commit -m "release: ProxyDog <version>" && git push origin master
+```
+
+`package.sh` only packages (DMG + ZIP + SHA256SUMS in `dist/`); `publish_update.sh` additionally refreshes the `updates/` feed. The repository must be public so clients can download releases.
+
 ## Analytics
 
 Analytics uses Aptabase. The app key is configured once **at development/build time**: `AptabaseAppKey` in `Support/AppConfig.plist` is injected into the app bundle's `Info.plist` by `scripts/build_app.sh`, so there is no key field in the settings or onboarding UI. The file is not committed; without it analytics is fully disabled.
@@ -252,6 +274,10 @@ UPSTREAM_SOCKS_REAL=socks5://127.0.0.1:1234 ./scripts/test_socks.sh   # also run
 
 # Localization completeness
 python3 scripts/check_localization.py
+
+# Package / publish an update (writes dist/ and updates/latest.json)
+./scripts/package.sh
+./scripts/publish_update.sh
 
 # Demo traffic / reset app state / capture a window
 ./scripts/demo_traffic.sh
