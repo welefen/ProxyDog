@@ -39,6 +39,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: DS.Space.x6) {
                     connectionSection
                     rewriteSection
+                    breakpointSection
                     appearanceSection
                     certificateSection
                 }
@@ -314,6 +315,14 @@ struct SettingsView: View {
     private var rewriteSection: some View {
         SettingsSection(title: "Rewrite rules") {
             RewriteRulesSectionView(store: state.rewriteRules)
+        }
+    }
+
+    // MARK: - Breakpoints
+
+    private var breakpointSection: some View {
+        SettingsSection(title: "Breakpoints") {
+            BreakpointsSectionView(store: state.breakpoints)
         }
     }
 

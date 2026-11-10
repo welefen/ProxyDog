@@ -189,3 +189,10 @@
 
 /* Rewrite */
 "Rewrite" = "Rewrite";
+
+/* Breakpoint editor */
+"Breakpoint" = "Breakpoint";
+"No body" = "No body";
+"Resume" = "Resume";
+"Drop" = "Drop";
+"%lld more waiting" = "%lld more waiting";

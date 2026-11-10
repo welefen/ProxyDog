@@ -73,6 +73,19 @@
 "Modify request" = "Modify request";
 "Modify response" = "Modify response";
 
+/* Settings · breakpoints */
+"Breakpoints" = "Breakpoints";
+"Matching exchanges pause and open an editor so you can tweak the body before resuming or dropping. Only applies while the proxy is running." = "Matching exchanges pause and open an editor so you can tweak the body before resuming or dropping. Only applies while the proxy is running.";
+"Add breakpoint" = "Add breakpoint";
+"No breakpoints yet" = "No breakpoints yet";
+"Add a breakpoint to pause matching requests or responses." = "Add a breakpoint to pause matching requests or responses.";
+"Edit breakpoint" = "Edit breakpoint";
+"Delete breakpoint" = "Delete breakpoint";
+"New breakpoint" = "New breakpoint";
+"Pause on request" = "Pause on request";
+"Pause on response" = "Pause on response";
+"Select at least one phase." = "Select at least one phase.";
+
 /* Settings · appearance */
 "Theme" = "Theme";
 "Follows the system appearance by default." = "Follows the system appearance by default.";

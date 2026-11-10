@@ -64,6 +64,9 @@ final class ProxyServer: @unchecked Sendable {
 
     /// Enabled static rewrite rules, read from any thread for every exchange.
     var rewriteRulesProvider: @Sendable () -> [RewriteRule] = { [] }
+    /// Enabled breakpoint rules and the gate that pauses matching exchanges.
+    var breakpointRulesProvider: @Sendable () -> [BreakpointRule] = { [] }
+    let breakpointGate = BreakpointGate()
 
     private(set) var status: Status = .stopped
 
@@ -150,7 +153,9 @@ final class ProxyServer: @unchecked Sendable {
                     certificateAuthority: certificateAuthority,
                     sslProxyingEnabled: sslEnabled,
                     upstreamProxyProvider: upstreamProxyProvider,
-                    rewriteRulesProvider: self.rewriteRulesProvider
+                    rewriteRulesProvider: self.rewriteRulesProvider,
+                    breakpointRulesProvider: self.breakpointRulesProvider,
+                    breakpointGate: self.breakpointGate
                 )
                 return channel.pipeline.addHandler(handler)
             }

@@ -39,6 +39,16 @@ enum DevLaunchOptions {
         value(for: "--sample-filter").flatMap(RequestCategory.init(rawValue:))
     }
 
+    /// Dev-only: paints a fake pending breakpoint so the editor sheet can be reviewed
+    /// without a paused proxy exchange. Values: request (default), response, queue, empty.
+    static var sampleBreakpointMode: String? {
+        let prefix = "--sample-breakpoint="
+        if let argument = arguments.first(where: { $0.hasPrefix(prefix) }) {
+            return String(argument.dropFirst(prefix.count))
+        }
+        return arguments.contains("--sample-breakpoint") ? "request" : nil
+    }
+
     /// QA probe: sends one analytics event a few seconds after launch so the
     /// self-request filter can be tested while the system proxy points at ProxyDog.
     static var analyticsProbeEnabled: Bool {
@@ -91,6 +101,101 @@ enum SampleTraffic {
         guard DevLaunchOptions.isSampleTrafficEnabled, !didLoad else { return }
         didLoad = true
         load(into: state)
+    }
+
+    /// Dev-only breakpoint preview: injects fake payloads into the same AppState list the
+    /// engine drives, so the sheet rendering can be screenshotted without real traffic.
+    static func injectSampleBreakpointIfRequested(state: AppState) {
+        guard let mode = DevLaunchOptions.sampleBreakpointMode,
+              state.pendingBreakpoints.isEmpty else { return }
+        state.pendingBreakpoints = sampleBreakpointPayloads(mode: mode)
+    }
+
+    private static func sampleBreakpointPayloads(mode: String) -> [BreakpointPayload] {
+        let emptyBodyPayload = BreakpointPayload(
+            id: UUID(),
+            phase: .request,
+            ruleName: "PUT /api/v1/orders/ord_8241",
+            method: "PUT",
+            url: "https://api.example.com/v1/orders/ord_8241",
+            statusCode: nil,
+            contentType: "application/json",
+            bodyText: "",
+            headers: headers([
+                ("Host", "api.example.com"),
+                ("Content-Type", "application/json"),
+            ]),
+            createdAt: Date()
+        )
+
+        let requestPayload = BreakpointPayload(
+            id: UUID(),
+            phase: .request,
+            ruleName: "POST /api/v1/orders",
+            method: "POST",
+            url: "https://api.example.com/v1/orders?expand=items,payments",
+            statusCode: nil,
+            contentType: "application/json",
+            bodyText: """
+            {
+              "order_id": "ord_8241",
+              "currency": "usd",
+              "amount": 2499,
+              "customer": {
+                "id": "cus_Q2f8sK1nT4wL",
+                "email": "dev@proxydog.app"
+              },
+              "items": [
+                { "sku": "pro-annual", "quantity": 1, "price": 2499 }
+              ]
+            }
+            """,
+            headers: headers([
+                ("Host", "api.example.com"),
+                ("User-Agent", "Safari/605.1.15"),
+                ("Content-Type", "application/json"),
+                ("Content-Length", "186"),
+                ("Authorization", "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiJ9"),
+            ]),
+            createdAt: Date()
+        )
+
+        let responsePayload = BreakpointPayload(
+            id: UUID(),
+            phase: .response,
+            ruleName: "api.example.com · order response",
+            method: "POST",
+            url: "https://api.example.com/v1/orders?expand=items,payments",
+            statusCode: 201,
+            contentType: "application/json",
+            bodyText: """
+            {
+              "id": "ord_8241",
+              "status": "created",
+              "amount": 2499,
+              "currency": "usd",
+              "receipt_url": "https://pay.example.com/receipts/ord_8241",
+              "created_at": "2026-11-10T10:00:00Z"
+            }
+            """,
+            headers: headers([
+                ("Server", "envoy"),
+                ("Content-Type", "application/json"),
+                ("Cache-Control", "no-store"),
+            ]),
+            createdAt: Date()
+        )
+
+        switch mode {
+        case "response":
+            return [responsePayload]
+        case "queue":
+            return [requestPayload, responsePayload, emptyBodyPayload]
+        case "empty":
+            return [emptyBodyPayload]
+        default:
+            return [requestPayload]
+        }
     }
 
     private static func load(into state: AppState) {

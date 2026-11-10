@@ -45,8 +45,17 @@ struct ContentView: View {
             OnboardingView()
                 .environmentObject(state)
         }
+        .sheet(item: Binding(
+            get: { state.pendingBreakpoints.first },
+            set: { _ in }
+        )) { payload in
+            BreakpointEditorView(payload: payload)
+                .environmentObject(state)
+                .id(payload.id)
+        }
         .onAppear {
             SampleTraffic.bootstrapIfRequested(state: state)
+            SampleTraffic.injectSampleBreakpointIfRequested(state: state)
             SampleTraffic.runDevProbesIfNeeded()
         }
     }

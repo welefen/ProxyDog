@@ -205,6 +205,9 @@ final class ExchangeState {
     /// Static rewrite rule applied to this exchange, when any.
     var rewriteRuleName: String?
     var rewriteAction: String?
+    /// Breakpoint rule that paused this exchange, when any.
+    var breakpointRuleName: String?
+    var breakpointPhase: String?
 
     var requestBody = Data()
     private(set) var requestBytesReceived = 0
@@ -315,6 +318,8 @@ final class ExchangeState {
             errorMessage: error,
             rewriteRuleName: rewriteRuleName,
             rewriteAction: rewriteAction,
+            breakpointRuleName: breakpointRuleName,
+            breakpointPhase: breakpointPhase,
             isPinned: false,
             clientSignature: clientSignature,
             clientPID: clientProcess?.pid,
@@ -347,6 +352,8 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
     private let upstreamProxyProvider: @Sendable () -> UpstreamProxy?
     /// Static rewrite rules, evaluated per exchange by the HTTP handlers.
     let rewriteRulesProvider: @Sendable () -> [RewriteRule]
+    let breakpointRulesProvider: @Sendable () -> [BreakpointRule]
+    let breakpointGate: BreakpointGate
 
     private var buffer = ByteBufferAllocator().buffer(capacity: 0)
     private var extraBytes: ByteBuffer?
@@ -362,9 +369,13 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
         certificateAuthority: CertificateAuthority,
         sslProxyingEnabled: Bool,
         upstreamProxyProvider: @Sendable @escaping () -> UpstreamProxy? = { nil },
-        rewriteRulesProvider: @Sendable @escaping () -> [RewriteRule] = { [] }
+        rewriteRulesProvider: @Sendable @escaping () -> [RewriteRule] = { [] },
+        breakpointRulesProvider: @Sendable @escaping () -> [BreakpointRule] = { [] },
+        breakpointGate: BreakpointGate = BreakpointGate()
     ) {
         self.rewriteRulesProvider = rewriteRulesProvider
+        self.breakpointRulesProvider = breakpointRulesProvider
+        self.breakpointGate = breakpointGate
         self.sink = sink
         self.certificateAuthority = certificateAuthority
         self.sslProxyingEnabled = sslProxyingEnabled
@@ -543,7 +554,9 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             connectTarget: ProxyConnectTarget(host: host, port: port),
             upstreamProxyProvider: upstreamProxyProvider,
             clientIdentity: clientIdentity,
-            rewriteRulesProvider: rewriteRulesProvider
+            rewriteRulesProvider: rewriteRulesProvider,
+            breakpointRulesProvider: breakpointRulesProvider,
+            breakpointGate: breakpointGate
         )
 
         // The TLS handler negotiates ALPN; HTTP2MITM waits for the handshake result and then
@@ -586,7 +599,9 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             requestDecoderWrapper: decoderWrapper,
             upstreamProxyProvider: upstreamProxyProvider,
             clientIdentity: clientIdentity,
-            rewriteRulesProvider: rewriteRulesProvider
+            rewriteRulesProvider: rewriteRulesProvider,
+            breakpointRulesProvider: breakpointRulesProvider,
+            breakpointGate: breakpointGate
         )
 
         return channel.setOption(ChannelOptions.autoRead, value: false)
@@ -894,6 +909,8 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     private let clientIdentity: ClientIdentity
     /// Static rewrite rules evaluated for every exchange (read on the event loop).
     let rewriteRulesProvider: @Sendable () -> [RewriteRule]
+    let breakpointRulesProvider: @Sendable () -> [BreakpointRule]
+    let breakpointGate: BreakpointGate
 
     let responseEncoder: HTTPResponseEncoder
     let requestDecoderWrapper: ByteToMessageHandler<HTTPRequestDecoder>
@@ -920,6 +937,13 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     private var dropForwardEncodingHeaders = false
     private var responsePhaseRule: RewriteRule?
 
+    // Breakpoint state.
+    private var requestBreakpointRule: BreakpointRule?
+    private var responseBreakpointRule: BreakpointRule?
+    private var bufferingBreakpointBody = false
+    private var breakpointBodyBuffer = Data()
+    private var requestBreakpointPaused = false
+
     /// Most recent finished capture of this connection, kept so a late process probe can
     /// still patch (and re-emit) it.
     private var lastCompletedCapture: CapturedRequest?
@@ -945,9 +969,13 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         requestDecoderWrapper: ByteToMessageHandler<HTTPRequestDecoder>,
         upstreamProxyProvider: @Sendable @escaping () -> UpstreamProxy? = { nil },
         clientIdentity: ClientIdentity = ClientIdentity(),
-        rewriteRulesProvider: @Sendable @escaping () -> [RewriteRule] = { [] }
+        rewriteRulesProvider: @Sendable @escaping () -> [RewriteRule] = { [] },
+        breakpointRulesProvider: @Sendable @escaping () -> [BreakpointRule] = { [] },
+        breakpointGate: BreakpointGate = BreakpointGate()
     ) {
         self.rewriteRulesProvider = rewriteRulesProvider
+        self.breakpointRulesProvider = breakpointRulesProvider
+        self.breakpointGate = breakpointGate
         self.sink = sink
         self.connectTarget = connectTarget
         self.scheme = scheme
@@ -1109,11 +1137,26 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         exchange = state
         state.clientProcess = clientIdentity.current
 
-        // Rewrite rules match the original, client-visible URL. WebSocket upgrade requests are
-        // left alone so we never break a protocol upgrade in flight.
+        // Rules match the original, client-visible URL. WebSocket upgrade requests are left
+        // alone so we never break a protocol upgrade in flight.
         let url = RewriteEngine.urlString(scheme: target.scheme, host: target.host, port: target.port, path: target.path)
+        let breakpointRules = isUpgrade ? [] : breakpointRulesProvider()
+        requestBreakpointRule = breakpointRules.first {
+            $0.isEnabled && $0.breakOnRequest && $0.matches(method: head.method.rawValue, url: url)
+        }
+        responseBreakpointRule = breakpointRules.first {
+            $0.isEnabled && $0.breakOnResponse && $0.matches(method: head.method.rawValue, url: url)
+        }
+        if let breakpoint = requestBreakpointRule {
+            state.breakpointRuleName = breakpoint.displayName
+            state.breakpointPhase = BreakpointPhase.request.rawValue
+        }
         let rules = rewriteRulesProvider()
-        let rule = isUpgrade ? nil : RewriteEngine.requestPhaseRule(rules, method: head.method.rawValue, url: url)
+        // A request breakpoint takes precedence: the request-phase rewrite rule is skipped for
+        // exchanges that will pause before going upstream.
+        let rule = (isUpgrade || requestBreakpointRule != nil)
+            ? nil
+            : RewriteEngine.requestPhaseRule(rules, method: head.method.rawValue, url: url)
         responsePhaseRule = isUpgrade ? nil : RewriteEngine.responsePhaseRule(rules, method: head.method.rawValue, url: url)
         if let rule {
             state.rewriteRuleName = rule.displayName
@@ -1160,6 +1203,20 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             }
         }
 
+        if requestBreakpointRule != nil {
+            // Pause before opening upstream. Requests with a body are buffered first.
+            let contentLength = head.headers.first(name: "Content-Length").flatMap(Int.init) ?? 0
+            let chunked = (head.headers.first(name: "Transfer-Encoding") ?? "").lowercased().contains("chunked")
+            if contentLength > 0 || chunked {
+                bufferingBreakpointBody = true
+                breakpointBodyBuffer = Data()
+                channel?.setOption(ChannelOptions.autoRead, value: true).whenFailure { _ in }
+            } else {
+                presentRequestBreakpoint()
+            }
+            return
+        }
+
         channel?.setOption(ChannelOptions.autoRead, value: false).whenFailure { _ in }
         openUpstream(state: state, head: head)
     }
@@ -1168,6 +1225,17 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         guard let state = exchange else { return }
         if let bytes = body.getBytes(at: body.readerIndex, length: body.readableBytes) {
             state.appendRequestBytes(bytes)
+        }
+        if bufferingBreakpointBody {
+            if breakpointBodyBuffer.count + body.readableBytes > Self.maxRewriteBodyBytes {
+                // Too large to show in the editor: abandon the pause and continue unchanged.
+                requestBreakpointRule = nil
+                state.breakpointRuleName = nil
+                state.breakpointPhase = nil
+            } else if let bytes = body.getBytes(at: body.readerIndex, length: body.readableBytes) {
+                breakpointBodyBuffer.append(contentsOf: bytes)
+            }
+            return
         }
         if bufferingRuleBody {
             if ruleBodyBuffer.count + body.readableBytes > Self.maxRewriteBodyBytes {
@@ -1202,6 +1270,24 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         guard let state = exchange else { return }
         state.requestEnded = true
         state.pendingTrailers = trailers
+
+        if bufferingBreakpointBody {
+            bufferingBreakpointBody = false
+            if requestBreakpointRule != nil {
+                presentRequestBreakpoint()
+                return
+            }
+            // Overflowed / abandoned: forward the buffered body and open upstream normally.
+            if !breakpointBodyBuffer.isEmpty {
+                forwardBodyOverride = ByteBuffer(bytes: breakpointBodyBuffer)
+            }
+            breakpointBodyBuffer = Data()
+            if let head = currentRequestHead {
+                channel?.setOption(ChannelOptions.autoRead, value: false).whenFailure { _ in }
+                openUpstream(state: state, head: head)
+            }
+            return
+        }
 
         if bufferingRuleBody, let rule = pendingRequestRule, let head = currentRequestHead {
             bufferingRuleBody = false
@@ -1241,6 +1327,101 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         }
     }
 
+    // MARK: Request breakpoints
+
+    private func presentRequestBreakpoint() {
+        guard let channel,
+              let state = exchange,
+              let head = currentRequestHead,
+              let rule = requestBreakpointRule
+        else { return }
+        let bodyText = String(data: breakpointBodyBuffer, encoding: .utf8) ?? ""
+        let payload = BreakpointPayload(
+            id: UUID(),
+            phase: .request,
+            ruleName: rule.displayName,
+            method: head.method.rawValue,
+            url: state.originalURLString,
+            statusCode: nil,
+            contentType: head.headers.first(name: "Content-Type"),
+            bodyText: bodyText,
+            headers: state.requestHeaders,
+            createdAt: Date()
+        )
+        requestBreakpointPaused = true
+        channel.setOption(ChannelOptions.autoRead, value: false).whenFailure { _ in }
+        breakpointGate.wait(payload: payload, on: channel.eventLoop) { [weak self] decision in
+            self?.resolveRequestBreakpoint(decision)
+        }
+    }
+
+    private func resolveRequestBreakpoint(_ decision: BreakpointDecision) {
+        guard let channel,
+              let state = exchange,
+              let head = currentRequestHead,
+              requestBreakpointPaused
+        else { return }
+        requestBreakpointPaused = false
+        guard channel.isActive else {
+            exchange = nil
+            return
+        }
+
+        let original = breakpointBodyBuffer
+        breakpointBodyBuffer = Data()
+
+        switch decision {
+        case .drop:
+            finishBreakpointDrop(state: state)
+
+        case .resume(let body):
+            if let body {
+                let data = Data(body.utf8)
+                state.replaceCapturedRequestBody(data)
+                forwardBodyOverride = ByteBuffer(bytes: data)
+                forwardContentLengthOverride = data.count
+                dropForwardEncodingHeaders = true
+            } else if !original.isEmpty {
+                forwardBodyOverride = ByteBuffer(bytes: original)
+            }
+            channel.setOption(ChannelOptions.autoRead, value: false).whenFailure { _ in }
+            openUpstream(state: state, head: head)
+        }
+    }
+
+    /// `.drop` at a request breakpoint: never contact upstream; answer 403 and complete the
+    /// capture with the breakpoint fields set.
+    private func finishBreakpointDrop(state: ExchangeState) {
+        exchange = nil
+        let body = Data("ProxyDog: dropped at breakpoint\n".utf8)
+        var headers = HTTPHeaders()
+        headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
+        headers.add(name: "Content-Length", value: String(body.count))
+        let keepAlive = !clientWantsClose
+        headers.add(name: "Connection", value: keepAlive ? "keep-alive" : "close")
+
+        state.responseStatusCode = 403
+        state.responseHeaders = ProxyWire.headerFields(headers)
+        state.replaceCapturedResponseBody(body, wireBytes: body.count)
+        let completed = state.snapshot(state: .completed)
+        lastCompletedCapture = completed
+        sink.captureDidUpdate(completed)
+
+        guard let channel, channel.isActive else { return }
+        let responseHead = HTTPResponseHead(version: .http1_1, status: .forbidden, headers: headers)
+        channel.write(HTTPServerResponsePart.head(responseHead))
+        var buffer = channel.allocator.buffer(capacity: body.count)
+        buffer.writeBytes([UInt8](body))
+        channel.write(HTTPServerResponsePart.body(.byteBuffer(buffer)))
+        channel.writeAndFlush(HTTPServerResponsePart.end(nil)).whenComplete { _ in
+            if keepAlive {
+                channel.setOption(ChannelOptions.autoRead, value: true).whenFailure { _ in }
+            } else {
+                channel.close(promise: nil)
+            }
+        }
+    }
+
     private func resetRewriteState() {
         currentRequestHead = nil
         pendingRequestRule = nil
@@ -1253,6 +1434,11 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         forwardContentLengthOverride = nil
         dropForwardEncodingHeaders = false
         responsePhaseRule = nil
+        requestBreakpointRule = nil
+        responseBreakpointRule = nil
+        bufferingBreakpointBody = false
+        breakpointBodyBuffer = Data()
+        requestBreakpointPaused = false
     }
 
     /// Completes an exchange locally with a rule-synthesized response (`.replaceResponse`).
@@ -1307,7 +1493,9 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         state: ExchangeState,
         head: HTTPRequestHead,
         clientChannel: Channel,
-        responseRule: RewriteRule?
+        responseRule: RewriteRule?,
+        responseBreakpointRule: BreakpointRule?,
+        breakpointGate: BreakpointGate
     ) -> UpstreamHandles {
         let requestEncoder = HTTPRequestEncoder()
         let responseDecoder = HTTPResponseDecoder(
@@ -1323,7 +1511,9 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             owner: self,
             requestEncoder: requestEncoder,
             responseDecoderWrapper: decoderWrapper,
-            responseRule: responseRule
+            responseRule: responseRule,
+            responseBreakpointRule: responseBreakpointRule,
+            breakpointGate: breakpointGate
         )
         return UpstreamHandles(
             requestEncoder: requestEncoder,
@@ -1354,7 +1544,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             .connectTimeout(.seconds(20))
             .channelInitializer { upstreamChannel in
                 let eventLoop = upstreamChannel.eventLoop
-                let handles = self.makeUpstreamHandles(state: state, head: head, clientChannel: channel, responseRule: self.responsePhaseRule)
+                let handles = self.makeUpstreamHandles(state: state, head: head, clientChannel: channel, responseRule: self.responsePhaseRule, responseBreakpointRule: self.responseBreakpointRule, breakpointGate: self.breakpointGate)
 
                 var setup: EventLoopFuture<Void>
                 if useTLS {
@@ -1421,7 +1611,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
             proxy: proxy
         )
             .flatMap { (proxyChannel: Channel, leftover: ByteBuffer) -> EventLoopFuture<(Channel, UpstreamHTTPRelayHandler)> in
-                let handles = self.makeUpstreamHandles(state: state, head: head, clientChannel: channel, responseRule: self.responsePhaseRule)
+                let handles = self.makeUpstreamHandles(state: state, head: head, clientChannel: channel, responseRule: self.responsePhaseRule, responseBreakpointRule: self.responseBreakpointRule, breakpointGate: self.breakpointGate)
 
                 var setup: EventLoopFuture<Void>
                 if useTLS {
@@ -1690,6 +1880,23 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         webSocketSession?.applyClientProcess(process)
     }
 
+    // MARK: Breakpoint owner hooks
+
+    func breakpointPendingSnapshot(_ state: ExchangeState) {
+        guard exchange === state else { return }
+        sink.captureDidUpdate(state.snapshot(state: .pending))
+    }
+
+    /// `.drop` at a response breakpoint: fail the capture, close upstream and the client
+    /// connection so the client sees a failure rather than a valid response.
+    func breakpointDropped(_ state: ExchangeState, message: String) {
+        guard exchange === state else { return }
+        exchange = nil
+        sink.captureDidUpdate(state.snapshot(state: .failed, error: message))
+        closeUpstream()
+        channel?.close(promise: nil)
+    }
+
     // MARK: Helpers
 
     private func closeUpstream() {
@@ -1749,11 +1956,14 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
     // `.modifyResponse` buffering state. The response head is withheld until the body is
     // complete so it can be sent as identity-encoded bytes with an exact Content-Length.
     private let responseRule: RewriteRule?
+    private let responseBreakpointRule: BreakpointRule?
+    private let breakpointGate: BreakpointGate
     private var buffering = false
     private var bufferedHead: HTTPResponseHead?
     private var bufferedOutgoingHead: HTTPResponseHead?
     private var bufferedBody = Data()
     private var bufferedNoBody = false
+    private var waitingBreakpoint: (original: HTTPResponseHead, outgoing: HTTPResponseHead, rawBody: Data, decodedBody: Data)?
     private static let maxRewriteBodyBytes = 16 * 1024 * 1024
 
     init(
@@ -1764,7 +1974,9 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
         owner: ClientHTTPHandler,
         requestEncoder: HTTPRequestEncoder,
         responseDecoderWrapper: ByteToMessageHandler<HTTPResponseDecoder>,
-        responseRule: RewriteRule?
+        responseRule: RewriteRule?,
+        responseBreakpointRule: BreakpointRule?,
+        breakpointGate: BreakpointGate
     ) {
         self.exchange = exchange
         self.method = method
@@ -1774,6 +1986,8 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
         self.requestEncoder = requestEncoder
         self.responseDecoderWrapper = responseDecoderWrapper
         self.responseRule = responseRule
+        self.responseBreakpointRule = responseBreakpointRule
+        self.breakpointGate = breakpointGate
         self.buffering = false
     }
 
@@ -1878,8 +2092,9 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
         headers.replaceOrAdd(name: "Connection", value: keepAlive ? "keep-alive" : "close")
 
         let outgoing = HTTPResponseHead(version: .http1_1, status: head.status, headers: headers)
-        if responseRule != nil, !noBody {
-            // Withhold the head until the body is fully buffered and rewritten.
+        if (responseRule != nil || responseBreakpointRule != nil), !noBody {
+            // Withhold the head until the body is fully buffered (rewrite) or the user decides
+            // (breakpoint).
             bufferedHead = head
             bufferedOutgoingHead = outgoing
             bufferedNoBody = noBody
@@ -1906,59 +2121,80 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
 
     /// Turns the buffered response into the modified response (identity encoding, exact
     /// Content-Length). Falls back to passing the original bytes through when the body is not
-    /// decodable/UTF-8 or the rule cannot be applied.
+    /// decodable/UTF-8 or the rule cannot be applied. When a response breakpoint matches and the
+    /// body is editable text, the exchange pauses before anything is written to the client.
     private func finalizeBufferedResponse() {
         guard let original = bufferedHead, let outgoing = bufferedOutgoingHead else { return }
         let body = bufferedBody
         bufferedBody = Data()
-        buffering = false
+
+        var decoded: Data? = body
+        if let encoding = original.headers.first(name: "content-encoding") {
+            decoded = BodyDecompression.canDecode(contentEncoding: encoding)
+                ? BodyDecompression.decode(body, contentEncoding: encoding)
+                : nil
+        }
+
+        // Response breakpoint: only pause for editable (UTF-8) or empty bodies.
+        if let breakpoint = responseBreakpointRule,
+           let decodedBody = decoded,
+           let bodyText = String(data: decodedBody, encoding: .utf8) {
+            buffering = false
+            exchange.breakpointRuleName = breakpoint.displayName
+            exchange.breakpointPhase = BreakpointPhase.response.rawValue
+            owner?.breakpointPendingSnapshot(exchange)
+            waitingBreakpoint = (original, outgoing, body, decodedBody)
+
+            var headers: [HeaderField] = []
+            for (name, value) in original.headers {
+                headers.append(HeaderField(name: name, value: value))
+            }
+            let payload = BreakpointPayload(
+                id: UUID(),
+                phase: .response,
+                ruleName: breakpoint.displayName,
+                method: exchange.method,
+                url: exchange.originalURLString,
+                statusCode: exchange.responseStatusCode,
+                contentType: original.headers.first(name: "content-type"),
+                bodyText: bodyText,
+                headers: headers,
+                createdAt: Date()
+            )
+            breakpointGate.wait(payload: payload, on: client.eventLoop) { [weak self] decision in
+                self?.resolveResponseBreakpoint(decision)
+            }
+            return
+        }
+
+        applyBufferedResponse(original: original, outgoing: outgoing, rawBody: body, decoded: decoded, breakpointBody: nil)
+    }
+
+    /// Sends the buffered response (rewrite rule applied when present, otherwise passthrough).
+    private func applyBufferedResponse(
+        original: HTTPResponseHead,
+        outgoing: HTTPResponseHead,
+        rawBody: Data,
+        decoded: Data?,
+        breakpointBody: Data?
+    ) {
         bufferedHead = nil
         bufferedOutgoingHead = nil
 
-        var transformed: Data?
-        if let rule = responseRule {
-            var decoded: Data? = body
-            if let encoding = original.headers.first(name: "content-encoding") {
-                decoded = BodyDecompression.canDecode(contentEncoding: encoding)
-                    ? BodyDecompression.decode(body, contentEncoding: encoding)
-                    : nil
-            }
-            if let decoded {
-                transformed = rule.transformData(decoded)
-            }
-            if let transformed {
+        if let breakpointBody {
+            // `.resume` with an edited body: identity encoding + exact Content-Length.
+            exchange.replaceCapturedResponseBody(breakpointBody, wireBytes: breakpointBody.count)
+            let keepClientAlive = !clientWantsClose
+            sendIdentityResponse(original: original, body: breakpointBody, keepAlive: keepClientAlive)
+            return
+        }
+
+        if let rule = responseRule, let decoded {
+            if let transformed = rule.transformData(decoded) {
                 exchange.rewriteRuleName = rule.displayName
                 exchange.rewriteAction = rule.action.label
                 exchange.replaceCapturedResponseBody(transformed, wireBytes: transformed.count)
-
-                let keepClientAlive = !clientWantsClose
-                var headers = HTTPHeaders()
-                for (name, value) in original.headers {
-                    let lower = name.lowercased()
-                    if lower == "connection"
-                        || lower == "keep-alive"
-                        || lower == "proxy-connection"
-                        || lower == "transfer-encoding"
-                        || lower == "upgrade"
-                        || lower == "content-encoding"
-                        || lower == "content-length" {
-                        continue
-                    }
-                    headers.add(name: name, value: value)
-                }
-                headers.replaceOrAdd(name: "Content-Length", value: String(transformed.count))
-                headers.replaceOrAdd(name: "Connection", value: keepClientAlive ? "keep-alive" : "close")
-
-                let responseHead = HTTPResponseHead(version: .http1_1, status: original.status, headers: headers)
-                headForwarded = true
-                forward(.head(responseHead))
-                if !transformed.isEmpty {
-                    var buffer = client.allocator.buffer(capacity: transformed.count)
-                    buffer.writeBytes([UInt8](transformed))
-                    forward(.body(.byteBuffer(buffer)))
-                }
-                let finalWrite = forward(.end(nil))
-                owner?.upstreamResponseFinished(exchange, keepAlive: keepClientAlive, finalWrite: finalWrite)
+                sendIdentityResponse(original: original, body: transformed, keepAlive: !clientWantsClose)
                 return
             }
         }
@@ -1966,6 +2202,67 @@ final class UpstreamHTTPRelayHandler: ChannelInboundHandler, RemovableChannelHan
         // Passthrough: send exactly what the upstream sent (with its original framing headers).
         headForwarded = true
         forward(.head(outgoing))
+        if !rawBody.isEmpty {
+            var buffer = client.allocator.buffer(capacity: rawBody.count)
+            buffer.writeBytes([UInt8](rawBody))
+            forward(.body(.byteBuffer(buffer)))
+        }
+        let finalWrite = forward(.end(nil))
+        owner?.upstreamResponseFinished(exchange, keepAlive: keepAlive, finalWrite: finalWrite)
+    }
+
+    /// Resolves a response breakpoint when the user decides (or the gate times out).
+    private func resolveResponseBreakpoint(_ decision: BreakpointDecision) {
+        guard let waiting = waitingBreakpoint else { return }
+        waitingBreakpoint = nil
+        guard client.isActive else {
+            owner?.breakpointDropped(exchange, message: "Client closed while paused at a breakpoint.")
+            return
+        }
+        switch decision {
+        case .drop:
+            owner?.breakpointDropped(exchange, message: "Dropped at breakpoint")
+        case .resume(let body):
+            if let body {
+                applyBufferedResponse(
+                    original: waiting.original,
+                    outgoing: waiting.outgoing,
+                    rawBody: waiting.rawBody,
+                    decoded: waiting.decodedBody,
+                    breakpointBody: Data(body.utf8)
+                )
+            } else {
+                applyBufferedResponse(
+                    original: waiting.original,
+                    outgoing: waiting.outgoing,
+                    rawBody: waiting.rawBody,
+                    decoded: waiting.decodedBody,
+                    breakpointBody: nil
+                )
+            }
+        }
+    }
+
+    private func sendIdentityResponse(original: HTTPResponseHead, body: Data, keepAlive: Bool) {
+        var headers = HTTPHeaders()
+        for (name, value) in original.headers {
+            let lower = name.lowercased()
+            if lower == "connection"
+                || lower == "keep-alive"
+                || lower == "proxy-connection"
+                || lower == "transfer-encoding"
+                || lower == "upgrade"
+                || lower == "content-encoding"
+                || lower == "content-length" {
+                continue
+            }
+            headers.add(name: name, value: value)
+        }
+        headers.replaceOrAdd(name: "Content-Length", value: String(body.count))
+        headers.replaceOrAdd(name: "Connection", value: keepAlive ? "keep-alive" : "close")
+        let responseHead = HTTPResponseHead(version: .http1_1, status: original.status, headers: headers)
+        headForwarded = true
+        forward(.head(responseHead))
         if !body.isEmpty {
             var buffer = client.allocator.buffer(capacity: body.count)
             buffer.writeBytes([UInt8](body))

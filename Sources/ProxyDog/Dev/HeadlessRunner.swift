@@ -63,6 +63,8 @@ final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
         if let path = request.clientAppPath { payload["client_path"] = path }
         if let name = request.rewriteRuleName { payload["rewrite_rule"] = name }
         if let action = request.rewriteAction { payload["rewrite_action"] = action }
+        if let rule = request.breakpointRuleName { payload["breakpoint_rule"] = rule }
+        if let phase = request.breakpointPhase { payload["breakpoint_phase"] = phase }
         if request.isWebSocket { payload["websocket"] = true }
         if !request.webSocketMessages.isEmpty { payload["ws_messages"] = request.webSocketMessages.count }
 
@@ -118,6 +120,8 @@ enum HeadlessRunner {
         // QA: load static rewrite rules from a JSON file so rewrite behaviour is testable
         // without the settings UI.
         let rulesFile = flagValue("--rules-file")
+        let breakpointsFile = flagValue("--breakpoints-file")
+        let breakpointActionsFile = flagValue("--breakpoint-actions")
         let rewriteSnapshot = RewriteRuleSnapshot()
         if let rulesFile,
            let data = try? Data(contentsOf: URL(fileURLWithPath: rulesFile)),
@@ -138,6 +142,14 @@ enum HeadlessRunner {
             FileHandle.standardError.write(Data(message.utf8))
         }
 
+        let breakpointSnapshot = BreakpointRuleSnapshot()
+        if let breakpointsFile,
+           let data = try? Data(contentsOf: URL(fileURLWithPath: breakpointsFile)),
+           let decoded = try? JSONDecoder().decode([BreakpointRule].self, from: data) {
+            breakpointSnapshot.update(decoded)
+            print("{\"type\":\"breakpoints\",\"count\":\(decoded.count)}")
+        }
+
         let sink = JSONLineCaptureSink(path: outputPath)
         sink.includeBodyPrefix = arguments.contains("--print-bodies")
         let server = ProxyServer(
@@ -149,6 +161,12 @@ enum HeadlessRunner {
         server.upstreamProxy = upstream
         server.socksPort = socksPort
         server.rewriteRulesProvider = { rewriteSnapshot.current() }
+        server.breakpointRulesProvider = { breakpointSnapshot.current() }
+        if let breakpointActionsFile,
+           let data = try? Data(contentsOf: URL(fileURLWithPath: breakpointActionsFile)) {
+            let auto = BreakpointAutoResolver(data: data)
+            server.breakpointGate.autoResolver = { payload in auto.next(for: payload) }
+        }
         if let upstream {
             print("{\"type\":\"upstream\",\"proxy\":\"\(upstream.displayName)\"}")
         }
@@ -397,5 +415,39 @@ extension HeadlessRunner {
             throw ProxyError.bindFailed("could not occupy port \(port)")
         }
         return descriptor
+    }
+}
+
+// MARK: - Breakpoint automation (headless tests)
+
+/// Plays back a fixed list of breakpoint decisions so engine tests can exercise pauses
+/// without a human in the loop. Decisions are consumed in hit order; when the list is
+/// exhausted exchanges resume unchanged.
+private final class BreakpointAutoResolver: @unchecked Sendable {
+    private struct Step: Decodable {
+        let action: String
+        let body: String?
+    }
+
+    private let lock = NSLock()
+    private var steps: [Step] = []
+    private var cursor = 0
+
+    init(data: Data) {
+        if let decoded = try? JSONDecoder().decode([Step].self, from: data) {
+            steps = decoded
+        }
+    }
+
+    func next(for payload: BreakpointPayload) -> BreakpointDecision? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard cursor < steps.count else { return .resume(body: nil) }
+        let step = steps[cursor]
+        cursor += 1
+        if step.action == "drop" {
+            return .drop
+        }
+        return .resume(body: step.body)
     }
 }

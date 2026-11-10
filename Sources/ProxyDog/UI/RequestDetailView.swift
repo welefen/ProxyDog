@@ -230,6 +230,16 @@ private struct OverviewTab: View {
                             color: DSColor.textSecondary
                         )
                     }
+                    if let breakpoint = request.breakpointRuleName {
+                        let phase = request.breakpointPhase == "response"
+                            ? String(localized: "Response")
+                            : String(localized: "Request")
+                        DetailFieldRow(
+                            label: String(localized: "Breakpoint"),
+                            value: "\(phase) · \(breakpoint)",
+                            color: DSColor.textSecondary
+                        )
+                    }
                     if let client = request.clientAppName {
                         DetailFieldRow(label: String(localized: "Client"), value: client)
                     }

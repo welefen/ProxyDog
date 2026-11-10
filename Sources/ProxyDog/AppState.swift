@@ -11,6 +11,9 @@ final class AppState: ObservableObject {
     let settings: AppSettings
     let store: CaptureStore
     let rewriteRules: RewriteRuleStore
+    let breakpoints: BreakpointRuleStore
+    /// Breakpoint sessions waiting for the user's decision (shown as a sheet).
+    @Published var pendingBreakpoints: [BreakpointPayload] = []
     let proxy: ProxyServer
 
     @Published private(set) var proxyStatus: ProxyServer.Status = .stopped
@@ -30,13 +33,24 @@ final class AppState: ObservableObject {
     private var ignoreOwnTrafficCancellable: AnyCancellable?
 
     convenience init() {
-        self.init(settings: AppSettings(), store: CaptureStore(), rewriteRules: RewriteRuleStore())
+        self.init(
+            settings: AppSettings(),
+            store: CaptureStore(),
+            rewriteRules: RewriteRuleStore(),
+            breakpoints: BreakpointRuleStore()
+        )
     }
 
-    init(settings: AppSettings, store: CaptureStore, rewriteRules: RewriteRuleStore) {
+    init(
+        settings: AppSettings,
+        store: CaptureStore,
+        rewriteRules: RewriteRuleStore,
+        breakpoints: BreakpointRuleStore
+    ) {
         self.settings = settings
         self.store = store
         self.rewriteRules = rewriteRules
+        self.breakpoints = breakpoints
         let sink = MainActorCaptureSink(store: store)
         self.sink = sink
         let proxy = ProxyServer(
@@ -47,6 +61,12 @@ final class AppState: ObservableObject {
         )
         self.proxy = proxy
         proxy.rewriteRulesProvider = { [rewriteRules] in rewriteRules.snapshot.current() }
+        proxy.breakpointRulesProvider = { [breakpoints] in breakpoints.snapshot.current() }
+        proxy.breakpointGate.onPendingChanged = { [weak self] payloads in
+            Task { @MainActor in
+                self?.pendingBreakpoints = payloads
+            }
+        }
         proxy.onStatusChange = { [weak self] status in
             Task { @MainActor in
                 self?.proxyStatus = status
@@ -76,6 +96,13 @@ final class AppState: ObservableObject {
                 self?.store.ignoresOwnTraffic = value
             }
         }
+    }
+
+    // MARK: - Breakpoints
+
+    /// Resume or drop a paused exchange from the breakpoint editor.
+    func resolveBreakpoint(id: UUID, decision: BreakpointDecision) {
+        proxy.breakpointGate.resolve(id: id, decision: decision)
     }
 
     // MARK: - Lifecycle

@@ -191,3 +191,10 @@
 
 /* Rewrite */
 "Rewrite" = "重写";
+
+/* Breakpoint editor */
+"Breakpoint" = "断点";
+"No body" = "没有正文";
+"Resume" = "放行";
+"Drop" = "丢弃";
+"%lld more waiting" = "还有 %lld 个等待处理";

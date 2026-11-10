@@ -12,6 +12,7 @@
 - **请求归属**：通过 libproc 反查发起连接的本地进程，详情页显示是哪个 App（含 PID，可看可执行路径），并保留原始 User-Agent。
 - **检索与筛选**：全文搜索、按域名过滤、Chrome DevTools 风格的类型筛选（Fetch/XHR、Doc、CSS、JS、Font、Img、Media、Manifest、Socket、Wasm、Other）、暂停/恢复抓包、清空、单条删除、收藏。
 - **重写规则（Rewrite）**：不写代码的静态规则，在设置里配置后立即生效；支持重定向、替换请求、替换响应、修改请求、修改响应 5 种动作（URL 正则/子串 + 可选 HTTP 方法匹配），HTTP/1.1 与 HTTP/2 流量都适用。
+- **断点（Breakpoint）**：命中 URL 的请求在转发前/响应返回前暂停，弹出编辑器可临时修改请求或响应正文，改完「放行」或「丢弃」；单次生效，不影响其他请求。
 - **导出**：HAR 1.2 文件导出、复制为 cURL。
 - **系统代理**：一键设置/关闭 macOS 系统 HTTP/HTTPS 代理（需要管理员授权）。
 - **上游代理（代理链）**：出站流量可以再交给已有的 HTTP CONNECT 或 SOCKS5 代理（例如本机正在运行的 VPN 客户端），抓包解密与 VPN 出网同时生效。
@@ -164,6 +165,24 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 - 请求正文替换/修改支持最大 32MB；WebSocket 升级请求不做改写
 - 被规则改写的请求会在详情页「概览」里标注「重写 · 动作名」，HAR 导出包含改写后的内容
 
+## 断点（Breakpoint）
+
+和「一直生效」的重写规则不同，断点是**遇到就停、人工修改、单次生效**，适合临时试各种值。设置 → 断点里按 URL（正则/子串 + 可选方法）配置规则，并选择在**请求阶段**或**响应阶段**暂停：
+
+![断点规则设置](Docs/screenshots/breakpoint-settings.png)
+
+命中后主窗口会弹出不可忽略的编辑器，展示方法与 URL、状态码、原始正文；修改正文后点「放行」继续，或点「丢弃」让该请求失败。多个请求同时命中会排队（显示「还有 N 个等待处理」）：
+
+![断点编辑器](Docs/screenshots/breakpoint-editor.png)
+
+说明：
+
+- 请求阶段：请求在连接上游之前暂停，可改请求正文（Content-Length 自动修正）；丢弃时客户端收到 403，不会请求上游
+- 响应阶段：响应在写给客户端之前暂停，可改响应正文（会自动解压 gzip/deflate，改完以未压缩返回并修正 Content-Length）；丢弃时连接被关闭，客户端看到失败
+- 只有可解码为 UTF-8 的正文才会暂停（二进制、br/zstd、超大正文自动放行）；WebSocket 升级请求不暂停
+- 120 秒内没有选择会自动放行，避免请求永久挂起
+- 被断点处理的请求会在详情页「概览」标注「断点 · 阶段」
+
 ## 根证书
 
 - 位置：`~/Library/Application Support/ProxyDog/Certificates/ca.crt`
@@ -209,6 +228,9 @@ UPSTREAM_REAL=127.0.0.1:1235 ./scripts/test_upstream.sh   # 再用真实 VPN 的
 
 # 重写规则测试：5 种动作 + 禁用规则 + 抓包标注
 ./scripts/test_rewrite.sh
+
+# 断点测试：请求/响应暂停改正文、丢弃、禁用规则、抓包阶段
+./scripts/test_breakpoint.sh
 
 # 请求归属测试：curl / Python 客户端 / MITM / SOCKS5 连接都能识别出 App
 ./scripts/test_attribution.sh

@@ -73,6 +73,19 @@
 "Modify request" = "修改请求";
 "Modify response" = "修改响应";
 
+/* Settings · breakpoints */
+"Breakpoints" = "断点";
+"Matching exchanges pause and open an editor so you can tweak the body before resuming or dropping. Only applies while the proxy is running." = "命中规则的请求会暂停，弹出编辑器供你临时修改正文，改完放行或丢弃。仅在代理运行时生效。";
+"Add breakpoint" = "添加断点";
+"No breakpoints yet" = "还没有断点规则";
+"Add a breakpoint to pause matching requests or responses." = "添加断点即可在匹配的请求或响应处暂停。";
+"Edit breakpoint" = "编辑断点";
+"Delete breakpoint" = "删除断点";
+"New breakpoint" = "新建断点";
+"Pause on request" = "在请求阶段暂停";
+"Pause on response" = "在响应阶段暂停";
+"Select at least one phase." = "请至少选择一个阶段。";
+
 /* Settings · appearance */
 "Theme" = "主题";
 "Follows the system appearance by default." = "默认跟随系统外观。";

@@ -50,6 +50,10 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
     var rewriteRuleName: String?
     /// Action of the applied rewrite rule (e.g. "Modify response").
     var rewriteAction: String?
+    /// Name of the breakpoint rule that paused this exchange, when any.
+    var breakpointRuleName: String?
+    /// Phase the breakpoint paused ("request" / "response"), when any.
+    var breakpointPhase: String?
     var isPinned: Bool
     /// User-Agent-derived client signature (e.g. "Safari/605.1.15"), when present.
     var clientSignature: String?
@@ -86,6 +90,8 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         errorMessage: String? = nil,
         rewriteRuleName: String? = nil,
         rewriteAction: String? = nil,
+        breakpointRuleName: String? = nil,
+        breakpointPhase: String? = nil,
         isPinned: Bool = false,
         clientSignature: String? = nil,
         clientPID: Int32? = nil,
@@ -113,6 +119,8 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         self.errorMessage = errorMessage
         self.rewriteRuleName = rewriteRuleName
         self.rewriteAction = rewriteAction
+        self.breakpointRuleName = breakpointRuleName
+        self.breakpointPhase = breakpointPhase
         self.isPinned = isPinned
         self.clientSignature = clientSignature
         self.clientPID = clientPID
