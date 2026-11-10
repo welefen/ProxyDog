@@ -409,31 +409,6 @@ struct SettingsView: View {
                     }
                 }
             }
-            SettingsSection(title: "Status") {
-                SettingsRow(
-                    title: "Proxy status",
-                    hint: "Listens on the loopback interface only.",
-                    hintText: proxyFailureMessage
-                ) {
-                    HStack(spacing: DS.Space.x2) {
-                        Circle()
-                            .fill(proxyStatusColor)
-                            .frame(width: 6, height: 6)
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text(proxyStatusText)
-                                .font(DS.Typography.mono(12))
-                                .foregroundStyle(state.proxyStatus.isRunning ? DSColor.textPrimary : DSColor.textSecondary)
-                                .monospacedDigit()
-                            if let socksPort = state.socksProxyFromSettings() {
-                                Text(verbatim: "SOCKS5 127.0.0.1:\(socksPort)")
-                                    .font(DS.Typography.mono(11))
-                                    .foregroundStyle(DSColor.textSecondary)
-                                    .monospacedDigit()
-                            }
-                        }
-                    }
-                }
-            }
             certificateSection
         }
     }
@@ -495,28 +470,6 @@ struct SettingsView: View {
 
     private var certificateSection: some View {
         SettingsSection(title: "SSL & Certificate") {
-            SettingsHairline()
-            SettingsRow(
-                title: "SSL proxying",
-                hint: "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners.",
-                hintText: sslWarning
-            ) {
-                Toggle("", isOn: Binding(
-                    get: { settings.sslProxyingEnabled && state.isCertificateTrusted },
-                    set: { newValue in
-                        guard state.isCertificateTrusted else { return }
-                        settings.sslProxyingEnabled = newValue
-                        if state.isProxyRunning { state.restartProxy() }
-                    }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(DSColor.accent)
-                .disabled(!state.isCertificateTrusted)
-                .accessibilityLabel("SSL proxying")
-            }
-            SettingsHairline()
             SettingsRow(
                 title: "Root certificate",
                 hint: "Required to inspect HTTPS. Stored in your login keychain."
@@ -553,6 +506,27 @@ struct SettingsView: View {
                     }
                 }
             }
+            SettingsHairline()
+            SettingsRow(
+                title: "SSL proxying",
+                hint: "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners.",
+                hintText: sslWarning
+            ) {
+                Toggle("", isOn: Binding(
+                    get: { settings.sslProxyingEnabled && state.isCertificateTrusted },
+                    set: { newValue in
+                        guard state.isCertificateTrusted else { return }
+                        settings.sslProxyingEnabled = newValue
+                        if state.isProxyRunning { state.restartProxy() }
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .tint(DSColor.accent)
+                .disabled(!state.isCertificateTrusted)
+                .accessibilityLabel("SSL proxying")
+            }
         }
     }
 
@@ -581,7 +555,7 @@ struct SettingsView: View {
     /// trusted yet (HTTPS handshakes would fail until it is installed).
     private var sslWarning: String? {
         guard !state.isCertificateTrusted else { return nil }
-        return String(localized: "The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it below.")
+        return String(localized: "The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install the root certificate first.")
     }
 
     private var proxyStatusText: String {
