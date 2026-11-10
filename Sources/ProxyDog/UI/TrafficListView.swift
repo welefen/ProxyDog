@@ -174,14 +174,14 @@ struct TrafficListView: View {
                 )
             Text("Request")
                 .frame(maxWidth: .infinity, alignment: .leading)
+            Color.clear
+                .frame(width: DS.Metric.pinColumnWidth)
             Text("Status")
                 .frame(width: DS.Metric.statusColumnWidth, alignment: .trailing)
             Text("Size")
                 .frame(width: DS.Metric.sizeColumnWidth, alignment: .trailing)
             Text("Time")
                 .frame(width: DS.Metric.durationColumnWidth, alignment: .trailing)
-            Color.clear
-                .frame(width: DS.Metric.pinColumnWidth)
         }
         .font(DS.Typography.mono(10, .medium))
         .foregroundStyle(DSColor.textMuted)
@@ -348,6 +348,9 @@ private struct TrafficRowView: View {
                 urlLine
                     .padding(.trailing, DS.Space.x3)
 
+                pinIndicator
+                    .frame(width: DS.Metric.pinColumnWidth, alignment: .center)
+
                 Text(PDStatus.compactLabel(for: request))
                     .font(DS.Typography.mono(11, .semibold))
                     .foregroundStyle(PDStatus.color(for: request))
@@ -365,9 +368,6 @@ private struct TrafficRowView: View {
                     .foregroundStyle(DSColor.textMuted)
                     .monospacedDigit()
                     .frame(width: DS.Metric.durationColumnWidth, alignment: .trailing)
-
-                pinIndicator
-                    .frame(width: DS.Metric.pinColumnWidth, alignment: .trailing)
             }
             .padding(.horizontal, DS.Space.x3)
             .frame(height: DS.Metric.rowHeight)
