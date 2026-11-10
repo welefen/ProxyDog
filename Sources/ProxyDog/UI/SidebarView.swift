@@ -5,6 +5,8 @@ import SwiftUI
 /// Quiet navigation column: traffic scope and host filtering.
 struct SidebarView: View {
     @EnvironmentObject private var state: AppState
+    @ObservedObject private var updater = UpdateManager.shared
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,16 +42,54 @@ struct SidebarView: View {
             Text("ProxyDog")
                 .font(DS.Typography.ui(16, .semibold))
                 .foregroundStyle(DSColor.textPrimary)
-            Text(AppInfo.versionLabel)
-                .font(DS.Typography.ui(11))
-                .foregroundStyle(DSColor.textMuted)
-                .monospacedDigit()
-                .padding(.leading, 1)
+            if let version = updater.availableVersion {
+                updateBadge(version)
+            } else {
+                Text(AppInfo.versionLabel)
+                    .font(DS.Typography.ui(11))
+                    .foregroundStyle(DSColor.textMuted)
+                    .monospacedDigit()
+                    .padding(.leading, 1)
+            }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, DS.Space.x3)
         .padding(.top, DS.Space.x3)
         .padding(.bottom, DS.Space.x4)
+    }
+
+    private func updateBadge(_ version: String) -> some View {
+        Button {
+            if updater.canInstall {
+                updater.installDownloadedUpdate()
+            } else {
+                state.requestSettings(destination: .appearance)
+                openSettings()
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 9, weight: .semibold))
+                Text(verbatim: version)
+                    .font(DS.Typography.ui(10, .semibold))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(DSColor.accent)
+            .padding(.horizontal, 5)
+            .frame(height: 16)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(DSColor.accent.opacity(0.12))
+            )
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+        .fastTooltip(
+            updater.canInstall
+                ? String(format: String(localized: "Update %@ is ready to install"), version)
+                : String(format: String(localized: "Update %@ is available"), version)
+        )
     }
 
     // MARK: Sections

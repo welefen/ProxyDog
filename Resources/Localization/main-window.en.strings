@@ -201,3 +201,7 @@
 "Rewrite this URL…" = "Rewrite this URL…";
 "Breakpoint this URL…" = "Breakpoint this URL…";
 "Rewrite rules and breakpoints" = "Rewrite rules and breakpoints";
+
+/* Updater badge */
+"Update %@ is available" = "Update %@ is available";
+"Update %@ is ready to install" = "Update %@ is ready to install";

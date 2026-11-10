@@ -82,6 +82,16 @@ final class UpdateManager: ObservableObject {
         }
     }
 
+    /// Newer version offered/downloaded, used for the sidebar badge.
+    var availableVersion: String? {
+        switch phase {
+        case .available(let version), .downloading(let version), .ready(let version):
+            return version
+        default:
+            return nil
+        }
+    }
+
     var canInstall: Bool {
         if case .ready = phase { return true }
         return false

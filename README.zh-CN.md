@@ -201,7 +201,8 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 1. 启动 3 秒后在后台请求更新清单：`https://api.github.com/repos/welefen/ProxyDog/contents/updates/latest.json?ref=master`，失败时回退到 `https://raw.githubusercontent.com/welefen/ProxyDog/master/updates/latest.json`。
 2. 清单包含 `version`、`downloadURL`、`sha256`、`releaseNotes`；若版本高于当前版本则下载 ZIP 并校验 SHA-256。
 3. 解压后校验应用包名（`com.proxydog.app`）与版本号，暂存新的 `ProxyDog.app`；点击「安装并重启」后由脚本在应用退出后替换旧包并重新启动。
-4. 仅在正式安装的 App 中自动检查（`build/` 下的开发构建会跳过）；也可用环境变量调试：`PROXYDOG_UPDATE_FEED`（自定义清单地址）、`PROXYDOG_CURRENT_VERSION`（覆盖当前版本）、`PROXYDOG_UPDATE_TOKEN`（访问私有仓库）、`PROXYDOG_UPDATE_DEBUG=1`（写日志到 `/tmp/proxydog-update-debug.log`）。
+4. 有可用更新时，主窗口侧边栏的版本号位置会变成可点击的「↑ 新版本」徽标：未下载时点击进入设置更新区，已下载时点击直接安装并重启。
+5. 仅在正式安装的 App 中自动检查（`build/` 下的开发构建会跳过）；也可用环境变量调试：`PROXYDOG_UPDATE_FEED`（自定义清单地址）、`PROXYDOG_CURRENT_VERSION`（覆盖当前版本）、`PROXYDOG_UPDATE_TOKEN`（访问私有仓库）、`PROXYDOG_UPDATE_DEBUG=1`（写日志到 `/tmp/proxydog-update-debug.log`）。
 
 发布新版本：
 
