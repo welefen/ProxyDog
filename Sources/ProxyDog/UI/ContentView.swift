@@ -4,6 +4,7 @@ import SwiftUI
 /// Root of the main window: sidebar, traffic list, detail inspector and the quiet
 /// status strip along the bottom.
 struct ContentView: View {
+    @Environment(\.openSettings) private var openSettings
     @EnvironmentObject private var state: AppState
     @State private var sidebarWidth: CGFloat = DS.Metric.sidebarIdeal
 
@@ -63,6 +64,7 @@ struct ContentView: View {
             SampleTraffic.bootstrapIfRequested(state: state)
             SampleTraffic.injectSampleBreakpointIfRequested(state: state)
             SampleTraffic.runDevProbesIfNeeded()
+            SampleTraffic.openSettingsIfRequested(state: state, openSettings: openSettings)
             SampleTraffic.presentSampleRuleDraftIfRequested(state: state)
         }
     }

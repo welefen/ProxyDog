@@ -101,6 +101,7 @@ struct SettingsView: View {
                 target?.styleMask.remove(.resizable)
                 target?.setContentSize(NSSize(width: 760, height: 560))
             }
+            applySettingsDestination(state.settingsDestinationRequest)
             // Fill the upstream address from whatever proxy is already running so the user
             // never has to type it by hand.
             state.autoFillUpstreamProxyIfEmpty()
@@ -112,6 +113,9 @@ struct SettingsView: View {
                     NSApp.keyWindow?.makeFirstResponder(nil)
                 }
             }
+        }
+        .onChange(of: state.settingsDestinationRequest) { _, destination in
+            applySettingsDestination(destination)
         }
         .onChange(of: settings.port) { _, newValue in
             if !portFocused { portText = String(newValue) }
@@ -551,6 +555,16 @@ struct SettingsView: View {
                 .accessibilityLabel("SSL proxying")
             }
         }
+    }
+
+    private func applySettingsDestination(_ destination: SettingsDestination?) {
+        guard let destination else { return }
+        switch destination {
+        case .connection: selectedTab = .connection
+        case .rules: selectedTab = .rules
+        case .appearance: selectedTab = .appearance
+        }
+        state.settingsDestinationRequest = nil
     }
 
     // MARK: - Derived state

@@ -19,6 +19,9 @@ final class AppState: ObservableObject {
     /// Pre-filled rule drafts opened from the traffic list context menu.
     @Published var rewriteRuleDraft: RewriteRule?
     @Published var breakpointRuleDraft: BreakpointRule?
+
+    /// Set when another window wants the settings pane on a specific page.
+    @Published var settingsDestinationRequest: SettingsDestination?
     let proxy: ProxyServer
 
     @Published private(set) var proxyStatus: ProxyServer.Status = .stopped
@@ -112,6 +115,12 @@ final class AppState: ObservableObject {
                 self?.store.ignoresOwnTraffic = value
             }
         }
+    }
+
+    /// Asks the settings window to show `destination`; the caller opens the window via
+    /// SwiftUI's `openSettings` environment action.
+    func requestSettings(destination: SettingsDestination) {
+        settingsDestinationRequest = destination
     }
 
     // MARK: - Rule drafts

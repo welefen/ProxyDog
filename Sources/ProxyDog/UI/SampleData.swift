@@ -55,6 +55,11 @@ enum DevLaunchOptions {
         arguments.contains("--analytics-probe")
     }
 
+    /// QA: opens the settings window at a given page (e.g. `--sample-settings-tab rules`).
+    static var sampleSettingsTab: String? {
+        value(for: "--sample-settings-tab")
+    }
+
     /// QA: opens the rewrite/breakpoint editor pre-filled from the first sample request.
     static var sampleRuleDraft: String? {
         value(for: "--sample-rule-draft")
@@ -99,6 +104,16 @@ enum SampleTraffic {
                 FileHandle.standardError.write(Data("[probe] self request finished\n".utf8))
             }.resume()
             FileHandle.standardError.write(Data("[probe] sent self request probe\n".utf8))
+        }
+    }
+
+    /// QA helper: open the settings window at the requested page.
+    static func openSettingsIfRequested(state: AppState, openSettings: OpenSettingsAction) {
+        guard let raw = DevLaunchOptions.sampleSettingsTab,
+              let destination = SettingsDestination(rawValue: raw) else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            state.requestSettings(destination: destination)
+            openSettings()
         }
     }
 

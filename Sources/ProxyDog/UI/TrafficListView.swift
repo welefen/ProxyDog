@@ -6,6 +6,7 @@ import SwiftUI
 /// Center column: capture toolbar, aligned column rhythm, custom rows and the
 /// keyboard affordances (Cmd+F, arrows, Delete).
 struct TrafficListView: View {
+    @Environment(\.openSettings) private var openSettings
     @EnvironmentObject private var state: AppState
 
     @FocusState private var searchFocused: Bool
@@ -94,6 +95,16 @@ struct TrafficListView: View {
                     .fill(DSColor.border)
                     .frame(width: 1, height: 14)
                     .padding(.horizontal, DS.Space.x1)
+
+                PDIconButton(symbol: "wand.and.stars", help: String(localized: "Rewrite rules")) {
+                    state.requestSettings(destination: .rules)
+                    openSettings()
+                }
+
+                PDIconButton(symbol: "pause.circle", help: String(localized: "Breakpoints")) {
+                    state.requestSettings(destination: .rules)
+                    openSettings()
+                }
 
                 PDIconButton(
                     symbol: state.isProxyRunning ? "power.circle.fill" : "power",
