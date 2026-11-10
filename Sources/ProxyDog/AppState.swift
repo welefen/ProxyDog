@@ -14,6 +14,8 @@ final class AppState: ObservableObject {
     let breakpoints: BreakpointRuleStore
     /// Breakpoint sessions waiting for the user's decision (shown as a sheet).
     @Published var pendingBreakpoints: [BreakpointPayload] = []
+    /// True while an intentional restart is in flight; transient status changes are hidden.
+    private var isRestartingProxy = false
     /// Pre-filled rule drafts opened from the traffic list context menu.
     @Published var rewriteRuleDraft: RewriteRule?
     @Published var breakpointRuleDraft: BreakpointRule?
@@ -72,7 +74,18 @@ final class AppState: ObservableObject {
         }
         proxy.onStatusChange = { [weak self] status in
             Task { @MainActor in
-                self?.proxyStatus = status
+                guard let self else { return }
+                // A restart briefly reports .stopped/.starting; swallow those transitions so
+                // the UI does not flash (e.g. the HTTP proxy switch disabling itself).
+                if self.isRestartingProxy {
+                    switch status {
+                    case .stopped, .starting:
+                        return
+                    default:
+                        self.isRestartingProxy = false
+                    }
+                }
+                self.proxyStatus = status
             }
         }
 
@@ -185,6 +198,7 @@ final class AppState: ObservableObject {
     }
 
     func stopProxy() {
+        isRestartingProxy = false
         proxyStatus = .stopped
         proxy.stop()
         Analytics.shared.track("proxy_stopped")
@@ -200,6 +214,7 @@ final class AppState: ObservableObject {
 
     func restartProxy() {
         let shouldRestart = proxy.status.isRunning || proxyStatus.isRunning
+        isRestartingProxy = shouldRestart
         proxy.stop()
         guard shouldRestart else {
             proxyStatus = .stopped
