@@ -169,3 +169,6 @@
 
 /* Context menu */
 "Show only this URL" = "只显示该地址";
+
+/* Headers */
+"Copy all headers" = "复制全部表头";

@@ -51,9 +51,12 @@ struct HeadersSectionView: View {
     let title: String
     let headers: [HeaderField]
 
+    @State private var isHovering = false
+    @State private var didCopyAll = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.x2) {
-            PDSectionLabel(title: title, detail: "\(headers.count)")
+            headerRow
 
             if headers.isEmpty {
                 Text("No headers")
@@ -75,6 +78,49 @@ struct HeadersSectionView: View {
                 )
             }
         }
+    }
+}
+
+extension HeadersSectionView {
+    /// Section title with the header count and a hover-revealed "copy all" affordance.
+    private var headerRow: some View {
+        HStack(spacing: DS.Space.x1 + 2) {
+            Text(title)
+                .font(DS.Typography.ui(11.5, .semibold))
+                .foregroundStyle(DSColor.textSecondary)
+            Text(String(headers.count))
+                .font(DS.Typography.mono(10.5))
+                .foregroundStyle(DSColor.textMuted)
+                .monospacedDigit()
+
+            if !headers.isEmpty {
+                Button {
+                    PDPasteboard.copy(
+                        headers.map { "\($0.name): \($0.value)" }.joined(separator: "\n")
+                    )
+                    didCopyAll = true
+                    Task {
+                        try? await Task.sleep(nanoseconds: 1_200_000_000)
+                        didCopyAll = false
+                    }
+                } label: {
+                    Image(systemName: didCopyAll ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 9.5, weight: .medium))
+                        .foregroundStyle(didCopyAll ? DSColor.green : DSColor.textMuted)
+                        .frame(width: 14, height: 14)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .opacity(isHovering || didCopyAll ? 1 : 0)
+                .fastTooltip(String(localized: "Copy all headers"))
+                .accessibilityLabel(String(localized: "Copy all headers"))
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(height: 16)
+        .contentShape(Rectangle())
+        .onHover { isHovering = $0 }
     }
 }
 
