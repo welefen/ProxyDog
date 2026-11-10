@@ -477,7 +477,7 @@ struct PDSegmented<Option: Hashable>: View {
             RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
                 .fill(DSColor.sunken)
         )
-        .help(help ?? "")
+        .helpIfPresent(help)
     }
 }
 

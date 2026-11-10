@@ -426,18 +426,15 @@ struct SettingsView: View {
                 title: "Theme",
                 hint: "Follows the system appearance by default."
             ) {
-                Picker("", selection: Binding(
-                    get: { settings.appearance },
-                    set: { settings.appearance = $0 }
-                )) {
-                    ForEach(AppSettings.Appearance.allCases) { appearance in
-                        Text(appearance.label).tag(appearance)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .tint(DSColor.accent)
-                .frame(width: 250)
+                PDSegmented(
+                    items: AppSettings.Appearance.allCases.map {
+                        .init(value: $0, label: $0.label)
+                    },
+                    selection: Binding(
+                        get: { settings.appearance },
+                        set: { settings.appearance = $0 }
+                    )
+                )
                 .accessibilityLabel("Theme")
             }
             SettingsHairline()
@@ -445,14 +442,12 @@ struct SettingsView: View {
                 title: "Language",
                 hint: "The app restarts to apply the language change."
             ) {
-                Picker("", selection: $language) {
-                    ForEach(AppLanguage.allCases) { option in
-                        Text(option.displayName).tag(option)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(width: 150)
+                PDSegmented(
+                    items: AppLanguage.allCases.map {
+                        .init(value: $0, label: $0.displayName)
+                    },
+                    selection: $language
+                )
                 .accessibilityLabel("Language")
                 .onChange(of: language) { _, newValue in
                     AppLanguage.apply(newValue)
