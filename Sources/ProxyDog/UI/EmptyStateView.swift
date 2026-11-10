@@ -59,8 +59,8 @@ struct TrafficEmptyStateView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(didCopy ? "Copied" : "Copy proxy address")
-            .accessibilityLabel("Copy proxy address")
+            .help(didCopy ? String(localized: "Copied") : String(localized: "Copy proxy address"))
+            .accessibilityLabel(String(localized: "Copy proxy address"))
         }
         .padding(.horizontal, DS.Space.x2 + 2)
         .frame(height: DS.Metric.controlHeight)
@@ -76,9 +76,9 @@ struct TrafficEmptyStateView: View {
 
     private var steps: some View {
         VStack(alignment: .leading, spacing: DS.Space.x2) {
-            step("1", "Turn on the system proxy")
-            step("2", "Trust the root certificate for HTTPS")
-            step("3", "Reload the app you want to inspect")
+            step("1", String(localized: "Turn on the system proxy"))
+            step("2", String(localized: "Trust the root certificate for HTTPS"))
+            step("3", String(localized: "Reload the app you want to inspect"))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -105,14 +105,16 @@ struct TrafficEmptyStateView: View {
         } else {
             HStack(spacing: DS.Space.x2) {
                 PDStatusDot(color: proxyFailed ? DSColor.red : DSColor.textMuted)
-                Text(proxyFailed ? "The proxy could not start" : "The proxy is off")
+                Text(proxyFailed
+                    ? String(localized: "The proxy could not start")
+                    : String(localized: "The proxy is off"))
                     .font(DS.Typography.ui(11))
                     .foregroundStyle(proxyFailed ? DSColor.red : DSColor.textMuted)
                     .help(proxyError)
                 Spacer(minLength: 0)
                 PDIconButton(
                     symbol: "power",
-                    help: "Start proxy",
+                    help: String(localized: "Start proxy"),
                     role: .accent
                 ) {
                     state.toggleProxy()
@@ -146,7 +148,7 @@ struct TrafficNoMatchesView: View {
             Text("No matching requests")
                 .font(DS.Typography.ui(12.5, .medium))
                 .foregroundStyle(DSColor.textSecondary)
-            PDIconButton(symbol: "xmark", help: "Clear search") {
+            PDIconButton(symbol: "xmark", help: String(localized: "Clear search")) {
                 state.searchText = ""
             }
         }
@@ -158,6 +160,6 @@ struct TrafficNoMatchesView: View {
 
 struct DetailEmptyStateView: View {
     var body: some View {
-        PDPlaceholder(symbol: "cursorarrow", title: "Select a request")
+        PDPlaceholder(symbol: "cursorarrow", title: String(localized: "Select a request"))
     }
 }

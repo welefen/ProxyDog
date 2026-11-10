@@ -1,0 +1,117 @@
+/* 主窗口界面（ui-main）。简体中文。 */
+
+/* 侧边栏 */
+"ProxyDog" = "ProxyDog";
+"Traffic" = "流量";
+"All Requests" = "全部请求";
+"Pinned" = "已收藏";
+"Domains" = "域名";
+"No domains yet" = "暂无域名";
+"Root certificate is not trusted. Click to install." = "根证书未受信任，点击安装。";
+"Settings" = "设置";
+"Failed" = "失败";
+"Paused" = "已暂停";
+"Starting" = "启动中";
+"Stopped" = "已停止";
+"Capture paused" = "抓包已暂停";
+"Capture paused. Resume from the toolbar." = "抓包已暂停，可从工具栏继续。";
+"Listening on %@" = "正在监听 %@";
+"Start the proxy to capture traffic" = "启动代理后可捕获请求";
+"Proxy failed. %@" = "代理错误：%@";
+"Proxy stopped" = "代理已停止";
+", has errors" = "，包含错误";
+"Start proxy" = "启动代理";
+"Stop proxy" = "停止代理";
+
+/* 请求列表 */
+"Search requests" = "搜索请求";
+"Search" = "搜索";
+"Clear search" = "清除搜索";
+"Pause capturing" = "暂停抓包";
+"Resume capturing" = "继续抓包";
+"Clear traffic" = "清空请求";
+"Request" = "请求";
+"Status" = "状态";
+"Size" = "大小";
+"Time" = "耗时";
+"Pin" = "收藏";
+"Unpin" = "取消收藏";
+"Copy URL" = "复制 URL";
+"Copy as cURL" = "复制为 cURL";
+"Delete" = "删除";
+"No matching requests" = "没有匹配的请求";
+"No traffic captured" = "暂无请求";
+"Turn on the system proxy" = "开启系统代理";
+"Trust the root certificate for HTTPS" = "信任根证书以解密 HTTPS";
+"Reload the app you want to inspect" = "重新加载要调试的应用";
+"The proxy could not start" = "代理启动失败";
+"The proxy is off" = "代理未启动";
+"Copy proxy address" = "复制代理地址";
+"Copy proxy address %@" = "复制代理地址 %@";
+"Copied" = "已复制";
+"Select a request" = "选择一条请求";
+
+/* 详情页签与概览 */
+"Overview" = "概览";
+"Headers" = "头部";
+"Body" = "正文";
+"Response" = "响应";
+"Method" = "方法";
+"URL" = "URL";
+"Protocol" = "协议";
+"Client" = "客户端";
+"Body size" = "正文大小";
+"Content type" = "内容类型";
+"Duration" = "耗时";
+"Started" = "开始";
+"Completed" = "结束";
+"Timing" = "时间";
+"Total" = "总计";
+"Decrypted" = "已解密";
+"Tunneled" = "隧道";
+"Not intercepted" = "未拦截";
+"Pin request" = "收藏请求";
+"Unpin request" = "取消收藏请求";
+"The exchange failed." = "请求失败。";
+"Pending" = "等待中";
+"No response" = "无响应";
+"%lld Failed" = "%lld 失败";
+
+/* 头部 */
+"Request headers" = "请求头部";
+"Response headers" = "响应头部";
+"No headers" = "无头部";
+"Copy header" = "复制头部";
+
+/* 正文 */
+"Request body" = "请求正文";
+"Response body" = "响应正文";
+"No request body" = "无请求正文";
+"No response body" = "无响应正文";
+"Waiting for response" = "等待响应";
+"Pretty" = "美化";
+"Raw" = "原始";
+"Copy body" = "复制正文";
+"Save body" = "保存正文";
+"Collapse" = "折叠";
+"Expand" = "展开";
+"Body captured up to the 2 MB limit" = "正文已捕获，上限 2 MB";
+"Showing the first 512 KB of %@" = "仅显示前 512 KB（共 %@）";
+"Showing the first 4 KB of %@" = "仅显示前 4 KB（共 %@）";
+"%lld key" = "%lld 个键";
+"%lld keys" = "%lld 个键";
+"%lld item" = "%lld 项";
+"%lld items" = "%lld 项";
+
+/* 状态栏 */
+"request" = "条请求";
+"requests" = "条请求";
+"error" = "个错误";
+"errors" = "个错误";
+"pinned" = "条收藏";
+"Certificate trusted" = "证书已受信任";
+"Certificate not trusted" = "证书未受信任";
+"The ProxyDog root certificate is trusted" = "ProxyDog 根证书已受信任";
+"The ProxyDog root certificate is not trusted" = "ProxyDog 根证书未受信任";
+"Dismiss" = "忽略";
+"Dismiss error" = "忽略错误";

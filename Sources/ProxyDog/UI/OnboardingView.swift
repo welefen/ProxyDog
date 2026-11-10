@@ -70,7 +70,11 @@ struct OnboardingView: View {
                     .frame(width: 16, height: 3)
             }
         }
-        .accessibilityLabel("Step \(step.rawValue + 1) of \(Step.allCases.count)")
+        .accessibilityLabel(String(
+            format: String(localized: "Step %lld of %lld"),
+            step.rawValue + 1,
+            Step.allCases.count
+        ))
     }
 
     private func indicatorColor(for candidate: Step) -> Color {
@@ -145,7 +149,7 @@ struct OnboardingView: View {
                     Circle()
                         .fill(state.isCertificateTrusted ? DSColor.accent : DSColor.textMuted)
                         .frame(width: 6, height: 6)
-                    Text(state.isCertificateTrusted ? "Trusted" : "Not trusted")
+                    Text(certificateStatusKey)
                         .font(DS.Typography.ui(12))
                         .foregroundStyle(state.isCertificateTrusted ? DSColor.textPrimary : DSColor.textSecondary)
                     if state.isCertificateTrusted {
@@ -217,7 +221,7 @@ struct OnboardingView: View {
                     }
                 } label: {
                     HStack(spacing: 2) {
-                        Text("aptabase.com")
+                        Text(verbatim: "aptabase.com")
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 9, weight: .semibold))
                     }
@@ -250,7 +254,7 @@ struct OnboardingView: View {
                             .font(DS.Typography.ui(12))
                             .foregroundStyle(DSColor.textPrimary)
                         Spacer(minLength: DS.Space.x2)
-                        Text("127.0.0.1:\(state.settings.port)")
+                        Text(verbatim: proxyAddress)
                             .font(DS.Typography.mono(12))
                             .foregroundStyle(DSColor.textPrimary)
                         OnboardingIconButton(systemName: "doc.on.doc", help: "Copy proxy address") {
@@ -276,7 +280,7 @@ struct OnboardingView: View {
                         .controlSize(.small)
                         .tint(DSColor.accent)
                         .disabled(!state.isProxyRunning)
-                        .accessibilityLabel("Set as system proxy")
+                        .accessibilityLabel("Set as System Proxy")
                     }
                     .padding(.horizontal, DS.Space.x3)
                     .padding(.vertical, DS.Space.x2)
@@ -299,7 +303,7 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func factRow(symbol: String, text: String) -> some View {
+    private func factRow(symbol: String, text: LocalizedStringKey) -> some View {
         HStack(alignment: .center, spacing: DS.Space.x2) {
             Image(systemName: symbol)
                 .font(.system(size: 12))
@@ -350,7 +354,7 @@ struct OnboardingView: View {
         }
     }
 
-    private func quietButton(_ title: String, action: @escaping () -> Void) -> some View {
+    private func quietButton(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(DS.Typography.ui(12))
@@ -360,13 +364,23 @@ struct OnboardingView: View {
         .buttonStyle(.plain)
     }
 
-    private var primaryTitle: String {
+    private var primaryTitle: LocalizedStringKey {
         switch step {
         case .welcome, .certificate, .analytics:
             return "Continue"
         case .ready:
             return "Done"
         }
+    }
+
+    // MARK: - Derived state
+
+    private var certificateStatusKey: LocalizedStringKey {
+        state.isCertificateTrusted ? "Trusted" : "Not trusted"
+    }
+
+    private var proxyAddress: String {
+        "127.0.0.1:\(state.settings.port)"
     }
 
     // MARK: - Actions
@@ -419,7 +433,7 @@ struct OnboardingView: View {
     private func copyProxyAddress() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString("127.0.0.1:\(state.settings.port)", forType: .string)
+        pasteboard.setString(proxyAddress, forType: .string)
     }
 }
 
@@ -454,7 +468,7 @@ private struct OnboardingHairline: View {
 
 private struct OnboardingIconButton: View {
     let systemName: String
-    let help: String
+    let help: LocalizedStringKey
     var tint: Color = DSColor.textSecondary
     let action: () -> Void
 

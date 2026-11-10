@@ -12,9 +12,9 @@ enum DetailTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .overview: return "Overview"
-        case .headers: return "Headers"
-        case .body: return "Body"
+        case .overview: return String(localized: "Overview")
+        case .headers: return String(localized: "Headers")
+        case .body: return String(localized: "Body")
         }
     }
 }
@@ -66,13 +66,15 @@ struct RequestDetailView: View {
 
             PDIconButton(
                 symbol: request.isPinned ? "pin.fill" : "pin",
-                help: request.isPinned ? "Unpin request" : "Pin request",
+                help: request.isPinned
+                    ? String(localized: "Unpin request")
+                    : String(localized: "Pin request"),
                 isOn: request.isPinned
             ) {
                 state.togglePin(request.id)
             }
 
-            PDIconButton(symbol: "doc.on.doc", help: "Copy URL") {
+            PDIconButton(symbol: "doc.on.doc", help: String(localized: "Copy URL")) {
                 PDPasteboard.copy(request.urlString)
             }
         }
@@ -152,36 +154,36 @@ private struct OverviewTab: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.x6) {
-                section("Request") {
-                    DetailFieldRow(label: "Method", value: request.method)
-                    DetailFieldRow(label: "URL", value: request.urlString, lineLimit: 3)
-                    DetailFieldRow(label: "Protocol", value: "HTTP/1.1")
+                section(String(localized: "Request")) {
+                    DetailFieldRow(label: String(localized: "Method"), value: request.method)
+                    DetailFieldRow(label: String(localized: "URL"), value: request.urlString, lineLimit: 3)
+                    DetailFieldRow(label: String(localized: "Protocol"), value: "HTTP/1.1")
                     if let client = request.clientAppName {
-                        DetailFieldRow(label: "Client", value: client)
+                        DetailFieldRow(label: String(localized: "Client"), value: client)
                     }
-                    DetailFieldRow(label: "Body size", value: PDFormat.bytes(request.requestBytes))
+                    DetailFieldRow(label: String(localized: "Body size"), value: PDFormat.bytes(request.requestBytes))
                     decryptedRow
                 }
 
-                section("Response") {
+                section(String(localized: "Response")) {
                     statusRow
-                    DetailFieldRow(label: "Content type", value: request.responseContentType ?? "—")
-                    DetailFieldRow(label: "Body size", value: PDFormat.bytes(request.responseBytes))
+                    DetailFieldRow(label: String(localized: "Content type"), value: request.responseContentType ?? "—")
+                    DetailFieldRow(label: String(localized: "Body size"), value: PDFormat.bytes(request.responseBytes))
                     DetailFieldRow(
-                        label: "Duration",
+                        label: String(localized: "Duration"),
                         value: PDFormat.duration(request.duration),
                         color: DSColor.textSecondary
                     )
                 }
 
-                section("Timing") {
-                    DetailFieldRow(label: "Started", value: PDFormat.clockTime(request.startedAt))
+                section(String(localized: "Timing")) {
+                    DetailFieldRow(label: String(localized: "Started"), value: PDFormat.clockTime(request.startedAt))
                     DetailFieldRow(
-                        label: "Completed",
+                        label: String(localized: "Completed"),
                         value: request.finishedAt.map(PDFormat.clockTime) ?? "—"
                     )
                     DetailFieldRow(
-                        label: "Total",
+                        label: String(localized: "Total"),
                         value: PDFormat.duration(request.duration),
                         color: DSColor.textSecondary
                     )
@@ -212,11 +214,11 @@ private struct OverviewTab: View {
                 .foregroundStyle(DSColor.textSecondary)
                 .frame(width: 104, alignment: .leading)
             if request.intercepted {
-                PDPropertyBadge(text: "Decrypted", symbol: "lock.open", tint: DSColor.green)
+                PDPropertyBadge(text: String(localized: "Decrypted"), symbol: "lock.open", tint: DSColor.green)
             } else if request.state == .tunneled {
-                PDPropertyBadge(text: "Tunneled", symbol: "lock", tint: DSColor.textMuted)
+                PDPropertyBadge(text: String(localized: "Tunneled"), symbol: "lock", tint: DSColor.textMuted)
             } else {
-                PDPropertyBadge(text: "Not intercepted", symbol: "lock", tint: DSColor.textMuted)
+                PDPropertyBadge(text: String(localized: "Not intercepted"), symbol: "lock", tint: DSColor.textMuted)
             }
             Spacer(minLength: 0)
         }
@@ -244,7 +246,7 @@ private struct OverviewTab: View {
                 .font(.system(size: 10.5, weight: .medium))
                 .foregroundStyle(DSColor.red)
                 .padding(.top, 2)
-            Text(request.errorMessage ?? "The exchange failed.")
+            Text(request.errorMessage ?? String(localized: "The exchange failed."))
                 .font(DS.Typography.mono(11.5))
                 .foregroundStyle(DSColor.red)
                 .textSelection(.enabled)
@@ -271,8 +273,14 @@ private struct HeadersTab: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.x6) {
-                HeadersSectionView(title: "Request headers", headers: request.requestHeaders)
-                HeadersSectionView(title: "Response headers", headers: request.responseHeaders)
+                HeadersSectionView(
+                    title: String(localized: "Request headers"),
+                    headers: request.requestHeaders
+                )
+                HeadersSectionView(
+                    title: String(localized: "Response headers"),
+                    headers: request.responseHeaders
+                )
             }
             .padding(DS.Space.x4)
             .frame(maxWidth: .infinity, alignment: .leading)

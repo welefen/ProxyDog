@@ -9,8 +9,8 @@ enum BodySide: String, CaseIterable, Hashable {
 
     var label: String {
         switch self {
-        case .request: return "Request"
-        case .response: return "Response"
+        case .request: return String(localized: "Request")
+        case .response: return String(localized: "Response")
         }
     }
 }
@@ -86,7 +86,7 @@ private struct HeaderRowView: View {
 
     var body: some View {
         Button {
-            PDPasteboard.copy("\(header.name): \(header.value)")
+            PDPasteboard.copy(header.name + ": " + header.value)
             didCopy = true
             Task {
                 try? await Task.sleep(nanoseconds: 1_200_000_000)
@@ -124,7 +124,7 @@ private struct HeaderRowView: View {
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
         .help("Copy header")
-        .accessibilityLabel("\(header.name): \(header.value)")
+        .accessibilityLabel(header.name + ": " + header.value)
     }
 }
 
@@ -176,7 +176,9 @@ private struct BodySectionView: View {
     private var isJSON: Bool { contentKind == .json }
 
     private var title: String {
-        side == .request ? "Request body" : "Response body"
+        side == .request
+            ? String(localized: "Request body")
+            : String(localized: "Response body")
     }
 
     var body: some View {
@@ -209,8 +211,8 @@ private struct BodySectionView: View {
             if isJSON && hasBody {
                 PDSegmented(
                     items: [
-                        .init(value: false, label: "Pretty"),
-                        .init(value: true, label: "Raw"),
+                        .init(value: false, label: String(localized: "Pretty")),
+                        .init(value: true, label: String(localized: "Raw")),
                     ],
                     selection: $showsRaw
                 )
@@ -218,13 +220,16 @@ private struct BodySectionView: View {
 
             PDIconButton(
                 symbol: didCopy ? "checkmark" : "doc.on.doc",
-                help: didCopy ? "Copied" : "Copy body"
+                help: didCopy ? String(localized: "Copied") : String(localized: "Copy body")
             ) {
                 copyBody()
             }
             .disabled(!hasBody)
 
-            PDIconButton(symbol: "square.and.arrow.down", help: "Save body") {
+            PDIconButton(
+                symbol: "square.and.arrow.down",
+                help: String(localized: "Save body")
+            ) {
                 saveBody()
             }
             .disabled(!hasBody)
@@ -276,9 +281,9 @@ private struct BodySectionView: View {
     }
 
     private var emptyTitle: String {
-        if side == .request { return "No request body" }
-        if request.state == .pending { return "Waiting for response" }
-        return "No response body"
+        if side == .request { return String(localized: "No request body") }
+        if request.state == .pending { return String(localized: "Waiting for response") }
+        return String(localized: "No response body")
     }
 
     private var emptyDetail: String? {
@@ -294,10 +299,13 @@ private struct BodySectionView: View {
         if truncatedAtLimit || displayTruncated {
             VStack(spacing: 0) {
                 if truncatedAtLimit {
-                    noticeRow("Body captured up to the 2 MB limit")
+                    noticeRow(String(localized: "Body captured up to the 2 MB limit"))
                 }
                 if displayTruncated {
-                    noticeRow("Showing the first 512 KB of \(PDFormat.bytes(data.count))")
+                    noticeRow(String(
+                        format: String(localized: "Showing the first 512 KB of %@"),
+                        PDFormat.bytes(data.count)
+                    ))
                 }
                 PDHairline()
             }
@@ -482,7 +490,10 @@ struct HexDumpView: View {
                         .fixedSize(horizontal: true, vertical: false)
                 }
                 if data.count > limit {
-                    Text("Showing the first 4 KB of \(PDFormat.bytes(data.count))")
+                    Text(String(
+                        format: String(localized: "Showing the first 4 KB of %@"),
+                        PDFormat.bytes(data.count)
+                    ))
                         .font(DS.Typography.ui(10.5))
                         .foregroundStyle(DSColor.textMuted)
                         .padding(.top, DS.Space.x2)
@@ -498,7 +509,7 @@ struct HexDumpView: View {
 /// One row of the flattened, collapsible JSON tree.
 struct JSONRow: Identifiable {
     enum Kind {
-        case container(key: String?, isIndex: Bool, open: String, childCount: Int, unit: String, isExpanded: Bool)
+        case container(key: String?, isIndex: Bool, open: String, countLabel: String, isExpanded: Bool)
         case leaf(key: String?, isIndex: Bool, display: String, tone: Tone)
         case emptyContainer(key: String?, isIndex: Bool, text: String)
         case closing(text: String)
@@ -561,7 +572,13 @@ struct JSONRow: Identifiable {
                 rows.append(JSONRow(
                     id: path,
                     depth: depth,
-                    kind: .container(key: key, isIndex: isIndex, open: "{", childCount: keys.count, unit: keys.count == 1 ? "key" : "keys", isExpanded: isExpanded)
+                    kind: .container(
+                        key: key,
+                        isIndex: isIndex,
+                        open: "{",
+                        countLabel: containerCountLabel(keys.count, isArray: false),
+                        isExpanded: isExpanded
+                    )
                 ))
                 if isExpanded {
                     for childKey in keys {
@@ -579,7 +596,13 @@ struct JSONRow: Identifiable {
                 rows.append(JSONRow(
                     id: path,
                     depth: depth,
-                    kind: .container(key: key, isIndex: isIndex, open: "[", childCount: array.count, unit: array.count == 1 ? "item" : "items", isExpanded: isExpanded)
+                    kind: .container(
+                        key: key,
+                        isIndex: isIndex,
+                        open: "[",
+                        countLabel: containerCountLabel(array.count, isArray: true),
+                        isExpanded: isExpanded
+                    )
                 ))
                 if isExpanded {
                     for (index, child) in array.enumerated() {
@@ -600,6 +623,17 @@ struct JSONRow: Identifiable {
 
         walk(value, key: nil, isIndex: false, path: "$", depth: 0)
         return rows
+    }
+
+    /// "3 keys" / "3 items", plural-aware and localized at flatten time.
+    private static func containerCountLabel(_ count: Int, isArray: Bool) -> String {
+        let template: String
+        if isArray {
+            template = count == 1 ? "%lld item" : "%lld items"
+        } else {
+            template = count == 1 ? "%lld key" : "%lld keys"
+        }
+        return String(format: String(localized: String.LocalizationValue(template)), count)
     }
 }
 
@@ -696,7 +730,9 @@ private struct JSONRowView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(expanded ? "Collapse" : "Expand")
+                .accessibilityLabel(
+                    expanded ? String(localized: "Collapse") : String(localized: "Expand")
+                )
             } else {
                 Color.clear.frame(width: 14, height: 16)
             }
@@ -712,20 +748,20 @@ private struct JSONRowView: View {
     }
 
     private var expanded: Bool {
-        if case .container(_, _, _, _, _, let isExpanded) = row.kind { return isExpanded }
+        if case .container(_, _, _, _, let isExpanded) = row.kind { return isExpanded }
         return false
     }
 
     @ViewBuilder
     private var content: some View {
         switch row.kind {
-        case let .container(key, isIndex, open, childCount, unit, isExpanded):
+        case let .container(key, isIndex, open, countLabel, isExpanded):
             keyText(key, isIndex: isIndex)
-            Text(isExpanded ? "\(open) " : "\(open)…  ")
+            Text(open + (isExpanded ? " " : "…  "))
                 .font(DS.Typography.mono(11.5))
                 .foregroundStyle(DSColor.textMuted)
             if !isExpanded {
-                Text("\(childCount) \(unit)")
+                Text(countLabel)
                     .font(DS.Typography.ui(10))
                     .foregroundStyle(DSColor.textMuted)
             }
@@ -780,7 +816,7 @@ enum PDBodySaver {
         let panel = NSSavePanel()
         panel.canCreateDirectories = true
         panel.nameFieldStringValue = suggestedFilename(for: request, side: side, contentType: contentType)
-        panel.title = "Save body"
+        panel.title = String(localized: "Save body")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         try? data.write(to: url)
     }

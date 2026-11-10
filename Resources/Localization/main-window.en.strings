@@ -1,0 +1,117 @@
+/* Main window UI (ui-main). English source strings. */
+
+/* Sidebar */
+"ProxyDog" = "ProxyDog";
+"Traffic" = "Traffic";
+"All Requests" = "All Requests";
+"Pinned" = "Pinned";
+"Domains" = "Domains";
+"No domains yet" = "No domains yet";
+"Root certificate is not trusted. Click to install." = "Root certificate is not trusted. Click to install.";
+"Settings" = "Settings";
+"Failed" = "Failed";
+"Paused" = "Paused";
+"Starting" = "Starting";
+"Stopped" = "Stopped";
+"Capture paused" = "Capture paused";
+"Capture paused. Resume from the toolbar." = "Capture paused. Resume from the toolbar.";
+"Listening on %@" = "Listening on %@";
+"Start the proxy to capture traffic" = "Start the proxy to capture traffic";
+"Proxy failed. %@" = "Proxy failed. %@";
+"Proxy stopped" = "Proxy stopped";
+", has errors" = ", has errors";
+"Start proxy" = "Start proxy";
+"Stop proxy" = "Stop proxy";
+
+/* Traffic list */
+"Search requests" = "Search requests";
+"Search" = "Search";
+"Clear search" = "Clear search";
+"Pause capturing" = "Pause capturing";
+"Resume capturing" = "Resume capturing";
+"Clear traffic" = "Clear traffic";
+"Request" = "Request";
+"Status" = "Status";
+"Size" = "Size";
+"Time" = "Time";
+"Pin" = "Pin";
+"Unpin" = "Unpin";
+"Copy URL" = "Copy URL";
+"Copy as cURL" = "Copy as cURL";
+"Delete" = "Delete";
+"No matching requests" = "No matching requests";
+"No traffic captured" = "No traffic captured";
+"Turn on the system proxy" = "Turn on the system proxy";
+"Trust the root certificate for HTTPS" = "Trust the root certificate for HTTPS";
+"Reload the app you want to inspect" = "Reload the app you want to inspect";
+"The proxy could not start" = "The proxy could not start";
+"The proxy is off" = "The proxy is off";
+"Copy proxy address" = "Copy proxy address";
+"Copy proxy address %@" = "Copy proxy address %@";
+"Copied" = "Copied";
+"Select a request" = "Select a request";
+
+/* Detail tabs and overview */
+"Overview" = "Overview";
+"Headers" = "Headers";
+"Body" = "Body";
+"Response" = "Response";
+"Method" = "Method";
+"URL" = "URL";
+"Protocol" = "Protocol";
+"Client" = "Client";
+"Body size" = "Body size";
+"Content type" = "Content type";
+"Duration" = "Duration";
+"Started" = "Started";
+"Completed" = "Completed";
+"Timing" = "Timing";
+"Total" = "Total";
+"Decrypted" = "Decrypted";
+"Tunneled" = "Tunneled";
+"Not intercepted" = "Not intercepted";
+"Pin request" = "Pin request";
+"Unpin request" = "Unpin request";
+"The exchange failed." = "The exchange failed.";
+"Pending" = "Pending";
+"No response" = "No response";
+"%lld Failed" = "%lld Failed";
+
+/* Headers */
+"Request headers" = "Request headers";
+"Response headers" = "Response headers";
+"No headers" = "No headers";
+"Copy header" = "Copy header";
+
+/* Body */
+"Request body" = "Request body";
+"Response body" = "Response body";
+"No request body" = "No request body";
+"No response body" = "No response body";
+"Waiting for response" = "Waiting for response";
+"Pretty" = "Pretty";
+"Raw" = "Raw";
+"Copy body" = "Copy body";
+"Save body" = "Save body";
+"Collapse" = "Collapse";
+"Expand" = "Expand";
+"Body captured up to the 2 MB limit" = "Body captured up to the 2 MB limit";
+"Showing the first 512 KB of %@" = "Showing the first 512 KB of %@";
+"Showing the first 4 KB of %@" = "Showing the first 4 KB of %@";
+"%lld key" = "%lld key";
+"%lld keys" = "%lld keys";
+"%lld item" = "%lld item";
+"%lld items" = "%lld items";
+
+/* Status bar */
+"request" = "request";
+"requests" = "requests";
+"error" = "error";
+"errors" = "errors";
+"pinned" = "pinned";
+"Certificate trusted" = "Certificate trusted";
+"Certificate not trusted" = "Certificate not trusted";
+"The ProxyDog root certificate is trusted" = "The ProxyDog root certificate is trusted";
+"The ProxyDog root certificate is not trusted" = "The ProxyDog root certificate is not trusted";
+"Dismiss" = "Dismiss";
+"Dismiss error" = "Dismiss error";

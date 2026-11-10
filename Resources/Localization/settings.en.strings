@@ -1,0 +1,79 @@
+/* Settings and onboarding copy: English source. */
+
+/* Settings · sections */
+"Connection" = "Connection";
+"Appearance" = "Appearance";
+"Certificate" = "Certificate";
+"Analytics" = "Analytics";
+
+/* Settings · connection */
+"Proxy port" = "Proxy port";
+"Changing the port restarts the proxy when it is running." = "Changing the port restarts the proxy when it is running.";
+"Restart proxy" = "Restart proxy";
+"SSL proxying" = "SSL proxying";
+"Decrypts HTTPS traffic with the ProxyDog root certificate." = "Decrypts HTTPS traffic with the ProxyDog root certificate.";
+"System proxy" = "System proxy";
+"Routes this Mac's HTTP and HTTPS traffic through ProxyDog." = "Routes this Mac's HTTP and HTTPS traffic through ProxyDog.";
+"Start the proxy to change this." = "Start the proxy to change this.";
+"Proxy status" = "Proxy status";
+"Listens on the loopback interface only." = "Listens on the loopback interface only.";
+"Stopped" = "Stopped";
+"Starting" = "Starting";
+"Failed" = "Failed";
+"Running on %@" = "Running on %@";
+
+/* Settings · appearance */
+"Theme" = "Theme";
+"Follows the system appearance by default." = "Follows the system appearance by default.";
+"The app restarts to apply the language change." = "The app restarts to apply the language change.";
+
+/* Settings · certificate */
+"Root certificate" = "Root certificate";
+"Required to inspect HTTPS. Stored in your login keychain." = "Required to inspect HTTPS. Stored in your login keychain.";
+"Trusted" = "Trusted";
+"Not trusted" = "Not trusted";
+"Remove certificate trust" = "Remove certificate trust";
+"Install root certificate" = "Install root certificate";
+"Export root certificate" = "Export root certificate";
+
+/* Settings · analytics */
+"Aptabase app key" = "Aptabase app key";
+"Optional. Anonymous usage events only; leave empty to disable." = "Optional. Anonymous usage events only; leave empty to disable.";
+"Keys look like A-US-… or A-EU-…." = "Keys look like A-US-… or A-EU-….";
+
+/* Onboarding · welcome */
+"Welcome to ProxyDog" = "Welcome to ProxyDog";
+"Inspect the HTTP and HTTPS traffic flowing through your Mac and the apps running on it." = "Inspect the HTTP and HTTPS traffic flowing through your Mac and the apps running on it.";
+"Local HTTPS interception through a root certificate" = "Local HTTPS interception through a root certificate";
+"Captured traffic stays on this Mac" = "Captured traffic stays on this Mac";
+"Copy as curl or export as HAR" = "Copy as curl or export as HAR";
+
+/* Onboarding · certificate */
+"Trust the root certificate" = "Trust the root certificate";
+"ProxyDog decrypts HTTPS with a local root certificate. macOS has to trust it before encrypted traffic can be inspected." = "ProxyDog decrypts HTTPS with a local root certificate. macOS has to trust it before encrypted traffic can be inspected.";
+"You can remove the certificate at any time in Settings." = "You can remove the certificate at any time in Settings.";
+
+/* Onboarding · analytics */
+"Anonymous usage" = "Anonymous usage";
+"Aptabase receives anonymous events such as launches and exports. Captured traffic is never included. This is optional and can be skipped." = "Aptabase receives anonymous events such as launches and exports. Captured traffic is never included. This is optional and can be skipped.";
+"App key" = "App key";
+"Paste app key" = "Paste app key";
+"Get a key at" = "Get a key at";
+"Open aptabase.com" = "Open aptabase.com";
+
+/* Onboarding · ready */
+"You are all set" = "You are all set";
+"Point an app or device at the address below, or route this Mac through the system proxy." = "Point an app or device at the address below, or route this Mac through the system proxy.";
+"Proxy address" = "Proxy address";
+"Copy proxy address" = "Copy proxy address";
+"HTTPS traffic stays encrypted until the root certificate is trusted." = "HTTPS traffic stays encrypted until the root certificate is trusted.";
+"The proxy starts automatically when ProxyDog launches." = "The proxy starts automatically when ProxyDog launches.";
+
+/* Onboarding · chrome and navigation */
+"Back" = "Back";
+"Close setup" = "Close setup";
+"Skip setup" = "Skip setup";
+"Skip" = "Skip";
+"Continue" = "Continue";
+"Done" = "Done";
+"Step %lld of %lld" = "Step %lld of %lld";

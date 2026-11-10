@@ -42,10 +42,10 @@ struct SidebarView: View {
 
     private var trafficSection: some View {
         VStack(alignment: .leading, spacing: 1) {
-            sectionHeader("Traffic")
+            sectionHeader(String(localized: "Traffic"))
             SidebarRow(
                 symbol: "tray.full",
-                title: "All Requests",
+                title: String(localized: "All Requests"),
                 count: state.store.requests.count,
                 isSelected: state.sidebarSelection == .all
             ) {
@@ -53,7 +53,7 @@ struct SidebarView: View {
             }
             SidebarRow(
                 symbol: "pin",
-                title: "Pinned",
+                title: String(localized: "Pinned"),
                 count: state.pinnedCount,
                 isSelected: state.sidebarSelection == .pinned
             ) {
@@ -64,7 +64,7 @@ struct SidebarView: View {
 
     private var domainsSection: some View {
         VStack(alignment: .leading, spacing: 1) {
-            sectionHeader("Domains")
+            sectionHeader(String(localized: "Domains"))
                 .padding(.top, DS.Space.x3)
 
             let summaries = state.domainSummaries
@@ -113,7 +113,7 @@ struct SidebarView: View {
                 if !state.isCertificateTrusted {
                     PDIconButton(
                         symbol: "exclamationmark.triangle",
-                        help: "Root certificate is not trusted. Click to install.",
+                        help: String(localized: "Root certificate is not trusted. Click to install."),
                         role: .warning,
                         size: 24
                     ) {
@@ -122,7 +122,9 @@ struct SidebarView: View {
                 }
                 PDIconButton(
                     symbol: state.isProxyRunning ? "power.circle.fill" : "power",
-                    help: state.isProxyRunning ? "Stop proxy" : "Start proxy",
+                    help: state.isProxyRunning
+                        ? String(localized: "Stop proxy")
+                        : String(localized: "Start proxy"),
                     role: state.isProxyRunning ? .accent : .normal,
                     size: 24
                 ) {
@@ -158,13 +160,13 @@ struct SidebarView: View {
     }
 
     private var statusText: String {
-        if case .failed = state.proxyStatus { return "Failed" }
+        if case .failed = state.proxyStatus { return String(localized: "Failed") }
         if state.isProxyRunning {
-            if state.store.isPaused { return "Paused" }
+            if state.store.isPaused { return String(localized: "Paused") }
             return "127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
         }
-        if case .starting = state.proxyStatus { return "Starting" }
-        return "Stopped"
+        if case .starting = state.proxyStatus { return String(localized: "Starting") }
+        return String(localized: "Stopped")
     }
 
     private var statusColor: Color {
@@ -180,21 +182,30 @@ struct SidebarView: View {
         if case .failed(let message) = state.proxyStatus { return message }
         if state.isProxyRunning {
             if state.store.isPaused {
-                return "Capture paused. Resume from the toolbar."
+                return String(localized: "Capture paused. Resume from the toolbar.")
             }
-            return "Listening on 127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
+            return String(
+                format: String(localized: "Listening on %@"),
+                "127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
+            )
         }
-        return "Start the proxy to capture traffic"
+        return String(localized: "Start the proxy to capture traffic")
     }
 
     private var statusAccessibilityLabel: String {
         if case .failed = state.proxyStatus {
-            return "Proxy failed. \(statusHelp)"
+            return String(format: String(localized: "Proxy failed. %@"), statusHelp)
         }
         if state.isProxyRunning {
-            return state.store.isPaused ? "Capture paused" : "Listening on 127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
+            if state.store.isPaused {
+                return String(localized: "Capture paused")
+            }
+            return String(
+                format: String(localized: "Listening on %@"),
+                "127.0.0.1:\(state.proxyStatus.port ?? state.settings.port)"
+            )
         }
-        return "Proxy stopped"
+        return String(localized: "Proxy stopped")
     }
 }
 
@@ -264,7 +275,7 @@ private struct SidebarRow: View {
     private var accessibilityLabel: String {
         var label = title
         if let count { label += ", \(count)" }
-        if hasFailure { label += ", has errors" }
+        if hasFailure { label += String(localized: ", has errors") }
         return label
     }
 }

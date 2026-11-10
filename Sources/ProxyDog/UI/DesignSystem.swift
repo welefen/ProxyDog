@@ -202,9 +202,9 @@ enum PDStatus {
 
     /// Label used in the traffic list status column.
     static func compactLabel(for request: CapturedRequest) -> String {
-        if request.state == .failed { return "Error" }
+        if request.state == .failed { return String(localized: "Error") }
         if request.state == .pending { return "…" }
-        if request.state == .tunneled { return "Tunnel" }
+        if request.state == .tunneled { return String(localized: "Tunnel") }
         return request.statusCode.map(String.init) ?? "—"
     }
 
@@ -229,19 +229,27 @@ enum PDStatus {
 
     static func fullLabel(for request: CapturedRequest) -> String {
         switch request.state {
-        case .pending: return "Pending"
-        case .failed: return request.statusCode.map { "\($0) Failed" } ?? "Failed"
-        case .tunneled: return "Tunneled"
-        case .completed: return request.statusCode.map(fullLabel(forCode:)) ?? "No response"
+        case .pending:
+            return String(localized: "Pending")
+        case .failed:
+            if let code = request.statusCode {
+                return String(format: String(localized: "%lld Failed"), code)
+            }
+            return String(localized: "Failed")
+        case .tunneled:
+            return String(localized: "Tunneled")
+        case .completed:
+            if let code = request.statusCode { return fullLabel(forCode: code) }
+            return String(localized: "No response")
         }
     }
 
     static func stateLabel(for request: CapturedRequest) -> String {
         switch request.state {
-        case .pending: return "Pending"
-        case .completed: return "Completed"
-        case .failed: return "Failed"
-        case .tunneled: return "Tunneled"
+        case .pending: return String(localized: "Pending")
+        case .completed: return String(localized: "Completed")
+        case .failed: return String(localized: "Failed")
+        case .tunneled: return String(localized: "Tunneled")
         }
     }
 
@@ -468,7 +476,7 @@ struct PDStatusDot: View {
 struct PDSearchField: View {
     @Binding var text: String
     var isFocused: FocusState<Bool>.Binding
-    var placeholder = "Search"
+    var placeholder = String(localized: "Search")
     var width: CGFloat = 200
 
     private var focused: Bool { isFocused.wrappedValue }

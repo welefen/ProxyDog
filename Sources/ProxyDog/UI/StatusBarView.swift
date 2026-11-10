@@ -9,11 +9,11 @@ struct StatusBarView: View {
 
     var body: some View {
         HStack(spacing: DS.Space.x4) {
-            countItem(PDFormat.count(state.allRequests.count), label: "requests")
-            countItem(PDFormat.count(state.pinnedCount), label: "pinned")
+            countItem(PDFormat.count(state.allRequests.count), label: requestLabel)
+            countItem(PDFormat.count(state.pinnedCount), label: String(localized: "pinned"))
             countItem(
                 PDFormat.count(errorCount),
-                label: "errors",
+                label: errorLabel,
                 color: errorCount > 0 ? DSColor.red : DSColor.textMuted
             )
 
@@ -40,6 +40,18 @@ struct StatusBarView: View {
         state.allRequests.lazy.filter(\.isFailure).count
     }
 
+    private var requestLabel: String {
+        state.allRequests.count == 1
+            ? String(localized: "request")
+            : String(localized: "requests")
+    }
+
+    private var errorLabel: String {
+        errorCount == 1
+            ? String(localized: "error")
+            : String(localized: "errors")
+    }
+
     // MARK: Items
 
     private func countItem(_ value: String, label: String, color: Color = DSColor.textSecondary) -> some View {
@@ -53,7 +65,6 @@ struct StatusBarView: View {
                 .foregroundStyle(DSColor.textMuted)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(value) \(label)")
     }
 
     private var pausedChip: some View {
@@ -106,12 +117,24 @@ struct StatusBarView: View {
         HStack(spacing: DS.Space.x1 + 2) {
             Image(systemName: state.isCertificateTrusted ? "lock" : "lock.open")
                 .font(.system(size: 9.5, weight: .medium))
-            Text(state.isCertificateTrusted ? "Certificate trusted" : "Certificate not trusted")
+            Text(certificateLabel)
                 .font(DS.Typography.ui(10.5))
         }
         .foregroundStyle(state.isCertificateTrusted ? DSColor.textMuted : DSColor.amber)
-        .help(state.isCertificateTrusted ? "The ProxyDog root certificate is trusted" : "The ProxyDog root certificate is not trusted")
-        .accessibilityLabel(state.isCertificateTrusted ? "Certificate trusted" : "Certificate not trusted")
+        .help(certificateHelp)
+        .accessibilityLabel(certificateLabel)
+    }
+
+    private var certificateLabel: String {
+        state.isCertificateTrusted
+            ? String(localized: "Certificate trusted")
+            : String(localized: "Certificate not trusted")
+    }
+
+    private var certificateHelp: String {
+        state.isCertificateTrusted
+            ? String(localized: "The ProxyDog root certificate is trusted")
+            : String(localized: "The ProxyDog root certificate is not trusted")
     }
 
     private var addressButton: some View {
@@ -155,7 +178,10 @@ private struct StatusBarAddressButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .help(didCopy ? "Copied" : "Copy proxy address")
-        .accessibilityLabel("Copy proxy address \(address)")
+        .help(didCopy ? String(localized: "Copied") : String(localized: "Copy proxy address"))
+        .accessibilityLabel(String(
+            format: String(localized: "Copy proxy address %@"),
+            address
+        ))
     }
 }

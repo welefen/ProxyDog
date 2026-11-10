@@ -1,0 +1,79 @@
+/* Settings and onboarding copy: 简体中文. */
+
+/* Settings · sections */
+"Connection" = "连接";
+"Appearance" = "外观";
+"Certificate" = "证书";
+"Analytics" = "埋点";
+
+/* Settings · connection */
+"Proxy port" = "代理端口";
+"Changing the port restarts the proxy when it is running." = "修改端口后，代理将在运行状态下自动重启。";
+"Restart proxy" = "重启代理";
+"SSL proxying" = "SSL 解密";
+"Decrypts HTTPS traffic with the ProxyDog root certificate." = "使用 ProxyDog 根证书解密 HTTPS 流量。";
+"System proxy" = "系统代理";
+"Routes this Mac's HTTP and HTTPS traffic through ProxyDog." = "将本机的 HTTP 和 HTTPS 流量转发到 ProxyDog。";
+"Start the proxy to change this." = "启动代理后才能修改。";
+"Proxy status" = "代理状态";
+"Listens on the loopback interface only." = "仅监听本机回环地址。";
+"Stopped" = "已停止";
+"Starting" = "启动中";
+"Failed" = "启动失败";
+"Running on %@" = "正在监听 %@";
+
+/* Settings · appearance */
+"Theme" = "主题";
+"Follows the system appearance by default." = "默认跟随系统外观。";
+"The app restarts to apply the language change." = "切换语言后应用会自动重启。";
+
+/* Settings · certificate */
+"Root certificate" = "根证书";
+"Required to inspect HTTPS. Stored in your login keychain." = "用于检查 HTTPS 流量，保存在登录钥匙串中。";
+"Trusted" = "受信任";
+"Not trusted" = "未受信任";
+"Remove certificate trust" = "移除信任";
+"Install root certificate" = "安装根证书";
+"Export root certificate" = "导出根证书";
+
+/* Settings · analytics */
+"Aptabase app key" = "Aptabase App Key";
+"Optional. Anonymous usage events only; leave empty to disable." = "可选，仅上报匿名使用事件，留空则不启用。";
+"Keys look like A-US-… or A-EU-…." = "Key 形如 A-US-… 或 A-EU-…。";
+
+/* Onboarding · welcome */
+"Welcome to ProxyDog" = "欢迎使用 ProxyDog";
+"Inspect the HTTP and HTTPS traffic flowing through your Mac and the apps running on it." = "检查流经本机以及各类应用的 HTTP 和 HTTPS 流量。";
+"Local HTTPS interception through a root certificate" = "通过根证书在本地解密 HTTPS";
+"Captured traffic stays on this Mac" = "抓取到的流量仅保留在本机";
+"Copy as curl or export as HAR" = "可复制为 curl 或导出 HAR";
+
+/* Onboarding · certificate */
+"Trust the root certificate" = "信任根证书";
+"ProxyDog decrypts HTTPS with a local root certificate. macOS has to trust it before encrypted traffic can be inspected." = "ProxyDog 使用本地根证书解密 HTTPS。需先在 macOS 中信任该证书，才能检查加密流量。";
+"You can remove the certificate at any time in Settings." = "之后可随时在设置中移除该证书。";
+
+/* Onboarding · analytics */
+"Anonymous usage" = "匿名使用数据";
+"Aptabase receives anonymous events such as launches and exports. Captured traffic is never included. This is optional and can be skipped." = "Aptabase 仅接收启动、导出等匿名事件，绝不包含抓取到的流量。此项可选，可以跳过。";
+"App key" = "App Key";
+"Paste app key" = "粘贴 App Key";
+"Get a key at" = "获取 Key：";
+"Open aptabase.com" = "打开 aptabase.com";
+
+/* Onboarding · ready */
+"You are all set" = "一切就绪";
+"Point an app or device at the address below, or route this Mac through the system proxy." = "将应用或设备指向下方地址，或将本机流量接入系统代理。";
+"Proxy address" = "代理地址";
+"Copy proxy address" = "复制代理地址";
+"HTTPS traffic stays encrypted until the root certificate is trusted." = "未信任根证书前，HTTPS 流量将保持加密。";
+"The proxy starts automatically when ProxyDog launches." = "代理会在 ProxyDog 启动时自动开启。";
+
+/* Onboarding · chrome and navigation */
+"Back" = "上一步";
+"Close setup" = "关闭引导";
+"Skip setup" = "跳过引导";
+"Skip" = "跳过";
+"Continue" = "继续";
+"Done" = "完成";
+"Step %lld of %lld" = "第 %lld 步，共 %lld 步";

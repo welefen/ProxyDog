@@ -56,7 +56,7 @@ struct TrafficListView: View {
                 PDSearchField(
                     text: $state.searchText,
                     isFocused: $searchFocused,
-                    placeholder: "Search requests",
+                    placeholder: String(localized: "Search requests"),
                     width: 220
                 )
             }
@@ -66,17 +66,19 @@ struct TrafficListView: View {
         ToolbarItemGroup(placement: .primaryAction) {
             PDIconButton(
                 symbol: state.store.isPaused ? "play.fill" : "pause.fill",
-                help: state.store.isPaused ? "Resume capturing" : "Pause capturing",
+                help: state.store.isPaused
+                    ? String(localized: "Resume capturing")
+                    : String(localized: "Pause capturing"),
                 role: state.store.isPaused ? .warning : .normal
             ) {
                 state.togglePause()
             }
 
-            PDIconButton(symbol: "trash", help: "Clear traffic") {
+            PDIconButton(symbol: "trash", help: String(localized: "Clear traffic")) {
                 state.clearRequests()
             }
 
-            PDIconButton(symbol: "square.and.arrow.up", help: "Export HAR") {
+            PDIconButton(symbol: "square.and.arrow.up", help: String(localized: "Export HAR")) {
                 state.presentHARExportPanel()
             }
 
@@ -87,7 +89,9 @@ struct TrafficListView: View {
 
             PDIconButton(
                 symbol: state.isProxyRunning ? "power.circle.fill" : "power",
-                help: state.isProxyRunning ? "Stop proxy" : "Start proxy",
+                help: state.isProxyRunning
+                    ? String(localized: "Stop proxy")
+                    : String(localized: "Start proxy"),
                 role: state.isProxyRunning ? .accent : .normal
             ) {
                 state.toggleProxy()
@@ -134,7 +138,7 @@ struct TrafficListView: View {
                             select(request.id)
                         }
                         .contextMenu {
-                            Button(request.isPinned ? "Unpin" : "Pin") {
+                            Button(request.isPinned ? String(localized: "Unpin") : String(localized: "Pin")) {
                                 state.togglePin(request.id)
                             }
                             Button("Copy URL") {
@@ -258,6 +262,8 @@ private struct TrafficRowView: View {
         Button(action: onSelect) {
             HStack(spacing: 0) {
                 Image(systemName: request.contentKind.symbolName)
+                    // Keep SF Symbol letterform variants in the Latin form (Aa, not 格式/甲乙丙).
+                    .environment(\.locale, Locale(identifier: "en_US"))
                     .font(.system(size: 11.5, weight: .regular))
                     .foregroundStyle(isSelected ? DSColor.textSecondary : DSColor.textMuted)
                     .frame(width: DS.Metric.iconColumnWidth, alignment: .leading)
@@ -342,7 +348,7 @@ private struct TrafficRowView: View {
             parts.append(PDFormat.duration(duration))
         }
         if request.isPinned {
-            parts.append("Pinned")
+            parts.append(String(localized: "Pinned"))
         }
         return parts.joined(separator: ", ")
     }

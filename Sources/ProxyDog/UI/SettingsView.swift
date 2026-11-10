@@ -20,6 +20,8 @@ struct SettingsView: View {
     @State private var analyticsError: String?
     @FocusState private var analyticsFocused: Bool
 
+    @State private var language: AppLanguage = AppLanguage.stored
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -36,7 +38,7 @@ struct SettingsView: View {
             }
             versionFooter
         }
-        .frame(width: 560, height: 680)
+        .frame(width: 560, height: 720)
         .onAppear {
             syncFromSettings()
             // Do not steal keyboard focus into the port field when the pane opens.
@@ -60,8 +62,8 @@ struct SettingsView: View {
         SettingsSection(title: "Connection") {
             SettingsRow(
                 title: "Proxy port",
-                hint: portError ?? "Changing the port restarts the proxy when it is running.",
-                hintTint: portError == nil ? nil : DSColor.red
+                hint: "Changing the port restarts the proxy when it is running.",
+                errorText: portError
             ) {
                 HStack(spacing: DS.Space.x2) {
                     TextField("8888", text: $portText)
@@ -124,10 +126,14 @@ struct SettingsView: View {
                 .controlSize(.small)
                 .tint(DSColor.accent)
                 .disabled(!state.isProxyRunning)
-                .accessibilityLabel("Set as system proxy")
+                .accessibilityLabel("Set as System Proxy")
             }
             SettingsHairline()
-            SettingsRow(title: "Proxy status", hint: proxyStatusHint) {
+            SettingsRow(
+                title: "Proxy status",
+                hint: "Listens on the loopback interface only.",
+                hintText: proxyFailureMessage
+            ) {
                 HStack(spacing: DS.Space.x2) {
                     Circle()
                         .fill(proxyStatusColor)
@@ -163,6 +169,24 @@ struct SettingsView: View {
                 .frame(width: 250)
                 .accessibilityLabel("Theme")
             }
+            SettingsHairline()
+            SettingsRow(
+                title: "Language",
+                hint: "The app restarts to apply the language change."
+            ) {
+                Picker("", selection: $language) {
+                    ForEach(AppLanguage.allCases) { option in
+                        Text(option.displayName).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .frame(width: 150)
+                .accessibilityLabel("Language")
+                .onChange(of: language) { _, newValue in
+                    AppLanguage.apply(newValue)
+                }
+            }
         }
     }
 
@@ -179,7 +203,7 @@ struct SettingsView: View {
                         Circle()
                             .fill(state.isCertificateTrusted ? DSColor.accent : DSColor.textMuted)
                             .frame(width: 6, height: 6)
-                        Text(state.isCertificateTrusted ? "Trusted" : "Not trusted")
+                        Text(certificateStatusKey)
                             .font(DS.Typography.ui(12))
                             .foregroundStyle(state.isCertificateTrusted ? DSColor.textPrimary : DSColor.textSecondary)
                     }
@@ -215,8 +239,8 @@ struct SettingsView: View {
         SettingsSection(title: "Analytics") {
             SettingsRow(
                 title: "Aptabase app key",
-                hint: analyticsError ?? "Optional. Anonymous usage events only; leave empty to disable.",
-                hintTint: analyticsError == nil ? nil : DSColor.red
+                hint: "Optional. Anonymous usage events only; leave empty to disable.",
+                errorText: analyticsError
             ) {
                 TextField("A-US-XXXXXXXX", text: $analyticsKey)
                     .textFieldStyle(.plain)
@@ -245,7 +269,7 @@ struct SettingsView: View {
             Rectangle()
                 .fill(DSColor.border)
                 .frame(height: 1)
-            Text("\(AppInfo.name) \(AppInfo.versionLabel)")
+            Text(verbatim: "\(AppInfo.name) \(AppInfo.versionLabel)")
                 .font(DS.Typography.ui(11))
                 .foregroundStyle(DSColor.textMuted)
                 .frame(maxWidth: .infinity)
@@ -255,26 +279,28 @@ struct SettingsView: View {
 
     // MARK: - Derived state
 
+    private var certificateStatusKey: LocalizedStringKey {
+        state.isCertificateTrusted ? "Trusted" : "Not trusted"
+    }
+
     private var proxyStatusText: String {
         switch state.proxyStatus {
         case .stopped:
-            return "Stopped"
+            return String(localized: "Stopped")
         case .starting:
-            return "Starting"
+            return String(localized: "Starting")
         case .running(let port):
-            return "Running on 127.0.0.1:\(port)"
+            return String(format: String(localized: "Running on %@"), "127.0.0.1:\(port)")
         case .failed:
-            return "Failed"
+            return String(localized: "Failed")
         }
     }
 
-    private var proxyStatusHint: String {
-        switch state.proxyStatus {
-        case .failed(let message):
+    private var proxyFailureMessage: String? {
+        if case .failed(let message) = state.proxyStatus {
             return message
-        default:
-            return "Listens on the loopback interface only."
         }
+        return nil
     }
 
     private var proxyStatusColor: Color {
@@ -297,6 +323,7 @@ struct SettingsView: View {
         analyticsKey = settings.aptabaseAppKey
         portError = nil
         analyticsError = nil
+        language = AppLanguage.stored
         state.refreshCertificateStatus()
         state.refreshSystemProxyState()
     }
@@ -305,7 +332,7 @@ struct SettingsView: View {
         let trimmed = portText.trimmingCharacters(in: .whitespaces)
         guard let port = Int(trimmed), (1...65535).contains(port) else {
             portText = String(settings.port)
-            portError = "Enter a port between 1 and 65535."
+            portError = String(localized: "Port must be between 1 and 65535.")
             return
         }
         portError = nil
@@ -325,7 +352,7 @@ struct SettingsView: View {
         if trimmed.isEmpty || looksLikeAppKey(trimmed) {
             analyticsError = nil
         } else {
-            analyticsError = "Keys look like A-US-… or A-EU-…."
+            analyticsError = String(localized: "Keys look like A-US-… or A-EU-….")
         }
     }
 
@@ -349,7 +376,7 @@ struct SettingsView: View {
 // MARK: - Local building blocks
 
 private struct SettingsSection<Content: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -374,20 +401,23 @@ private struct SettingsSection<Content: View>: View {
 }
 
 private struct SettingsRow<Control: View>: View {
-    let title: String
-    let hint: String?
-    let hintTint: Color?
+    let title: LocalizedStringKey
+    let hint: LocalizedStringKey?
+    let hintText: String?
+    let errorText: String?
     @ViewBuilder let control: () -> Control
 
     init(
-        title: String,
-        hint: String? = nil,
-        hintTint: Color? = nil,
+        title: LocalizedStringKey,
+        hint: LocalizedStringKey? = nil,
+        hintText: String? = nil,
+        errorText: String? = nil,
         @ViewBuilder control: @escaping () -> Control
     ) {
         self.title = title
         self.hint = hint
-        self.hintTint = hintTint
+        self.hintText = hintText
+        self.errorText = errorText
         self.control = control
     }
 
@@ -397,10 +427,20 @@ private struct SettingsRow<Control: View>: View {
                 Text(title)
                     .font(DS.Typography.ui(13))
                     .foregroundStyle(DSColor.textPrimary)
-                if let hint {
+                if let errorText {
+                    Text(verbatim: errorText)
+                        .font(DS.Typography.ui(11))
+                        .foregroundStyle(DSColor.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if let hintText {
+                    Text(verbatim: hintText)
+                        .font(DS.Typography.ui(11))
+                        .foregroundStyle(DSColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if let hint {
                     Text(hint)
                         .font(DS.Typography.ui(11))
-                        .foregroundStyle(hintTint ?? DSColor.textSecondary)
+                        .foregroundStyle(DSColor.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -424,7 +464,7 @@ private struct SettingsHairline: View {
 
 private struct SettingsIconButton: View {
     let systemName: String
-    let help: String
+    let help: LocalizedStringKey
     var tint: Color = DSColor.textSecondary
     let action: () -> Void
 
