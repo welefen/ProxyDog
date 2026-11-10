@@ -262,14 +262,13 @@ final class AppState: ObservableObject {
         }
 
         let changed = settings.upstreamProxyEnabled != enabled
-            || settings.upstreamProxyHost != trimmedHost
-            || settings.upstreamProxyPort != port
+            || settings.upstreamHost(for: kind) != trimmedHost
+            || settings.upstreamPort(for: kind) != port
             || settings.upstreamProxyKind != kind
 
         settings.upstreamProxyEnabled = enabled
-        settings.upstreamProxyHost = trimmedHost
-        settings.upstreamProxyPort = port
         settings.upstreamProxyKind = kind
+        settings.setUpstreamAddress(host: trimmedHost, port: port, kind: kind)
         proxy.upstreamProxy = upstreamProxyFromSettings()
 
         if changed, proxy.status.isRunning || proxyStatus.isRunning {
@@ -292,8 +291,8 @@ final class AppState: ObservableObject {
                 return String(localized: "The SOCKS5 port must differ from the HTTP proxy port.")
             }
             if settings.upstreamProxyEnabled,
-               UpstreamProxy(host: settings.upstreamProxyHost, port: settings.upstreamProxyPort).isLoopback,
-               port == settings.upstreamProxyPort {
+               UpstreamProxy(host: settings.upstreamHost, port: settings.upstreamPort).isLoopback,
+               port == settings.upstreamPort {
                 return String(localized: "The SOCKS5 port must differ from the upstream proxy port.")
             }
         }
@@ -332,12 +331,11 @@ final class AppState: ObservableObject {
     /// when the settings pane opens so it shows the detected proxy instead of empty fields.
     @discardableResult
     func autoFillUpstreamProxyIfEmpty() -> Bool {
-        let hostEmpty = settings.upstreamProxyHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || settings.upstreamProxyPort <= 0
+        let hostEmpty = settings.upstreamHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || settings.upstreamPort <= 0
         guard hostEmpty, let detected = detectSystemUpstreamProxy() else { return false }
         settings.upstreamProxyKind = .httpConnect
-        settings.upstreamProxyHost = detected.host
-        settings.upstreamProxyPort = detected.port
+        settings.setUpstreamAddress(host: detected.host, port: detected.port, kind: .httpConnect)
         return true
     }
 
@@ -347,21 +345,18 @@ final class AppState: ObservableObject {
     func detectUpstreamProxyFromSystem() -> Bool {
         guard let detected = detectSystemUpstreamProxy() else { return false }
         settings.upstreamProxyKind = .httpConnect
-        settings.upstreamProxyHost = detected.host
-        settings.upstreamProxyPort = detected.port
+        settings.setUpstreamAddress(host: detected.host, port: detected.port, kind: .httpConnect)
         return true
     }
 
     /// Current upstream configuration derived from settings, nil when disabled/invalid.
     func upstreamProxyFromSettings() -> UpstreamProxy? {
         guard settings.upstreamProxyEnabled else { return nil }
-        let host = settings.upstreamProxyHost.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !host.isEmpty, (1...65535).contains(settings.upstreamProxyPort) else { return nil }
-        return UpstreamProxy(
-            kind: settings.upstreamProxyKind,
-            host: host,
-            port: settings.upstreamProxyPort
-        )
+        let kind = settings.upstreamProxyKind
+        let host = settings.upstreamHost(for: kind).trimmingCharacters(in: .whitespacesAndNewlines)
+        let port = settings.upstreamPort(for: kind)
+        guard !host.isEmpty, (1...65535).contains(port) else { return nil }
+        return UpstreamProxy(kind: kind, host: host, port: port)
     }
 
     /// Reads the web proxy of the first active network service via `networksetup`.

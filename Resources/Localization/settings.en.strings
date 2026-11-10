@@ -23,6 +23,11 @@
 "Enter the host of the upstream proxy." = "Enter the host of the upstream proxy.";
 "The upstream proxy cannot be ProxyDog itself." = "The upstream proxy cannot be ProxyDog itself.";
 
+"Upstream protocol" = "Upstream protocol";
+"Both addresses are stored; the selected protocol is used." = "Both addresses are stored; the selected protocol is used.";
+"HTTP upstream" = "HTTP upstream";
+"SOCKS5 upstream" = "SOCKS5 upstream";
+
 "SOCKS5 proxy" = "SOCKS5 proxy";
 "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way." = "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way.";
 "SOCKS5 port" = "SOCKS5 port";

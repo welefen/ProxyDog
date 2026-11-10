@@ -16,16 +16,19 @@ struct SettingsView: View {
     @State private var portError: String?
     @FocusState private var portFocused: Bool
 
-    @State private var upstreamKind: UpstreamProxyKind = .httpConnect
-    @State private var upstreamHostText: String = ""
-    @State private var upstreamPortText: String = ""
+    @State private var upstreamHTTPHostText: String = ""
+    @State private var upstreamHTTPPortText: String = ""
+    @State private var upstreamSOCKSHostText: String = ""
+    @State private var upstreamSOCKSPortText: String = ""
     @State private var upstreamError: String?
-    /// Placeholders come from the detected system proxy, so the row shows the address the
-    /// app would use instead of a made-up default.
+    /// Placeholders come from the detected system proxy, so the HTTP row shows the address
+    /// the app would use instead of a made-up default.
     @State private var detectedUpstreamHost: String = "127.0.0.1"
     @State private var detectedUpstreamPort: String = "8080"
-    @FocusState private var upstreamHostFocused: Bool
-    @FocusState private var upstreamPortFocused: Bool
+    @FocusState private var upstreamHTTPHostFocused: Bool
+    @FocusState private var upstreamHTTPPortFocused: Bool
+    @FocusState private var upstreamSOCKSHostFocused: Bool
+    @FocusState private var upstreamSOCKSPortFocused: Bool
 
     @State private var socksPortText: String = ""
     @State private var socksError: String?
@@ -115,16 +118,21 @@ struct SettingsView: View {
         .onChange(of: settings.port) { _, newValue in
             if !portFocused { portText = String(newValue) }
         }
-        .onChange(of: settings.upstreamProxyHost) { _, newValue in
-            if !upstreamHostFocused { upstreamHostText = newValue }
+        .onChange(of: settings.upstreamHTTPHost) { _, newValue in
+            if !upstreamHTTPHostFocused { upstreamHTTPHostText = newValue }
         }
-        .onChange(of: settings.upstreamProxyPort) { _, newValue in
-            if !upstreamPortFocused {
-                upstreamPortText = newValue > 0 ? String(newValue) : ""
+        .onChange(of: settings.upstreamHTTPPort) { _, newValue in
+            if !upstreamHTTPPortFocused {
+                upstreamHTTPPortText = newValue > 0 ? String(newValue) : ""
             }
         }
-        .onChange(of: settings.upstreamProxyKind) { _, newValue in
-            if upstreamKind != newValue { upstreamKind = newValue }
+        .onChange(of: settings.upstreamSOCKSHost) { _, newValue in
+            if !upstreamSOCKSHostFocused { upstreamSOCKSHostText = newValue }
+        }
+        .onChange(of: settings.upstreamSOCKSPort) { _, newValue in
+            if !upstreamSOCKSPortFocused {
+                upstreamSOCKSPortText = newValue > 0 ? String(newValue) : ""
+            }
         }
         .onChange(of: settings.socksProxyPort) { _, newValue in
             if !socksPortFocused { socksPortText = String(newValue) }
@@ -279,60 +287,106 @@ struct SettingsView: View {
             }
             SettingsHairline()
             SettingsRow(
-                title: "Upstream address",
-                errorText: upstreamError
+                title: "Upstream protocol",
+                hint: "Both addresses are stored; the selected protocol is used."
+            ) {
+                PDSegmented(
+                    items: UpstreamProxyKind.allCases.map { kind in
+                        PDSegmented<UpstreamProxyKind>.Item(value: kind, label: kind.label)
+                    },
+                    selection: Binding(
+                        get: { settings.upstreamProxyKind },
+                        set: { applyUpstreamKindChange($0) }
+                    )
+                )
+                .disabled(!settings.upstreamProxyEnabled)
+            }
+            SettingsHairline()
+            SettingsRow(
+                title: "HTTP upstream",
+                errorText: settings.upstreamProxyKind == .httpConnect ? upstreamError : nil
             ) {
                 HStack(spacing: DS.Space.x2) {
-                    Picker("", selection: $upstreamKind) {
-                        ForEach(UpstreamProxyKind.allCases) { kind in
-                            Text(kind.label).tag(kind)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .frame(width: 84)
-                    .onChange(of: upstreamKind) { _, newValue in
-                        applyUpstreamKindChange(newValue)
-                    }
-                    TextField(detectedUpstreamHost, text: $upstreamHostText)
+                    TextField(detectedUpstreamHost, text: $upstreamHTTPHostText)
                         .textFieldStyle(.plain)
                         .font(DS.Typography.mono(12))
                         .foregroundStyle(DSColor.textPrimary)
-                        .focused($upstreamHostFocused)
-                        .frame(width: 104)
+                        .focused($upstreamHTTPHostFocused)
+                        .frame(width: 112)
                         .padding(.horizontal, DS.Space.x2)
                         .padding(.vertical, 5)
-                        .background(fieldBackground(isFocused: upstreamHostFocused, isEnabled: upstreamAddressAvailable))
-                        .onSubmit(commitUpstreamAddress)
-                        .onChange(of: upstreamHostFocused) { _, focused in
-                            if !focused { commitUpstreamAddress() }
+                        .background(fieldBackground(isFocused: upstreamHTTPHostFocused, isEnabled: settings.upstreamProxyEnabled))
+                        .onSubmit { commitUpstreamAddress(.httpConnect) }
+                        .onChange(of: upstreamHTTPHostFocused) { _, focused in
+                            if !focused { commitUpstreamAddress(.httpConnect) }
                         }
-                        .disabled(!upstreamAddressAvailable)
-                    TextField(detectedUpstreamPort, text: $upstreamPortText)
+                        .disabled(!settings.upstreamProxyEnabled)
+                    TextField(detectedUpstreamPort, text: $upstreamHTTPPortText)
                         .textFieldStyle(.plain)
                         .font(DS.Typography.mono(12))
                         .foregroundStyle(DSColor.textPrimary)
                         .multilineTextAlignment(.trailing)
-                        .focused($upstreamPortFocused)
+                        .focused($upstreamHTTPPortFocused)
                         .frame(width: 56)
                         .padding(.horizontal, DS.Space.x2)
                         .padding(.vertical, 5)
-                        .background(fieldBackground(isFocused: upstreamPortFocused, isEnabled: upstreamAddressAvailable))
-                        .onSubmit(commitUpstreamAddress)
-                        .onChange(of: upstreamPortText) { _, newValue in
+                        .background(fieldBackground(isFocused: upstreamHTTPPortFocused, isEnabled: settings.upstreamProxyEnabled))
+                        .onSubmit { commitUpstreamAddress(.httpConnect) }
+                        .onChange(of: upstreamHTTPPortText) { _, newValue in
                             let filtered = String(newValue.filter(\.isNumber).prefix(5))
-                            if filtered != newValue { upstreamPortText = filtered }
+                            if filtered != newValue { upstreamHTTPPortText = filtered }
                         }
-                        .onChange(of: upstreamPortFocused) { _, focused in
-                            if !focused { commitUpstreamAddress() }
+                        .onChange(of: upstreamHTTPPortFocused) { _, focused in
+                            if !focused { commitUpstreamAddress(.httpConnect) }
                         }
-                        .disabled(!upstreamAddressAvailable)
+                        .disabled(!settings.upstreamProxyEnabled)
                     SettingsIconButton(
                         systemName: "arrow.down.to.line",
                         help: String(localized: "Fill from system proxy"),
                         action: fillUpstreamFromSystem
                     )
-                    .disabled(!upstreamAddressAvailable)
+                    .disabled(!settings.upstreamProxyEnabled)
+                }
+            }
+            SettingsHairline()
+            SettingsRow(
+                title: "SOCKS5 upstream",
+                errorText: settings.upstreamProxyKind == .socks5 ? upstreamError : nil
+            ) {
+                HStack(spacing: DS.Space.x2) {
+                    TextField("127.0.0.1", text: $upstreamSOCKSHostText)
+                        .textFieldStyle(.plain)
+                        .font(DS.Typography.mono(12))
+                        .foregroundStyle(DSColor.textPrimary)
+                        .focused($upstreamSOCKSHostFocused)
+                        .frame(width: 112)
+                        .padding(.horizontal, DS.Space.x2)
+                        .padding(.vertical, 5)
+                        .background(fieldBackground(isFocused: upstreamSOCKSHostFocused, isEnabled: settings.upstreamProxyEnabled))
+                        .onSubmit { commitUpstreamAddress(.socks5) }
+                        .onChange(of: upstreamSOCKSHostFocused) { _, focused in
+                            if !focused { commitUpstreamAddress(.socks5) }
+                        }
+                        .disabled(!settings.upstreamProxyEnabled)
+                    TextField("1080", text: $upstreamSOCKSPortText)
+                        .textFieldStyle(.plain)
+                        .font(DS.Typography.mono(12))
+                        .foregroundStyle(DSColor.textPrimary)
+                        .multilineTextAlignment(.trailing)
+                        .focused($upstreamSOCKSPortFocused)
+                        .frame(width: 56)
+                        .padding(.horizontal, DS.Space.x2)
+                        .padding(.vertical, 5)
+                        .background(fieldBackground(isFocused: upstreamSOCKSPortFocused, isEnabled: settings.upstreamProxyEnabled))
+                        .onSubmit { commitUpstreamAddress(.socks5) }
+                        .onChange(of: upstreamSOCKSPortText) { _, newValue in
+                            let filtered = String(newValue.filter(\.isNumber).prefix(5))
+                            if filtered != newValue { upstreamSOCKSPortText = filtered }
+                        }
+                        .onChange(of: upstreamSOCKSPortFocused) { _, focused in
+                            if !focused { commitUpstreamAddress(.socks5) }
+                        }
+                        .disabled(!settings.upstreamProxyEnabled)
                 }
             }
             SettingsHairline()
@@ -565,9 +619,7 @@ struct SettingsView: View {
     private func syncFromSettings() {
         portText = String(settings.port)
         portError = nil
-        upstreamKind = settings.upstreamProxyKind
-        upstreamHostText = settings.upstreamProxyHost
-        upstreamPortText = settings.upstreamProxyPort > 0 ? String(settings.upstreamProxyPort) : ""
+        syncUpstreamFields()
         upstreamError = nil
         socksPortText = String(settings.socksProxyPort)
         socksError = nil
@@ -592,114 +644,100 @@ struct SettingsView: View {
 
     // MARK: - Upstream proxy
 
-    /// The address row is editable while upstream proxying is on, and also while a
-    /// validation error is on screen so the user can correct an invalid configuration.
-    private var upstreamAddressAvailable: Bool {
-        settings.upstreamProxyEnabled || upstreamError != nil
+    private func hostText(for kind: UpstreamProxyKind) -> String {
+        kind == .httpConnect ? upstreamHTTPHostText : upstreamSOCKSHostText
     }
 
-    private var parsedUpstreamPort: Int {
-        Int(upstreamPortText.trimmingCharacters(in: .whitespaces)) ?? 0
+    private func parsedPort(for kind: UpstreamProxyKind) -> Int {
+        let text = kind == .httpConnect ? upstreamHTTPPortText : upstreamSOCKSPortText
+        return Int(text.trimmingCharacters(in: .whitespaces)) ?? 0
     }
 
     private func setUpstreamEnabled(_ enabled: Bool) {
-        upstreamHostFocused = false
-        upstreamPortFocused = false
-
-        if enabled {
-            if let error = state.applyUpstreamProxy(
-                enabled: true,
-                host: upstreamHostText,
-                port: parsedUpstreamPort,
-                kind: upstreamKind
-            ) {
-                // Nothing is applied on failure, so the switch falls back to off.
-                upstreamError = error
-                return
-            }
-            upstreamError = nil
-            syncUpstreamText()
-        } else {
-            _ = state.applyUpstreamProxy(
-                enabled: false,
-                host: upstreamHostText,
-                port: parsedUpstreamPort,
-                kind: upstreamKind
-            )
-            upstreamError = nil
-            syncUpstreamText()
+        upstreamHTTPHostFocused = false
+        upstreamHTTPPortFocused = false
+        upstreamSOCKSHostFocused = false
+        upstreamSOCKSPortFocused = false
+        let kind = settings.upstreamProxyKind
+        if let error = state.applyUpstreamProxy(
+            enabled: enabled,
+            host: settings.upstreamHost(for: kind),
+            port: settings.upstreamPort(for: kind),
+            kind: kind
+        ) {
+            // Nothing is applied on failure, so the switch falls back to off.
+            upstreamError = error
+            return
         }
+        upstreamError = nil
+        syncUpstreamFields()
     }
 
     private func applyUpstreamKindChange(_ kind: UpstreamProxyKind) {
-        let port = parsedUpstreamPort
+        guard kind != settings.upstreamProxyKind else { return }
         if let error = state.applyUpstreamProxy(
             enabled: settings.upstreamProxyEnabled,
-            host: upstreamHostText,
-            port: port,
+            host: settings.upstreamHost(for: kind),
+            port: settings.upstreamPort(for: kind),
             kind: kind
         ) {
+            // Nothing is applied on failure; the segmented control falls back to the
+            // protocol that is still selected in settings.
             upstreamError = error
-            upstreamKind = settings.upstreamProxyKind
-            if settings.upstreamProxyEnabled {
-                _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: port, kind: kind)
-            }
             return
         }
         upstreamError = nil
-        syncUpstreamText()
+        syncUpstreamFields()
     }
 
-    private func commitUpstreamAddress() {
-        guard upstreamAddressAvailable else { return }
-        let port = parsedUpstreamPort
-        if let error = state.applyUpstreamProxy(
-            enabled: true,
-            host: upstreamHostText,
-            port: port,
-            kind: upstreamKind
-        ) {
-            upstreamError = error
-            if settings.upstreamProxyEnabled {
-                // Never leave an invalid configuration switched on.
-                _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: port, kind: upstreamKind)
+    private func commitUpstreamAddress(_ kind: UpstreamProxyKind) {
+        guard settings.upstreamProxyEnabled else { return }
+        let host = hostText(for: kind)
+        let port = parsedPort(for: kind)
+        if settings.upstreamProxyKind == kind {
+            if let error = state.applyUpstreamProxy(enabled: true, host: host, port: port, kind: kind) {
+                upstreamError = error
+                syncUpstreamFields(for: kind)
+                return
             }
-            return
+            upstreamError = nil
+            syncUpstreamFields(for: kind)
+        } else {
+            // Pre-fill the address of the protocol that is not in use yet.
+            settings.setUpstreamAddress(host: host, port: port, kind: kind)
+            upstreamError = nil
+            syncUpstreamFields(for: kind)
         }
-        upstreamError = nil
-        syncUpstreamText()
     }
 
     private func fillUpstreamFromSystem() {
-        upstreamHostFocused = false
-        upstreamPortFocused = false
+        upstreamHTTPHostFocused = false
+        upstreamHTTPPortFocused = false
         guard state.detectUpstreamProxyFromSystem() else { return }
+        refreshDetectedUpstream()
+        syncUpstreamFields()
 
-        upstreamKind = state.settings.upstreamProxyKind
-        upstreamHostText = state.settings.upstreamProxyHost
-        upstreamPortText = state.settings.upstreamProxyPort > 0 ? String(state.settings.upstreamProxyPort) : ""
-
-        guard upstreamAddressAvailable else { return }
-        if let error = state.applyUpstreamProxy(
-            enabled: true,
-            host: upstreamHostText,
-            port: state.settings.upstreamProxyPort,
-            kind: upstreamKind
-        ) {
+        guard settings.upstreamProxyEnabled else { return }
+        let host = settings.upstreamHost(for: .httpConnect)
+        let port = settings.upstreamPort(for: .httpConnect)
+        if let error = state.applyUpstreamProxy(enabled: true, host: host, port: port, kind: .httpConnect) {
             upstreamError = error
             // Keep the pane consistent: an invalid detected address never stays enabled.
-            _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: state.settings.upstreamProxyPort, kind: upstreamKind)
+            _ = state.applyUpstreamProxy(enabled: false, host: host, port: port, kind: .httpConnect)
         } else {
             upstreamError = nil
-            syncUpstreamText()
+            syncUpstreamFields()
         }
     }
 
-    private func syncUpstreamText() {
-        upstreamKind = settings.upstreamProxyKind
-        upstreamHostText = settings.upstreamProxyHost
-        if settings.upstreamProxyPort > 0 {
-            upstreamPortText = String(settings.upstreamProxyPort)
+    private func syncUpstreamFields(for kind: UpstreamProxyKind? = nil) {
+        if kind == nil || kind == .httpConnect {
+            upstreamHTTPHostText = settings.upstreamHTTPHost
+            upstreamHTTPPortText = settings.upstreamHTTPPort > 0 ? String(settings.upstreamHTTPPort) : ""
+        }
+        if kind == nil || kind == .socks5 {
+            upstreamSOCKSHostText = settings.upstreamSOCKSHost
+            upstreamSOCKSPortText = settings.upstreamSOCKSPort > 0 ? String(settings.upstreamSOCKSPort) : ""
         }
     }
 

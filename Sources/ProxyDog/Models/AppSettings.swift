@@ -36,9 +36,14 @@ final class AppSettings: ObservableObject {
         static let systemProxy = "proxy.systemProxyEnabled"
         static let capacity = "capture.capacity"
         static let upstreamEnabled = "proxy.upstreamEnabled"
-        static let upstreamHost = "proxy.upstreamHost"
-        static let upstreamPort = "proxy.upstreamPort"
         static let upstreamKind = "proxy.upstreamKind"
+        static let upstreamHTTPHost = "proxy.upstreamHTTPHost"
+        static let upstreamHTTPPort = "proxy.upstreamHTTPPort"
+        static let upstreamSOCKSHost = "proxy.upstreamSOCKSHost"
+        static let upstreamSOCKSPort = "proxy.upstreamSOCKSPort"
+        // Legacy single-proxy keys, still used for migration.
+        static let legacyUpstreamHost = "proxy.upstreamHost"
+        static let legacyUpstreamPort = "proxy.upstreamPort"
         static let socksEnabled = "proxy.socksEnabled"
         static let socksPort = "proxy.socksPort"
         static let ignoreOwnTraffic = "capture.ignoreOwnTraffic"
@@ -71,16 +76,55 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(upstreamProxyEnabled, forKey: Key.upstreamEnabled) }
     }
 
-    @Published var upstreamProxyHost: String {
-        didSet { defaults.set(upstreamProxyHost, forKey: Key.upstreamHost) }
+    /// HTTP upstream address (kept separately from SOCKS5 so both can be filled in).
+    @Published var upstreamHTTPHost: String {
+        didSet { defaults.set(upstreamHTTPHost, forKey: Key.upstreamHTTPHost) }
     }
 
-    @Published var upstreamProxyPort: Int {
-        didSet { defaults.set(upstreamProxyPort, forKey: Key.upstreamPort) }
+    @Published var upstreamHTTPPort: Int {
+        didSet { defaults.set(upstreamHTTPPort, forKey: Key.upstreamHTTPPort) }
     }
 
+    /// SOCKS5 upstream address.
+    @Published var upstreamSOCKSHost: String {
+        didSet { defaults.set(upstreamSOCKSHost, forKey: Key.upstreamSOCKSHost) }
+    }
+
+    @Published var upstreamSOCKSPort: Int {
+        didSet { defaults.set(upstreamSOCKSPort, forKey: Key.upstreamSOCKSPort) }
+    }
+
+    /// Which upstream protocol is used for chaining.
     @Published var upstreamProxyKind: UpstreamProxyKind {
         didSet { defaults.set(upstreamProxyKind.rawValue, forKey: Key.upstreamKind) }
+    }
+
+    /// Address of the currently selected upstream protocol.
+    var upstreamHost: String {
+        upstreamProxyKind == .httpConnect ? upstreamHTTPHost : upstreamSOCKSHost
+    }
+
+    var upstreamPort: Int {
+        upstreamProxyKind == .httpConnect ? upstreamHTTPPort : upstreamSOCKSPort
+    }
+
+    func upstreamHost(for kind: UpstreamProxyKind) -> String {
+        kind == .httpConnect ? upstreamHTTPHost : upstreamSOCKSHost
+    }
+
+    func upstreamPort(for kind: UpstreamProxyKind) -> Int {
+        kind == .httpConnect ? upstreamHTTPPort : upstreamSOCKSPort
+    }
+
+    func setUpstreamAddress(host: String, port: Int, kind: UpstreamProxyKind) {
+        switch kind {
+        case .httpConnect:
+            upstreamHTTPHost = host
+            upstreamHTTPPort = port
+        case .socks5:
+            upstreamSOCKSHost = host
+            upstreamSOCKSPort = port
+        }
     }
 
     /// Extra SOCKS5 listener so apps that only speak SOCKS5 can be inspected.
@@ -106,9 +150,19 @@ final class AppSettings: ObservableObject {
         self.sslProxyingEnabled = defaults.object(forKey: Key.sslEnabled) as? Bool ?? true
         self.systemProxyEnabled = defaults.bool(forKey: Key.systemProxy)
         self.upstreamProxyEnabled = defaults.bool(forKey: Key.upstreamEnabled)
-        self.upstreamProxyHost = defaults.string(forKey: Key.upstreamHost) ?? ""
-        self.upstreamProxyPort = defaults.integer(forKey: Key.upstreamPort)
-        self.upstreamProxyKind = UpstreamProxyKind(rawValue: defaults.string(forKey: Key.upstreamKind) ?? "") ?? .httpConnect
+        let storedKind = UpstreamProxyKind(rawValue: defaults.string(forKey: Key.upstreamKind) ?? "") ?? .httpConnect
+        self.upstreamProxyKind = storedKind
+        // Migrate the old single-address configuration into the matching protocol slot.
+        let legacyHost = defaults.string(forKey: Key.legacyUpstreamHost) ?? ""
+        let legacyPort = defaults.integer(forKey: Key.legacyUpstreamPort)
+        self.upstreamHTTPHost = defaults.string(forKey: Key.upstreamHTTPHost)
+            ?? (storedKind == .httpConnect ? legacyHost : "")
+        let storedHTTPPort = defaults.integer(forKey: Key.upstreamHTTPPort)
+        self.upstreamHTTPPort = storedHTTPPort > 0 ? storedHTTPPort : (storedKind == .httpConnect ? legacyPort : 0)
+        self.upstreamSOCKSHost = defaults.string(forKey: Key.upstreamSOCKSHost)
+            ?? (storedKind == .socks5 ? legacyHost : "")
+        let storedSOCKSPort = defaults.integer(forKey: Key.upstreamSOCKSPort)
+        self.upstreamSOCKSPort = storedSOCKSPort > 0 ? storedSOCKSPort : (storedKind == .socks5 ? legacyPort : 0)
         self.socksProxyEnabled = defaults.object(forKey: Key.socksEnabled) as? Bool ?? false
         let storedSocksPort = defaults.integer(forKey: Key.socksPort)
         self.socksProxyPort = storedSocksPort > 0 ? storedSocksPort : AppDefaults.socksPort

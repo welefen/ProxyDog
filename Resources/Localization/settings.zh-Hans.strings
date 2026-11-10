@@ -23,6 +23,11 @@
 "Enter the host of the upstream proxy." = "请输入上游代理的主机地址。";
 "The upstream proxy cannot be ProxyDog itself." = "上游代理不能指向 ProxyDog 自身。";
 
+"Upstream protocol" = "上游协议";
+"Both addresses are stored; the selected protocol is used." = "两个地址都会保存，实际使用所选协议。";
+"HTTP upstream" = "HTTP 上游";
+"SOCKS5 upstream" = "SOCKS5 上游";
+
 "SOCKS5 proxy" = "SOCKS5 代理";
 "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way." = "给只支持 SOCKS5 的 App 使用，例如 Telegram；ProxyDog 同样会抓包并解密 HTTPS。";
 "SOCKS5 port" = "SOCKS5 端口";
