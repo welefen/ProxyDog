@@ -11,7 +11,7 @@ struct StatusBarView: View {
 
     var body: some View {
         HStack(spacing: DS.Space.x4) {
-            countItem(PDFormat.count(state.allRequests.count), label: requestLabel)
+            countItem(PDFormat.count(state.filteredRequests.count), label: requestLabel)
             countItem(
                 PDFormat.count(errorCount),
                 label: errorLabel,
@@ -60,12 +60,14 @@ struct StatusBarView: View {
         }
     }
 
+    /// Counts follow the visible list (sidebar scope, type filter and search), not the
+    /// whole capture buffer.
     private var errorCount: Int {
-        state.allRequests.lazy.filter(\.isFailure).count
+        state.filteredRequests.lazy.filter(\.isFailure).count
     }
 
     private var requestLabel: String {
-        state.allRequests.count == 1
+        state.filteredRequests.count == 1
             ? String(localized: "request")
             : String(localized: "requests")
     }
