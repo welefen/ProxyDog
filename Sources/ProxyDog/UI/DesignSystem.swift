@@ -668,15 +668,24 @@ extension View {
     }
 }
 
-/// Compact dropdown for an HTTP method filter. The empty value means "any method".
-struct PDMethodPicker: View {
-    @Binding var method: String
+/// Quiet dropdown used inside editors (method filter, rewrite action). Renders like a text
+/// field with a chevron and opens a custom popover instead of the system menu chrome.
+struct PDDropdownPicker: View {
+    struct Option: Identifiable {
+        let value: String
+        let label: String
+        var id: String { value }
+    }
+
+    let options: [Option]
+    @Binding var selection: String
+    var width: CGFloat = 112
+    var mono: Bool = true
+
     @State private var isPresented = false
 
-    static let options = ["", "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
-
-    private var currentLabel: String {
-        method.isEmpty ? String(localized: "Any method") : method
+    private var selectedLabel: String {
+        options.first(where: { $0.value == selection })?.label ?? selection
     }
 
     var body: some View {
@@ -684,9 +693,9 @@ struct PDMethodPicker: View {
             isPresented.toggle()
         } label: {
             HStack(spacing: DS.Space.x2) {
-                Text(currentLabel)
-                    .font(DS.Typography.mono(12))
-                    .foregroundStyle(method.isEmpty ? DSColor.textMuted : DSColor.textPrimary)
+                Text(selectedLabel)
+                    .font(mono ? DS.Typography.mono(12) : DS.Typography.ui(12))
+                    .foregroundStyle(DSColor.textPrimary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.down")
@@ -694,7 +703,7 @@ struct PDMethodPicker: View {
                     .foregroundStyle(DSColor.textMuted)
             }
             .padding(.horizontal, DS.Space.x2)
-            .frame(width: 112, height: 26)
+            .frame(width: width, height: 26)
             .background(
                 RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
                     .fill(DSColor.raised)
@@ -708,15 +717,15 @@ struct PDMethodPicker: View {
         .buttonStyle(.plain)
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(Self.options, id: \.self) { option in
-                    let selected = option == method
+                ForEach(options) { option in
+                    let selected = option.value == selection
                     Button {
-                        method = option
+                        selection = option.value
                         isPresented = false
                     } label: {
                         HStack(spacing: DS.Space.x2) {
-                            Text(option.isEmpty ? String(localized: "Any method") : option)
-                                .font(DS.Typography.mono(12))
+                            Text(option.label)
+                                .font(mono ? DS.Typography.mono(12) : DS.Typography.ui(12))
                                 .foregroundStyle(DSColor.textPrimary)
                             Spacer(minLength: 0)
                             if selected {
@@ -733,8 +742,23 @@ struct PDMethodPicker: View {
                 }
             }
             .padding(4)
-            .frame(width: 150)
+            .frame(width: max(width, 140))
         }
+    }
+}
+
+/// Compact dropdown for an HTTP method filter. The empty value means "any method".
+struct PDMethodPicker: View {
+    @Binding var method: String
+
+    static let methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+
+    var body: some View {
+        PDDropdownPicker(
+            options: [.init(value: "", label: String(localized: "Any method"))]
+                + Self.methods.map { .init(value: $0, label: $0) },
+            selection: $method
+        )
         .accessibilityLabel("Method")
     }
 }

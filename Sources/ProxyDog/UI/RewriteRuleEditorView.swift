@@ -212,14 +212,17 @@ struct RewriteRuleEditorView: View {
     private var actionCard: some View {
         RewriteEditorCard {
             RewriteEditorRow(label: "Action") {
-                Picker("", selection: $draft.action) {
-                    ForEach(RewriteAction.allCases) { action in
-                        Text(action.label).tag(action)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(width: 190)
+                PDDropdownPicker(
+                    options: RewriteAction.allCases.map {
+                        .init(value: $0.rawValue, label: $0.label)
+                    },
+                    selection: Binding(
+                        get: { draft.action.rawValue },
+                        set: { draft.action = RewriteAction(rawValue: $0) ?? draft.action }
+                    ),
+                    width: 190,
+                    mono: false
+                )
                 .accessibilityLabel("Action")
             }
 
