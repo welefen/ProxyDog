@@ -22,12 +22,12 @@ struct ProxyDogApp: App {
     private var appCommands: some Commands {
         CommandGroup(replacing: .newItem) {}
         CommandMenu("Proxy") {
-            Button(state.isProxyRunning ? "Stop Proxy" : "Start Proxy") {
+            Button(LocalizedStringKey(state.isProxyRunning ? "Stop Proxy" : "Start Proxy")) {
                 state.toggleProxy()
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
 
-            Button(state.store.isPaused ? "Resume Capturing" : "Pause Capturing") {
+            Button(LocalizedStringKey(state.store.isPaused ? "Resume Capturing" : "Pause Capturing")) {
                 state.togglePause()
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])

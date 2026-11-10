@@ -10,7 +10,7 @@
 - **检索与清理**：全文搜索、按域名过滤、暂停/恢复抓包、清空、单条删除、收藏。
 - **导出**：HAR 1.2 文件导出、复制为 cURL。
 - **系统代理**：一键设置/关闭 macOS 系统 HTTP/HTTPS 代理（需要管理员授权）。
-- **外观**：浅色为默认设计，完整支持深色模式，默认跟随系统。
+- **外观与语言**：浅色为默认设计，完整支持深色模式，默认跟随系统；界面内置简体中文与 English，默认跟随系统语言，可在设置中切换（切换后自动重启生效）。
 - **数据埋点**：使用 Aptabase，App Key 在首次启动向导中交互式询问，可跳过；不采集任何请求内容。
 
 ## 截图
@@ -30,6 +30,10 @@ Body 详情：JSON 树与 Pretty/Raw 切换。
 首次启动向导：安装根证书、填写 Aptabase App Key、设置系统代理。
 
 ![首次启动向导](Docs/screenshots/onboarding.png)
+
+## 语言
+
+界面支持简体中文与 English 两套文案，默认跟随系统语言（本机为中文时即中文界面）。设置 → 外观 → 语言 可在「跟随系统 / 简体中文 / English」之间切换，切换后应用会自动重启。所有界面文案都放在 `Resources/Localization/` 下的 `.strings` 片段里，新增文案时同步补全两种语言，并用 `python3 scripts/check_localization.py` 校验。
 
 ## 环境要求
 
@@ -101,6 +105,9 @@ Support/                     # Info.plist、应用图标
 
 # 无界面启动代理（输出 JSON Lines 抓包事件）
 ./.build/debug/ProxyDog --headless --port 8899 --out /tmp/captures.jsonl
+
+# 校验中英文案完整性
+python3 scripts/check_localization.py
 
 # 生成演示流量 / 重置应用状态 / 截取窗口
 ./scripts/demo_traffic.sh

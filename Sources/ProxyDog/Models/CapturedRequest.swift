@@ -109,8 +109,8 @@ extension CapturedRequest {
         if let statusCode { return String(statusCode) }
         switch state {
         case .pending: return "…"
-        case .failed: return "Error"
-        case .tunneled: return "Tunnel"
+        case .failed: return String(localized: "Error")
+        case .tunneled: return String(localized: "Tunnel")
         case .completed: return "—"
         }
     }

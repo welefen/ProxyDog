@@ -140,7 +140,7 @@ final class AppState: ObservableObject {
 
     func applyPort(_ port: Int) {
         guard port > 0, port < 65_536 else {
-            errorMessage = "Port must be between 1 and 65535."
+            errorMessage = String(localized: "Port must be between 1 and 65535.")
             return
         }
         let wasRunning = proxy.status.isRunning || proxyStatus.isRunning
@@ -305,7 +305,7 @@ final class AppState: ObservableObject {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "ProxyDog.har"
         panel.canCreateDirectories = true
-        panel.title = "Export HAR"
+        panel.title = String(localized: "Export HAR")
         if panel.runModal() == .OK, let url = panel.url {
             exportHAR(to: url)
         }
@@ -315,7 +315,7 @@ final class AppState: ObservableObject {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "proxydog-ca.crt"
         panel.canCreateDirectories = true
-        panel.title = "Export Root Certificate"
+        panel.title = String(localized: "Export Root Certificate")
         if panel.runModal() == .OK, let url = panel.url {
             exportCertificate(to: url)
         }

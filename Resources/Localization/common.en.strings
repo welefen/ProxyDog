@@ -1,0 +1,35 @@
+/* Lead-owned strings: app menus, panels, errors, model labels. English source. */
+
+/* App menus */
+"Proxy" = "Proxy";
+"Start Proxy" = "Start Proxy";
+"Stop Proxy" = "Stop Proxy";
+"Pause Capturing" = "Pause Capturing";
+"Resume Capturing" = "Resume Capturing";
+"Set as System Proxy" = "Set as System Proxy";
+"Clear Traffic" = "Clear Traffic";
+"Export HAR…" = "Export HAR…";
+
+/* Panels and errors */
+"Export HAR" = "Export HAR";
+"Export Root Certificate" = "Export Root Certificate";
+"Port must be between 1 and 65535." = "Port must be between 1 and 65535.";
+
+/* Appearance and language */
+"Follow system" = "Follow system";
+"Light" = "Light";
+"Dark" = "Dark";
+"Language" = "Language";
+
+/* Exchange states */
+"Error" = "Error";
+"Tunnel" = "Tunnel";
+
+/* Payload kinds (technical names stay as-is) */
+"Text" = "Text";
+"Image" = "Image";
+"Font" = "Font";
+"Audio" = "Audio";
+"Video" = "Video";
+"Form" = "Form";
+"Binary" = "Binary";

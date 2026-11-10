@@ -1,0 +1,35 @@
+/* Lead-owned strings: app menus, panels, errors, model labels. 简体中文. */
+
+/* App menus */
+"Proxy" = "代理";
+"Start Proxy" = "启动代理";
+"Stop Proxy" = "停止代理";
+"Pause Capturing" = "暂停抓包";
+"Resume Capturing" = "继续抓包";
+"Set as System Proxy" = "设为系统代理";
+"Clear Traffic" = "清空请求";
+"Export HAR…" = "导出 HAR…";
+
+/* Panels and errors */
+"Export HAR" = "导出 HAR";
+"Export Root Certificate" = "导出根证书";
+"Port must be between 1 and 65535." = "端口必须在 1 到 65535 之间。";
+
+/* Appearance and language */
+"Follow system" = "跟随系统";
+"Light" = "浅色";
+"Dark" = "深色";
+"Language" = "语言";
+
+/* Exchange states */
+"Error" = "错误";
+"Tunnel" = "隧道";
+
+/* Payload kinds (technical names stay as-is) */
+"Text" = "文本";
+"Image" = "图片";
+"Font" = "字体";
+"Audio" = "音频";
+"Video" = "视频";
+"Form" = "表单";
+"Binary" = "二进制";

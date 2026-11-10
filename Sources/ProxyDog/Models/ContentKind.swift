@@ -57,13 +57,13 @@ enum ContentKind: String, Sendable, CaseIterable {
         case .html: return "HTML"
         case .xml: return "XML"
         case .css: return "CSS"
-        case .text: return "Text"
-        case .image: return "Image"
-        case .font: return "Font"
-        case .audio: return "Audio"
-        case .video: return "Video"
-        case .form: return "Form"
-        case .binary: return "Binary"
+        case .text: return String(localized: "Text")
+        case .image: return String(localized: "Image")
+        case .font: return String(localized: "Font")
+        case .audio: return String(localized: "Audio")
+        case .video: return String(localized: "Video")
+        case .form: return String(localized: "Form")
+        case .binary: return String(localized: "Binary")
         }
     }
 
