@@ -463,10 +463,10 @@ private struct RewriteBodyRow: View {
                 .padding(6)
                 .background(
                     RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                        .fill(DSColor.sunken)
+                        .fill(DSColor.raised)
                         .overlay(
                             RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                                .strokeBorder(focused ? DSColor.accent : DSColor.border, lineWidth: 1)
+                                .strokeBorder(focused ? DSColor.accent : DSColor.border, lineWidth: focused ? 1.5 : 1)
                         )
                 )
         }
@@ -492,10 +492,10 @@ private struct RewriteTextField: View {
             .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                    .fill(DSColor.sunken)
+                    .fill(DSColor.raised)
                     .overlay(
                         RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                            .strokeBorder(focused ? DSColor.accent : DSColor.border, lineWidth: 1)
+                            .strokeBorder(focused ? DSColor.accent : DSColor.border, lineWidth: focused ? 1.5 : 1)
                     )
             )
     }

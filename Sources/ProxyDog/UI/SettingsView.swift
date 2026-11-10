@@ -302,7 +302,7 @@ struct SettingsView: View {
                         .frame(width: 104)
                         .padding(.horizontal, DS.Space.x2)
                         .padding(.vertical, 5)
-                        .background(fieldBackground(isFocused: upstreamHostFocused))
+                        .background(fieldBackground(isFocused: upstreamHostFocused, isEnabled: upstreamAddressAvailable))
                         .onSubmit(commitUpstreamAddress)
                         .onChange(of: upstreamHostFocused) { _, focused in
                             if !focused { commitUpstreamAddress() }
@@ -317,7 +317,7 @@ struct SettingsView: View {
                         .frame(width: 56)
                         .padding(.horizontal, DS.Space.x2)
                         .padding(.vertical, 5)
-                        .background(fieldBackground(isFocused: upstreamPortFocused))
+                        .background(fieldBackground(isFocused: upstreamPortFocused, isEnabled: upstreamAddressAvailable))
                         .onSubmit(commitUpstreamAddress)
                         .onChange(of: upstreamPortText) { _, newValue in
                             let filtered = String(newValue.filter(\.isNumber).prefix(5))
@@ -364,7 +364,7 @@ struct SettingsView: View {
                     .frame(width: 56)
                     .padding(.horizontal, DS.Space.x2)
                     .padding(.vertical, 5)
-                    .background(fieldBackground(isFocused: socksPortFocused))
+                    .background(fieldBackground(isFocused: socksPortFocused, isEnabled: socksAddressAvailable))
                     .onSubmit(commitSocksPort)
                     .onChange(of: socksPortText) { _, newValue in
                         let filtered = String(newValue.filter(\.isNumber).prefix(5))
@@ -747,12 +747,17 @@ struct SettingsView: View {
         socksPortText = String(settings.socksProxyPort)
     }
 
-    private func fieldBackground(isFocused: Bool) -> some View {
+    /// Editable inputs are white with a hairline border (a grey fill reads as disabled);
+    /// truly disabled fields keep the sunken fill.
+    private func fieldBackground(isFocused: Bool, isEnabled: Bool = true) -> some View {
         RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-            .fill(DSColor.sunken)
+            .fill(isEnabled ? DSColor.raised : DSColor.sunken)
             .overlay(
                 RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                    .strokeBorder(isFocused ? DSColor.accent : DSColor.border, lineWidth: 1)
+                    .strokeBorder(
+                        isFocused ? DSColor.accent : DSColor.border,
+                        lineWidth: isFocused ? 1.5 : 1
+                    )
             )
     }
 }
