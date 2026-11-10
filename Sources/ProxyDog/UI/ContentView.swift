@@ -1,22 +1,47 @@
 import AppKit
 import SwiftUI
 
-/// Placeholder root view. Replaced by the UI implementation
-/// (`Sources/ProxyDog/UI/ContentView.swift`).
+/// Root of the main window: sidebar, traffic list, detail inspector and the quiet
+/// status strip along the bottom.
 struct ContentView: View {
     @EnvironmentObject private var state: AppState
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text(AppInfo.name)
-                .font(.largeTitle.weight(.semibold))
-            Text("UI is under construction")
-                .foregroundStyle(.secondary)
+        VStack(spacing: 0) {
+            NavigationSplitView {
+                SidebarView()
+                    .navigationSplitViewColumnWidth(
+                        min: DS.Metric.sidebarMin,
+                        ideal: DS.Metric.sidebarIdeal,
+                        max: DS.Metric.sidebarMax
+                    )
+            } content: {
+                TrafficListView()
+                    .navigationSplitViewColumnWidth(
+                        min: DS.Metric.listMin,
+                        ideal: DS.Metric.listIdeal
+                    )
+            } detail: {
+                RequestDetailView()
+                    .navigationSplitViewColumnWidth(
+                        min: DS.Metric.detailMin,
+                        ideal: DS.Metric.detailIdeal
+                    )
+            }
+            .navigationSplitViewStyle(.balanced)
+            .navigationTitle("")
+            .toolbarBackground(DSColor.chrome, for: .windowToolbar)
+
+            StatusBarView()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(DSColor.base)
         .sheet(isPresented: $state.isOnboardingPresented) {
             OnboardingView()
                 .environmentObject(state)
+        }
+        .preferredColorScheme(DevLaunchOptions.appearanceOverride)
+        .onAppear {
+            SampleTraffic.bootstrapIfRequested(state: state)
         }
     }
 }

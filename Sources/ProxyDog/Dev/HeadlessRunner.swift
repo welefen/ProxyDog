@@ -85,10 +85,16 @@ enum HeadlessRunner {
             case .failed(let message): value = "failed:\(message)"
             }
             print("{\"type\":\"status\",\"status\":\"\(value)\"}")
+            switch status {
+            case .running(let boundPort):
+                print("{\"type\":\"ready\",\"port\":\(boundPort)}")
+            case .failed:
+                exit(1)
+            default:
+                break
+            }
         }
         server.start()
-
-        print("{\"type\":\"ready\",\"port\":\(port)}")
 
         if let exitAfter {
             DispatchQueue.global().asyncAfter(deadline: .now() + exitAfter) {

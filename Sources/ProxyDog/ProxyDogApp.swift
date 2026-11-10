@@ -7,31 +7,14 @@ struct ProxyDogApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(state)
-                .environmentObject(state.settings)
-                .environmentObject(state.store)
-                .preferredColorScheme(state.settings.appearance.colorScheme)
-                .frame(
-                    minWidth: 980,
-                    idealWidth: AppDefaults.defaultWindowWidth,
-                    maxWidth: .infinity,
-                    minHeight: 620,
-                    idealHeight: AppDefaults.defaultWindowHeight,
-                    maxHeight: .infinity
-                )
-                .onAppear { state.bootstrap() }
+            AppRootView(state: state, settings: state.settings)
         }
         .defaultSize(width: AppDefaults.defaultWindowWidth, height: AppDefaults.defaultWindowHeight)
         .windowToolbarStyle(.unified)
         .commands { appCommands }
 
         Settings {
-            SettingsView()
-                .environmentObject(state)
-                .environmentObject(state.settings)
-                .preferredColorScheme(state.settings.appearance.colorScheme)
-                .frame(width: 560)
+            SettingsRootView(state: state, settings: state.settings)
         }
     }
 
@@ -80,5 +63,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+}
+
+
+/// Root view of the main window. Observing both AppState and AppSettings keeps the
+/// appearance switch (Light / Dark / Follow system) live without a relaunch.
+struct AppRootView: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        ContentView()
+            .environmentObject(state)
+            .environmentObject(settings)
+            .environmentObject(state.store)
+            .preferredColorScheme(settings.appearance.colorScheme)
+            .frame(
+                minWidth: 980,
+                idealWidth: AppDefaults.defaultWindowWidth,
+                maxWidth: .infinity,
+                minHeight: 620,
+                idealHeight: AppDefaults.defaultWindowHeight,
+                maxHeight: .infinity
+            )
+            .onAppear { state.bootstrap() }
+    }
+}
+
+struct SettingsRootView: View {
+    @ObservedObject var state: AppState
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        SettingsView()
+            .environmentObject(state)
+            .environmentObject(settings)
+            .preferredColorScheme(settings.appearance.colorScheme)
+            .frame(width: 560)
     }
 }

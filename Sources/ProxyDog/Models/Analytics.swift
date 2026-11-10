@@ -3,89 +3,142 @@ import Foundation
 /// Minimal Aptabase client. Implemented without a third-party SDK so the app stays
 /// dependency free on the analytics side.
 ///
-/// Endpoint: POST https://{region}.aptabase.com/api/v0/event
-/// The region is the second segment of the app key, e.g. `A-US-1234` -> `us`.
+/// Ingest format: `POST https://{region}.aptabase.com/api/v0/event` with the
+/// `App-Key` header and one JSON event per request. The region is the second
+/// segment of the app key (`A-US-…` -> `us.aptabase.com`).
+///
+/// Design rules:
+/// - an empty or malformed key means analytics is completely inert;
+/// - every failure is silent, nothing is ever logged or surfaced to the UI;
+/// - events are queued and sent by at most two concurrent requests, so the app is
+///   never blocked and a slow network cannot pile up connections.
 final class Analytics: @unchecked Sendable {
     static let shared = Analytics()
 
-    private let queue = DispatchQueue(label: "com.proxydog.analytics")
-    private var appKey: String = ""
-    private var regionHost: String = ""
-    private var sessionID = UUID().uuidString
-    private var isFlushing = false
+    private static let maxInFlight = 2
+    private static let maxPendingEvents = 256
+    private static let flushDelay: TimeInterval = 0.6
+
+    private let stateQueue = DispatchQueue(label: "com.proxydog.analytics.state")
+    private let urlSession: URLSession
+    private let sessionID = UUID().uuidString.lowercased()
+
+    // Mutated only on `stateQueue`.
+    private var appKey = ""
+    private var regionHost = ""
     private var pending: [[String: Any]] = []
+    private var inFlight = 0
+    private var flushScheduled = false
 
-    private init() {}
+    private init() {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 5
+        configuration.timeoutIntervalForResource = 8
+        configuration.waitsForConnectivity = false
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.httpAdditionalHeaders = ["User-Agent": "ProxyDog/\(AppInfo.version)"]
+        urlSession = URLSession(configuration: configuration)
+    }
 
-    /// Enables analytics for the given key. Pass an empty string to disable.
+    // MARK: - Configuration
+
+    /// Enables analytics for the given key. Pass an empty string to disable it.
+    /// Events captured while disabled are dropped, and any queued events are
+    /// discarded when the key changes to an invalid/empty value.
     func configure(appKey: String) {
-        queue.async {
-            let key = appKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = appKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        stateQueue.async {
+            let host = Analytics.regionHost(forAppKey: key)
             self.appKey = key
-            self.regionHost = Analytics.host(forAppKey: key)
-        }
-    }
-
-    var isEnabled: Bool {
-        queue.sync { !appKey.isEmpty }
-    }
-
-    func track(_ eventName: String, properties: [String: String] = [:]) {
-        queue.async {
-            guard !self.appKey.isEmpty, !self.regionHost.isEmpty else { return }
-            var payload: [String: Any] = [
-                "timestamp": Analytics.timestampFormatter.string(from: Date()),
-                "sessionId": self.sessionID,
-                "eventName": eventName,
-                "systemProps": Analytics.systemProperties(),
-                "props": properties,
-            ]
-            if properties.isEmpty { payload["props"] = [String: Any]() }
-            self.pending.append(payload)
-            self.flushIfNeeded()
-        }
-    }
-
-    private func flushIfNeeded() {
-        guard !isFlushing, !pending.isEmpty else { return }
-        isFlushing = true
-        let events = pending
-        pending.removeAll()
-        let urlString = "https://\(regionHost)/api/v0/event"
-        guard let url = URL(string: urlString) else {
-            isFlushing = false
-            return
-        }
-        let key = appKey
-        queue.async {
-            for event in events {
-                guard let body = try? JSONSerialization.data(withJSONObject: event) else { continue }
-                var request = URLRequest(url: url)
-                request.httpMethod = "POST"
-                request.httpBody = body
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.setValue(key, forHTTPHeaderField: "App-Key")
-                request.timeoutInterval = 10
-                URLSession.shared.dataTask(with: request) { _, _, _ in
-                    self.queue.async {
-                        if self.pending.isEmpty {
-                            self.isFlushing = false
-                        } else {
-                            self.isFlushing = false
-                            self.flushIfNeeded()
-                        }
-                    }
-                }.resume()
+            self.regionHost = host
+            if key.isEmpty || host.isEmpty {
+                self.pending.removeAll()
             }
         }
     }
 
-    private static func host(forAppKey key: String) -> String {
-        let parts = key.split(separator: "-")
-        guard parts.count >= 2 else { return "" }
-        let region = String(parts[1]).lowercased()
-        guard !region.isEmpty else { return "" }
-        return "\(region).aptabase.com"
+    var isEnabled: Bool {
+        stateQueue.sync { !appKey.isEmpty && !regionHost.isEmpty }
+    }
+
+    // MARK: - Events
+
+    func track(_ eventName: String, properties: [String: String] = [:]) {
+        let name = eventName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+
+        stateQueue.async {
+            guard !self.appKey.isEmpty, !self.regionHost.isEmpty else { return }
+            let event: [String: Any] = [
+                "timestamp": Analytics.timestamp(),
+                "sessionId": self.sessionID,
+                "eventName": name,
+                "systemProps": Analytics.systemProperties(),
+                "props": properties,
+            ]
+            self.pending.append(event)
+            if self.pending.count > Analytics.maxPendingEvents {
+                self.pending.removeFirst(self.pending.count - Analytics.maxPendingEvents)
+            }
+            self.scheduleFlushLocked()
+        }
+    }
+
+    // MARK: - Delivery (runs on stateQueue)
+
+    private func scheduleFlushLocked() {
+        guard !flushScheduled, !pending.isEmpty else { return }
+        flushScheduled = true
+        stateQueue.asyncAfter(deadline: .now() + Analytics.flushDelay) {
+            self.flushScheduled = false
+            self.flushLocked()
+        }
+    }
+
+    private func flushLocked() {
+        guard !appKey.isEmpty, !regionHost.isEmpty else {
+            pending.removeAll()
+            return
+        }
+        guard let url = URL(string: "https://\(regionHost)/api/v0/event") else {
+            pending.removeAll()
+            return
+        }
+
+        while inFlight < Analytics.maxInFlight, !pending.isEmpty {
+            let event = pending.removeFirst()
+            guard let body = try? JSONSerialization.data(withJSONObject: event) else { continue }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.httpBody = body
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(appKey, forHTTPHeaderField: "App-Key")
+            request.timeoutInterval = 5
+
+            inFlight += 1
+            urlSession.dataTask(with: request) { [weak self] _, _, _ in
+                guard let self else { return }
+                self.stateQueue.async {
+                    self.inFlight = max(0, self.inFlight - 1)
+                    if !self.pending.isEmpty {
+                        self.flushLocked()
+                    }
+                }
+            }.resume()
+        }
+    }
+
+    // MARK: - Payload helpers
+
+    private static func regionHost(forAppKey key: String) -> String {
+        let parts = key.split(separator: "-").map(String.init)
+        guard parts.count >= 2, parts[0].uppercased() == "A" else { return "" }
+        switch parts[1].uppercased() {
+        case "US": return "us.aptabase.com"
+        case "EU": return "eu.aptabase.com"
+        default: return ""
+        }
     }
 
     private static let timestampFormatter: ISO8601DateFormatter = {
@@ -94,24 +147,28 @@ final class Analytics: @unchecked Sendable {
         return formatter
     }()
 
-    private static func systemProperties() -> [String: Any] {
+    private static func timestamp() -> String {
+        timestampFormatter.string(from: Date())
+    }
+
+    private static func systemProperties() -> [String: String] {
         let processInfo = ProcessInfo.processInfo
-        let locale = Locale.current.identifier
+        let version = processInfo.operatingSystemVersion
         return [
-            "locale": locale,
+            "locale": Locale.current.identifier.replacingOccurrences(of: "_", with: "-"),
             "osName": "macOS",
-            "osVersion": processInfo.operatingSystemVersionString,
-            "deviceModel": "\(hostModel())",
+            "osVersion": "\(version.majorVersion).\(version.minorVersion)",
+            "deviceModel": hardwareModel(),
             "appVersion": AppInfo.version,
             "sdkVersion": "proxydog-1.0.0",
         ]
     }
 
-    private static func hostModel() -> String {
+    private static func hardwareModel() -> String {
         var size = 0
-        sysctlbyname("hw.model", nil, &size, nil, 0)
-        var model = [CChar](repeating: 0, count: max(size, 1))
-        sysctlbyname("hw.model", &model, &size, nil, 0)
-        return String(cString: model)
+        guard sysctlbyname("hw.model", nil, &size, nil, 0) == 0, size > 0 else { return "Mac" }
+        var buffer = [CChar](repeating: 0, count: size)
+        guard sysctlbyname("hw.model", &buffer, &size, nil, 0) == 0 else { return "Mac" }
+        return String(cString: buffer)
     }
 }

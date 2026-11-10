@@ -236,6 +236,17 @@ final class AppState: ObservableObject {
         store.togglePin(id: id)
     }
 
+    func removeRequest(_ id: CapturedRequest.ID) {
+        store.remove(id: id)
+        if selectionID == id {
+            selectionID = nil
+        }
+    }
+
+    var allRequests: [CapturedRequest] {
+        store.requests
+    }
+
     func togglePause() {
         store.setPaused(!store.isPaused)
     }

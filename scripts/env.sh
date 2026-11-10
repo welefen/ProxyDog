@@ -14,6 +14,9 @@ export CLANG_MODULE_CACHE_PATH="$ROOT/.build-cache/clang"
 export SWIFTPM_MODULECACHE_OVERRIDE="$ROOT/.build-cache/clang"
 
 SWIFT_BIN="$(xcrun --find swift 2>/dev/null || command -v swift)"
+SWIFTC_BIN="$(xcrun --find swiftc 2>/dev/null || command -v swiftc)"
+PD_SDK="$(xcrun --show-sdk-path 2>/dev/null || true)"
+export SWIFTC_BIN PD_SDK
 export SWIFT_BIN
 
 export PD_FLAGS=(--disable-sandbox --cache-path "$ROOT/.build-cache/spm" --config-path "$ROOT/.build-config")
