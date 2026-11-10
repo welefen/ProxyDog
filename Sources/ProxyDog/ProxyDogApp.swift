@@ -17,8 +17,30 @@ struct ProxyDogApp: App {
             CommandGroup(after: .appInfo) {
                 Button("Check for Updates…") {
                     NSApp.activate(ignoringOtherApps: true)
-                    Task { await updater.check(manual: true) }
+                    if updater.canInstall {
+                        updater.installDownloadedUpdate()
+                        return
+                    }
+                    NotificationCenter.default.post(name: .openUpdatesSettings, object: nil)
+                    Task {
+                        await updater.check(manual: true)
+                        switch updater.phase {
+                        case .upToDate:
+                            Self.presentUpdateAlert(
+                                title: String(localized: "You’re up to date"),
+                                message: String(format: String(localized: "ProxyDog v%@ is the latest version."), updater.currentVersion)
+                            )
+                        case .failed(let message):
+                            Self.presentUpdateAlert(
+                                title: String(localized: "Update check failed"),
+                                message: message
+                            )
+                        default:
+                            break
+                        }
+                    }
                 }
+                .keyboardShortcut("u", modifiers: [.command, .shift])
                 .disabled(updater.phase.isBusy)
             }
         }
@@ -58,6 +80,18 @@ struct ProxyDogApp: App {
             }
             .keyboardShortcut("e", modifiers: [.command, .shift])
         }
+    }
+}
+
+extension ProxyDogApp {
+    @MainActor
+    static func presentUpdateAlert(title: String, message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: String(localized: "OK"))
+        alert.runModal()
     }
 }
 

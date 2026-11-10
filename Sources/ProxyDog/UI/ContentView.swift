@@ -46,6 +46,10 @@ struct ContentView: View {
             OnboardingView()
                 .environmentObject(state)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openUpdatesSettings)) { _ in
+            state.requestSettings(destination: .appearance)
+            openSettings()
+        }
         .sheet(item: $state.rewriteRuleDraft) { rule in
             RewriteRuleEditorView(rule: rule, isNew: true, store: state.rewriteRules)
         }

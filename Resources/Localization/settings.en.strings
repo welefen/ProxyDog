@@ -183,3 +183,9 @@
 "The downloaded app is not ProxyDog." = "The downloaded app is not ProxyDog.";
 "The downloaded version does not match the update manifest." = "The downloaded version does not match the update manifest.";
 "Could not extract the update archive: %@" = "Could not extract the update archive: %@";
+
+/* Update alerts */
+"You’re up to date" = "You’re up to date";
+"ProxyDog v%@ is the latest version." = "ProxyDog v%@ is the latest version.";
+"Update check failed" = "Update check failed";
+"OK" = "OK";

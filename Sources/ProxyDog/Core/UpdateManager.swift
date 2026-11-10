@@ -143,17 +143,32 @@ final class UpdateManager: ObservableObject {
     // MARK: - Feed
 
     private func fetchManifest() async throws -> UpdateManifest {
-        if let manifest = try? await fetch(feedURL) {
-            return manifest
+        // Race the direct and proxied attempts so a blocked path does not stall the check.
+        // Failures resolve to nil; the first successful attempt wins.
+        let urls = [feedURL, Self.fallbackFeedURL]
+        let manifest = await withTaskGroup(of: UpdateManifest?.self) { group -> UpdateManifest? in
+            for url in urls {
+                group.addTask { try? await self.fetch(url) }
+                group.addTask { await self.fetchViaSystemProxy(url) }
+            }
+            while let next = await group.next() {
+                if let next {
+                    group.cancelAll()
+                    return next
+                }
+            }
+            return nil
         }
-        return try await fetch(Self.fallbackFeedURL)
+        guard let manifest else { throw UpdateError.feedUnavailable }
+        return manifest
     }
 
-    private func fetch(_ url: URL) async throws -> UpdateManifest {
+    private func fetch(_ url: URL, proxy: String? = nil) async throws -> UpdateManifest {
         var arguments = [
-            "-fsSL", "--max-time", "30",
+            "-fsSL", "--max-time", "12",
             "-H", "Accept: application/vnd.github.raw",
         ]
+        if let proxy { arguments += ["--proxy", proxy] }
         if let token = ProcessInfo.processInfo.environment["PROXYDOG_UPDATE_TOKEN"], !token.isEmpty {
             arguments += ["-H", "Authorization: Bearer \(token)"]
         }
@@ -165,6 +180,49 @@ final class UpdateManager: ObservableObject {
             throw UpdateError.feedUnavailable
         }
         return try JSONDecoder().decode(UpdateManifest.self, from: data)
+    }
+
+    /// Second attempt through the macOS HTTP proxy (usually the VPN client) when the
+    /// direct connection is blocked. Skipped when the proxy points at ProxyDog itself.
+    private func fetchViaSystemProxy(_ url: URL) async -> UpdateManifest? {
+        guard let proxy = Self.systemHTTPProxy() else { return nil }
+        let ownPort = UserDefaults.standard.integer(forKey: "proxy.port")
+        if proxy.host == "127.0.0.1" || proxy.host == "localhost" {
+            if proxy.port == ownPort { return nil }
+        }
+        return try? await fetch(url, proxy: "http://\(proxy.host):\(proxy.port)")
+    }
+
+    private static func systemHTTPProxy() -> (host: String, port: Int)? {
+        guard let services = try? ProcessRunner.run("/usr/sbin/networksetup", ["-listallnetworkservices"]) else {
+            return nil
+        }
+        let candidates = services.stdout
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("An asterisk") && !$0.hasPrefix("*") }
+        for service in candidates {
+            guard let result = try? ProcessRunner.run("/usr/sbin/networksetup", ["-getwebproxy", service]) else {
+                continue
+            }
+            var enabled = false
+            var host = ""
+            var port = 0
+            for line in result.stdout.split(separator: "\n") {
+                let parts = line.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+                guard parts.count == 2 else { continue }
+                switch parts[0] {
+                case "Enabled": enabled = parts[1].lowercased() == "yes"
+                case "Server": host = parts[1]
+                case "Port": port = Int(parts[1]) ?? 0
+                default: break
+                }
+            }
+            if enabled, !host.isEmpty, (1...65535).contains(port) {
+                return (host, port)
+            }
+        }
+        return nil
     }
 
     // MARK: - Download and stage
@@ -190,7 +248,18 @@ final class UpdateManager: ObservableObject {
                 arguments += ["-H", "Authorization: Bearer \(token)"]
             }
             arguments.append(downloadURL.absoluteString)
-            let result = try await Self.runCurl(arguments)
+            var result = try await Self.runCurl(arguments)
+            if !result.succeeded, Self.systemHTTPProxy() != nil {
+                // Retry through the macOS HTTP proxy when direct access is blocked.
+                if let proxy = Self.systemHTTPProxy() {
+                    let ownPort = UserDefaults.standard.integer(forKey: "proxy.port")
+                    let isOwnProxy = (proxy.host == "127.0.0.1" || proxy.host == "localhost") && proxy.port == ownPort
+                    if !isOwnProxy, var retry = arguments as [String]? {
+                        retry.insert(contentsOf: ["--proxy", "http://\(proxy.host):\(proxy.port)"], at: 2)
+                        result = try await Self.runCurl(retry)
+                    }
+                }
+            }
             guard result.succeeded,
                   FileManager.default.fileExists(atPath: archive.path) else {
                 throw UpdateError.downloadFailed
@@ -375,4 +444,10 @@ enum UpdateError: LocalizedError {
             return String(format: String(localized: "Could not extract the update archive: %@"), tool)
         }
     }
+}
+
+
+extension Notification.Name {
+    /// Posted by the app menu so the main window can open Settings → Updates.
+    static let openUpdatesSettings = Notification.Name("com.proxydog.app.openUpdatesSettings")
 }

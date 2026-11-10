@@ -186,3 +186,9 @@
 "The downloaded app is not ProxyDog." = "安装包不是有效的 ProxyDog 应用。";
 "The downloaded version does not match the update manifest." = "安装包版本与更新清单不一致。";
 "Could not extract the update archive: %@" = "解压安装包失败：%@";
+
+/* Update alerts */
+"You’re up to date" = "已是最新版本";
+"ProxyDog v%@ is the latest version." = "当前 ProxyDog v%@ 已是最新版本。";
+"Update check failed" = "检查更新失败";
+"OK" = "好";
