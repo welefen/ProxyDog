@@ -115,3 +115,19 @@
 "The ProxyDog root certificate is not trusted" = "ProxyDog 根证书未受信任";
 "Dismiss" = "忽略";
 "Dismiss error" = "忽略错误";
+
+/* WebSocket */
+"Messages" = "消息";
+"%lld messages" = "%lld 条消息";
+"WebSocket" = "WebSocket";
+"Connected" = "已连接";
+"Closed" = "已关闭";
+"Sent" = "发送";
+"Received" = "接收";
+"Close" = "关闭";
+"No WebSocket messages yet" = "暂无 WebSocket 消息";
+"Select a message" = "选择一条消息";
+"Truncated" = "已截断";
+"Copy payload" = "复制载荷";
+"No payload" = "无载荷";
+"Payload truncated at the 512 KB capture limit" = "载荷已截断（捕获上限 512 KB）";

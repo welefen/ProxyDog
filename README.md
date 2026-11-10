@@ -6,7 +6,8 @@
 
 - **HTTP / HTTPS 抓包**：本地 HTTP 代理监听 `127.0.0.1:8888`，通过本地根证书对 HTTPS 做 TLS 解密（MITM），明文与加密流量统一展示。
 - **实时请求列表**：方法、状态码、大小、耗时、协议类型图标；域名分组、失败标记、收藏（Pinned）。
-- **请求详情**：Overview（URL、客户端、耗时、大小、解密状态）、Headers（请求/响应表头，点击复制）、Body（JSON 树、文本、图片预览、二进制 Hex、Pretty/Raw 切换）。
+- **请求详情**：Overview（URL、客户端、耗时、大小、解密状态）、Headers（请求/响应表头，点击复制）、Body（JSON 树、文本、图片预览、二进制 Hex、Pretty/Raw 切换）、Messages（WebSocket 消息）。
+- **WebSocket 调试**：抓取 101 升级握手，按帧解析双向消息（文本/二进制/ping/pong/关闭、分片重组），wss 自动解密；详情页「消息」标签实时追加，可查看每条消息内容。
 - **检索与清理**：全文搜索、按域名过滤、暂停/恢复抓包、清空、单条删除、收藏。
 - **导出**：HAR 1.2 文件导出、复制为 cURL。
 - **系统代理**：一键设置/关闭 macOS 系统 HTTP/HTTPS 代理（需要管理员授权）。
@@ -24,6 +25,10 @@
 Body 详情：JSON 树与 Pretty/Raw 切换。
 
 ![请求详情](Docs/screenshots/request-body.png)
+
+WebSocket 消息：101 握手、双向消息列表、载荷（文本/JSON/二进制 Hex）查看。
+
+![WebSocket](Docs/screenshots/websocket.png)
 
 设置页：连接（端口、SSL 解密、系统代理、上游代理/代理链、SOCKS5 端口）、外观（主题与语言）、证书，底部显示版本号。
 
@@ -100,6 +105,22 @@ curl -x http://127.0.0.1:8889 https://example.com/
 curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 ```
 
+## WebSocket 调试
+
+`ws://` 与 `wss://` 都支持：
+
+1. 像普通请求一样出现在列表里（状态 101），`wss://` 会先做 TLS 解密再升级。
+2. 选中该请求 → 详情页「消息 / Messages」标签：按时间顺序列出双向消息，箭头表示方向（↑ 客户端→服务端，↓ 服务端→客户端），显示类型、时间、大小和内容预览；点击消息在下方查看完整内容（文本支持 Pretty/Raw 与 JSON 美化，二进制以 Hex 展示）。
+3. 消息在连接期间实时追加；超长消息按 512KB 截断（会标注「已截断」，字节数仍为真实大小），每个连接最多保留 2000 条 / 4MB。
+
+```bash
+./.build/debug/ProxyDog --headless --port 8888 --out /tmp/caps.jsonl
+./scripts/ws_test.py server 18996        # 本地 WS echo 服务器
+./scripts/ws_test.py plain 8888 127.0.0.1 18996   # 通过 ProxyDog 跑一次 ws
+```
+
+限制：不解析 `permessage-deflate` 压缩帧（按二进制原样保存）、不支持 WebSocket over HTTP/2；ping/pong 与 close 控制帧只记录内容，不影响转发。
+
 ## 根证书
 
 - 位置：`~/Library/Application Support/ProxyDog/Certificates/ca.crt`
@@ -140,6 +161,9 @@ Support/                     # Info.plist、应用图标、AppConfig.plist(.exam
 ./scripts/test_upstream.sh
 UPSTREAM_REAL=127.0.0.1:1235 ./scripts/test_upstream.sh   # 再用真实 VPN 的 HTTP 代理跑一遍
 
+# WebSocket 测试：ws/wss 握手、MITM 解密、双向消息解析、分片重组、1MB 截断
+./scripts/test_websocket.sh
+
 # SOCKS5 监听器测试：HTTPS 解密、HTTP 捕获、SOCKS5 上游链路、失败路径
 ./scripts/test_socks.sh
 UPSTREAM_SOCKS_REAL=socks5://127.0.0.1:1234 ./scripts/test_socks.sh   # 再用真实 VPN 的 SOCKS5 端口跑一遍
@@ -171,7 +195,7 @@ defaults write com.proxydog.app app.onboardingCompleted -bool true
 
 - 仅支持 HTTP/1.1：TLS 握手时 ALPN 只协商 `http/1.1`，不支持 HTTP/2 帧解析。
 - 上游 TLS 不校验证书，便于抓取自签名证书的开发服务器。
-- WebSocket 显示为 101 隧道，不解码帧。
+- WebSocket 不解析 `permessage-deflate` 压缩帧，也不支持 WebSocket over HTTP/2。
 - 单个请求/响应体最多保存 2 MB（超出部分仍然透传，仅不入库）。
 - 关闭系统代理时直接关闭代理开关，不会恢复开启前的原有代理配置。
 

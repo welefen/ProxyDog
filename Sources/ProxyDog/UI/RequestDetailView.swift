@@ -7,6 +7,7 @@ enum DetailTab: String, CaseIterable, Identifiable {
     case overview
     case headers
     case body
+    case messages
 
     var id: String { rawValue }
 
@@ -15,7 +16,13 @@ enum DetailTab: String, CaseIterable, Identifiable {
         case .overview: return String(localized: "Overview")
         case .headers: return String(localized: "Headers")
         case .body: return String(localized: "Body")
+        case .messages: return String(localized: "Messages")
         }
+    }
+
+    /// WebSocket exchanges show Messages instead of Body (a 101 has no body).
+    static func tabs(for request: CapturedRequest) -> [DetailTab] {
+        request.isWebSocket ? [.overview, .headers, .messages] : [.overview, .headers, .body]
     }
 }
 
@@ -32,7 +39,7 @@ struct RequestDetailView: View {
             if let request = state.selectedRequest {
                 VStack(spacing: 0) {
                     header(for: request)
-                    tabBar
+                    tabBar(for: request)
                     tabContent(for: request)
                 }
             } else {
@@ -41,6 +48,15 @@ struct RequestDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DSColor.base)
+        .onChange(of: state.selectionID) { _, _ in normalizeTab() }
+    }
+
+    /// Keep the selected tab valid when switching between HTTP and WebSocket rows.
+    private func normalizeTab() {
+        guard let request = state.selectedRequest else { return }
+        if !DetailTab.tabs(for: request).contains(tab) {
+            tab = .overview
+        }
     }
 
     // MARK: Header
@@ -86,9 +102,9 @@ struct RequestDetailView: View {
 
     // MARK: Tabs
 
-    private var tabBar: some View {
+    private func tabBar(for request: CapturedRequest) -> some View {
         HStack(spacing: DS.Space.x5) {
-            ForEach(DetailTab.allCases) { item in
+            ForEach(DetailTab.tabs(for: request)) { item in
                 DetailTabButton(title: item.title, isSelected: tab == item) {
                     tab = item
                 }
@@ -109,6 +125,9 @@ struct RequestDetailView: View {
             HeadersTab(request: request)
         case .body:
             BodyTabView(request: request)
+        case .messages:
+            WebSocketMessagesTabView(request: request)
+                .id(request.id)
         }
     }
 }
@@ -161,19 +180,44 @@ private struct OverviewTab: View {
                     if let client = request.clientAppName {
                         DetailFieldRow(label: String(localized: "Client"), value: client)
                     }
-                    DetailFieldRow(label: String(localized: "Body size"), value: PDFormat.bytes(request.requestBytes))
+                    if !request.isWebSocket {
+                        DetailFieldRow(
+                            label: String(localized: "Body size"),
+                            value: PDFormat.bytes(request.requestBytes)
+                        )
+                    }
                     decryptedRow
                 }
 
                 section(String(localized: "Response")) {
                     statusRow
                     DetailFieldRow(label: String(localized: "Content type"), value: request.responseContentType ?? "—")
-                    DetailFieldRow(label: String(localized: "Body size"), value: PDFormat.bytes(request.responseBytes))
+                    if !request.isWebSocket {
+                        DetailFieldRow(
+                            label: String(localized: "Body size"),
+                            value: PDFormat.bytes(request.responseBytes)
+                        )
+                    }
                     DetailFieldRow(
                         label: String(localized: "Duration"),
                         value: PDFormat.duration(request.duration),
                         color: DSColor.textSecondary
                     )
+                }
+
+                if request.isWebSocket {
+                    section(String(localized: "WebSocket")) {
+                        webSocketStateRow
+                        DetailFieldRow(
+                            label: String(localized: "Messages"),
+                            value: PDFormat.count(request.webSocketMessages.count)
+                        )
+                        DetailFieldRow(
+                            label: String(localized: "Duration"),
+                            value: PDFormat.duration(webSocketDuration),
+                            color: DSColor.textSecondary
+                        )
+                    }
                 }
 
                 section(String(localized: "Timing")) {
@@ -205,6 +249,31 @@ private struct OverviewTab: View {
                 content()
             }
         }
+    }
+
+    private var webSocketConnected: Bool {
+        request.finishedAt == nil && request.state != .failed
+    }
+
+    private var webSocketDuration: TimeInterval {
+        if let finishedAt = request.finishedAt {
+            return max(0, finishedAt.timeIntervalSince(request.startedAt))
+        }
+        return max(0, Date().timeIntervalSince(request.startedAt))
+    }
+
+    private var webSocketStateRow: some View {
+        HStack(alignment: .center, spacing: DS.Space.x3) {
+            Text("Status")
+                .font(DS.Typography.ui(11.5))
+                .foregroundStyle(DSColor.textSecondary)
+                .frame(width: 104, alignment: .leading)
+            Text(webSocketConnected ? String(localized: "Connected") : String(localized: "Closed"))
+                .font(DS.Typography.mono(11.5, .semibold))
+                .foregroundStyle(webSocketConnected ? DSColor.green : DSColor.textMuted)
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: 20)
     }
 
     private var decryptedRow: some View {

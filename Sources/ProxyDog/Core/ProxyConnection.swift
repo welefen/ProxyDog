@@ -1261,9 +1261,27 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         isTunnel = true
         state.responseStatusCode = Int(responseHead.status.code)
         state.responseHeaders = ProxyWire.headerFields(responseHead.headers)
-        sink.captureDidUpdate(state.snapshot(state: .completed))
+
+        let webSocket = Self.isWebSocketUpgrade(state: state, responseHead: responseHead)
+        var completed = state.snapshot(state: .completed)
+        completed.isWebSocket = webSocket
+        sink.captureDidUpdate(completed)
+
+        // For WebSocket upgrades both tunnel directions get a frame parser that reports
+        // messages back on this exchange while forwarding the original bytes untouched.
+        let session: WebSocketCaptureSession?
+        if webSocket {
+            session = WebSocketCaptureSession(
+                request: completed,
+                sink: sink,
+                eventLoop: channel.eventLoop
+            )
+        } else {
+            session = nil
+        }
 
         guard let relay, let encoder = upstreamRequestEncoder, let decoderWrapper = upstreamResponseDecoderWrapper else {
+            session?.flushFinal()
             channel.close(promise: nil)
             upstream.close(promise: nil)
             return
@@ -1272,14 +1290,33 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         let clientPipe = TunnelPipeHandler(allocator: channel.allocator)
         let serverPipe = TunnelPipeHandler(allocator: upstream.allocator)
         let clientHandler = self
+        let clientParser: WebSocketFrameCaptureHandler? = session.map {
+            WebSocketFrameCaptureHandler(direction: .sent, session: $0)
+        }
+        let serverParser: WebSocketFrameCaptureHandler? = session.map {
+            WebSocketFrameCaptureHandler(direction: .received, session: $0)
+        }
 
         channel.setOption(ChannelOptions.autoRead, value: false).whenComplete { _ in
             upstream.setOption(ChannelOptions.autoRead, value: false).whenComplete { _ in
-                channel.pipeline.addHandler(clientPipe)
+                var clientSetup = channel.pipeline.addHandler(clientPipe)
+                if let clientParser {
+                    clientSetup = clientSetup.flatMap {
+                        channel.pipeline.addHandler(clientParser, position: .before(clientPipe))
+                    }
+                }
+
+                clientSetup
                     .flatMap { channel.pipeline.removeHandler(clientHandler) }
                     .flatMap { channel.pipeline.removeHandler(clientHandler.responseEncoder) }
                     .flatMap { channel.pipeline.removeHandler(clientHandler.requestDecoderWrapper) }
                     .flatMap { upstream.pipeline.addHandler(serverPipe) }
+                    .flatMap { () -> EventLoopFuture<Void> in
+                        guard let serverParser else {
+                            return upstream.eventLoop.makeSucceededVoidFuture()
+                        }
+                        return upstream.pipeline.addHandler(serverParser, position: .after(decoderWrapper))
+                    }
                     .flatMap { upstream.pipeline.removeHandler(relay) }
                     .flatMap { upstream.pipeline.removeHandler(decoderWrapper) }
                     .flatMap { upstream.pipeline.removeHandler(encoder) }
@@ -1290,11 +1327,23 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
                         upstream.setOption(ChannelOptions.autoRead, value: true).whenFailure { _ in }
                     }
                     .whenFailure { _ in
+                        session?.flushFinal()
                         channel.close(promise: nil)
                         upstream.close(promise: nil)
                     }
             }
         }
+    }
+
+    /// True when a 101 response upgraded to the WebSocket protocol.
+    private static func isWebSocketUpgrade(state: ExchangeState, responseHead: HTTPResponseHead) -> Bool {
+        let responseUpgrade = (responseHead.headers.first(name: "Upgrade") ?? "").lowercased()
+        if responseUpgrade.contains("websocket") { return true }
+        if responseHead.headers.first(name: "Sec-WebSocket-Accept") != nil { return true }
+        let requestUpgrade = state.requestHeaders
+            .first { $0.name.caseInsensitiveCompare("Upgrade") == .orderedSame }?
+            .value.lowercased() ?? ""
+        return requestUpgrade.contains("websocket")
     }
 
     // MARK: Helpers

@@ -4,6 +4,9 @@ import Foundation
 final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
     private let lock = NSLock()
     private let handle: FileHandle
+    /// Number of WebSocket messages already printed per exchange, so every update only
+    /// emits the new frames instead of the whole history.
+    private var reportedMessageCounts: [UUID: Int] = [:]
 
     init(path: String?) {
         if let path {
@@ -15,6 +18,15 @@ final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
     }
 
     func captureDidUpdate(_ request: CapturedRequest) {
+        var newMessages: [WebSocketMessage] = []
+        lock.lock()
+        let alreadyReported = reportedMessageCounts[request.id] ?? 0
+        if request.webSocketMessages.count > alreadyReported {
+            newMessages = Array(request.webSocketMessages[alreadyReported...])
+            reportedMessageCounts[request.id] = request.webSocketMessages.count
+        }
+        lock.unlock()
+
         var payload: [String: Any] = [
             "type": "capture",
             "id": request.id.uuidString,
@@ -30,12 +42,32 @@ final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
         if let duration = request.duration { payload["duration_ms"] = Int(duration * 1000) }
         if let error = request.errorMessage { payload["error"] = error }
         if let contentType = request.responseContentType { payload["content_type"] = contentType }
+        if request.isWebSocket { payload["websocket"] = true }
+        if !request.webSocketMessages.isEmpty { payload["ws_messages"] = request.webSocketMessages.count }
 
         guard
             let data = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]),
             let line = String(data: data, encoding: .utf8)
         else { return }
         write(line + "\n")
+
+        for message in newMessages {
+            var event: [String: Any] = [
+                "type": "ws_message",
+                "id": request.id.uuidString,
+                "direction": message.direction.rawValue,
+                "kind": message.kind.rawValue,
+                "bytes": message.byteCount,
+                "truncated": message.truncated,
+            ]
+            if let text = message.text {
+                event["text"] = String(text.prefix(200))
+            }
+            if let data = try? JSONSerialization.data(withJSONObject: event, options: [.sortedKeys]),
+               let line = String(data: data, encoding: .utf8) {
+                write(line + "\n")
+            }
+        }
     }
 
     private func write(_ string: String) {

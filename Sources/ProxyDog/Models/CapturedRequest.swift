@@ -44,6 +44,12 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
     var isPinned: Bool
     var clientSignature: String?
 
+    /// Captured WebSocket messages, in arrival order (empty for non-WebSocket exchanges).
+    var webSocketMessages: [WebSocketMessage]
+
+    /// True once the WebSocket connection has been upgraded (HTTP 101).
+    var isWebSocket: Bool
+
     init(
         id: UUID = UUID(),
         startedAt: Date = Date(),
@@ -61,7 +67,9 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         state: CaptureState = .pending,
         errorMessage: String? = nil,
         isPinned: Bool = false,
-        clientSignature: String? = nil
+        clientSignature: String? = nil,
+        webSocketMessages: [WebSocketMessage] = [],
+        isWebSocket: Bool = false
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -80,6 +88,8 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         self.errorMessage = errorMessage
         self.isPinned = isPinned
         self.clientSignature = clientSignature
+        self.webSocketMessages = webSocketMessages
+        self.isWebSocket = isWebSocket
     }
 }
 

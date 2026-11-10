@@ -24,8 +24,14 @@ enum DevLaunchOptions {
         case "overview": return .overview
         case "headers": return .headers
         case "body": return .body
+        case "messages": return .messages
         default: return nil
         }
+    }
+
+    /// Preselects a WebSocket message (0-based) for screenshot/QA runs.
+    static var sampleMessageIndex: Int? {
+        value(for: "--sample-message").flatMap(Int.init)
     }
 
     /// Accepts both `--flag=value` and the `open --args --flag value` spelling.
@@ -189,6 +195,39 @@ enum SampleTraffic {
             ]),
             client: "ProxyDog/1.0"
         ))
+
+        // WebSocket exchange (101 + live message stream); index 2 in the sample list.
+        var socket = request(
+            "GET",
+            "https://api.example.com/v1/socket",
+            status: 101,
+            duration: 4.82,
+            secondsAgo: 9,
+            requestHeaders: headers([
+                ("Host", "api.example.com"),
+                ("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"),
+                ("Origin", "https://app.example.com"),
+                ("Upgrade", "websocket"),
+                ("Connection", "Upgrade"),
+                ("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ=="),
+                ("Sec-WebSocket-Version", "13"),
+                ("Sec-WebSocket-Protocol", "graphql-ws"),
+                ("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits"),
+            ]),
+            responseHeaders: headers([
+                ("Server", "envoy"),
+                ("Upgrade", "websocket"),
+                ("Connection", "Upgrade"),
+                ("Sec-WebSocket-Accept", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="),
+                ("Sec-WebSocket-Protocol", "graphql-ws"),
+                ("Date", "Mon, 10 Nov 2026 05:00:00 GMT"),
+                ("X-Request-Id", "req_7c3d9f12"),
+            ]),
+            client: "Safari 17.4",
+            isWebSocket: true
+        )
+        socket.webSocketMessages = webSocketMessages(startedAt: socket.startedAt)
+        requests.append(socket)
 
         requests.append(request(
             "GET",
@@ -539,7 +578,9 @@ enum SampleTraffic {
         intercepted: Bool = true,
         pinned: Bool = false,
         client: String? = nil,
-        error: String? = nil
+        error: String? = nil,
+        isWebSocket: Bool = false,
+        webSocketMessages: [WebSocketMessage] = []
     ) -> CapturedRequest {
         let components = URLComponents(string: urlString)
         let scheme = components?.scheme ?? "https"
@@ -569,7 +610,9 @@ enum SampleTraffic {
             state: state,
             errorMessage: error,
             isPinned: pinned,
-            clientSignature: client
+            clientSignature: client,
+            webSocketMessages: webSocketMessages,
+            isWebSocket: isWebSocket
         )
         captured.finishedAt = finished
         return captured
@@ -581,6 +624,109 @@ enum SampleTraffic {
 
     private static func jsonData(_ object: Any) -> Data {
         (try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])) ?? Data()
+    }
+
+    /// Sample WebSocket frames: JSON text both ways, a binary frame, ping/pong and
+    /// close control frames, plus one 600 KB binary frame captured truncated.
+    private static func webSocketMessages(startedAt: Date) -> [WebSocketMessage] {
+        func message(
+            _ direction: WebSocketDirection,
+            _ kind: WebSocketMessageKind,
+            _ offset: TimeInterval,
+            _ payload: Data?,
+            byteCount: Int? = nil,
+            truncated: Bool = false
+        ) -> WebSocketMessage {
+            WebSocketMessage(
+                direction: direction,
+                kind: kind,
+                timestamp: startedAt.addingTimeInterval(offset),
+                payload: payload,
+                byteCount: byteCount ?? payload?.count ?? 0,
+                truncated: truncated
+            )
+        }
+
+        let connectionInit = jsonData([
+            "type": "connection_init",
+            "payload": [
+                "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MiJ9",
+                "client": "Safari 17.4",
+                "locale": "en-US",
+            ],
+        ])
+        let connectionAck = jsonData([
+            "type": "connection_ack",
+            "payload": [
+                "session_id": "sess_9f31c2",
+                "heartbeat_interval": 15000,
+            ],
+        ])
+        let subscriptionStart = jsonData([
+            "id": "1",
+            "type": "start",
+            "payload": [
+                "query": "subscription OnOrderEvent { orderEvents { id type amount currency ts } }",
+                "variables": ["channel": "orders", "region": "us-east-1"],
+            ],
+        ])
+        let firstEvent = jsonData([
+            "id": "1",
+            "type": "data",
+            "payload": [
+                "data": [
+                    "orderEvents": [
+                        [
+                            "id": "evt_8241",
+                            "type": "order.created",
+                            "amount": 2499,
+                            "currency": "usd",
+                            "ts": "2026-11-10T05:00:00.412Z",
+                        ]
+                    ]
+                ]
+            ],
+        ])
+        let secondEvent = jsonData([
+            "id": "1",
+            "type": "data",
+            "payload": [
+                "data": [
+                    "orderEvents": [
+                        [
+                            "id": "evt_8242",
+                            "type": "order.paid",
+                            "amount": 2499,
+                            "currency": "usd",
+                            "ts": "2026-11-10T05:00:00.901Z",
+                        ]
+                    ]
+                ]
+            ],
+        ])
+
+        var binaryFrame = Data()
+        for index in 0..<28 {
+            binaryFrame.append(UInt8((index &* 43 &+ 7) % 256))
+        }
+
+        let truncatedBytes = 4096
+        let truncatedPayload = Data((0..<truncatedBytes).map { UInt8(($0 &* 29 &+ 5) % 256) })
+        let closePayload = Data([0x03, 0xE8])
+
+        return [
+            message(.sent, .text, 0.02, connectionInit),
+            message(.received, .text, 0.08, connectionAck),
+            message(.sent, .text, 0.11, subscriptionStart),
+            message(.received, .text, 0.44, firstEvent),
+            message(.received, .binary, 0.68, binaryFrame),
+            message(.sent, .ping, 1.22, nil),
+            message(.received, .pong, 1.26, nil),
+            message(.received, .text, 1.94, secondEvent),
+            message(.received, .binary, 2.18, truncatedPayload, byteCount: 614_400, truncated: true),
+            message(.sent, .close, 4.66, closePayload),
+            message(.received, .close, 4.80, closePayload),
+        ]
     }
 
     /// Deterministic binary payload that stands in for a font file.

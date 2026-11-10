@@ -115,3 +115,19 @@
 "The ProxyDog root certificate is not trusted" = "The ProxyDog root certificate is not trusted";
 "Dismiss" = "Dismiss";
 "Dismiss error" = "Dismiss error";
+
+/* WebSocket */
+"Messages" = "Messages";
+"%lld messages" = "%lld messages";
+"WebSocket" = "WebSocket";
+"Connected" = "Connected";
+"Closed" = "Closed";
+"Sent" = "Sent";
+"Received" = "Received";
+"Close" = "Close";
+"No WebSocket messages yet" = "No WebSocket messages yet";
+"Select a message" = "Select a message";
+"Truncated" = "Truncated";
+"Copy payload" = "Copy payload";
+"No payload" = "No payload";
+"Payload truncated at the 512 KB capture limit" = "Payload truncated at the 512 KB capture limit";
