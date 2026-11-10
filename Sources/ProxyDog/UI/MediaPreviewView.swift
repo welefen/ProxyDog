@@ -30,6 +30,12 @@ struct MediaBodyView: View {
                 PlayerView(player: player)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(DSColor.sunken)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                            .strokeBorder(DSColor.border, lineWidth: DS.Metric.separator)
+                    )
+                    .padding(DS.Space.x4)
                 caption(for: player)
             } else if isUnplayable {
                 VStack(spacing: 0) {
