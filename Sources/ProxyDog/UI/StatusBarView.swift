@@ -37,20 +37,25 @@ struct StatusBarView: View {
         .background(DSColor.chrome)
         // The sidebar visually runs to the bottom of the window: the strip's leading
         // segment blends into it, so only the content part gets a top divider, and the
-        // column separator continues through the strip.
-        .overlay(alignment: .top) {
-            HStack(spacing: 0) {
-                Color.clear.frame(width: leadingInset)
-                PDHairline()
-            }
-        }
+        // column separator continues through the strip. Both are drawn explicitly with a
+        // GeometryReader so their positions do not depend on stack alignment.
         .overlay(alignment: .topLeading) {
-            if leadingInset > 0 {
-                Rectangle()
-                    .fill(DSColor.border)
-                    .frame(width: DS.Metric.separator)
-                    .frame(maxHeight: .infinity)
-                    .offset(x: leadingInset)
+            GeometryReader { proxy in
+                ZStack(alignment: .topLeading) {
+                    Rectangle()
+                        .fill(DSColor.border)
+                        .frame(
+                            width: max(0, proxy.size.width - leadingInset),
+                            height: DS.Metric.separator
+                        )
+                        .offset(x: leadingInset)
+                    if leadingInset > 0 {
+                        Rectangle()
+                            .fill(DSColor.border)
+                            .frame(width: DS.Metric.separator, height: proxy.size.height)
+                            .offset(x: leadingInset)
+                    }
+                }
             }
         }
     }
