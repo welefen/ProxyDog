@@ -237,7 +237,10 @@ struct SettingsView: View {
                 SettingsHairline()
                 SettingsRow(
                     title: "HTTP upstream proxy",
-                    hint: "Chains outbound traffic through an existing HTTP proxy such as a VPN client. Only affects traffic entering through the HTTP proxy port."
+                    hint: "Chains outbound traffic through an existing HTTP proxy such as a VPN client. Only affects traffic entering through the HTTP proxy port.",
+                    hintText: state.isSystemProxyEnabled
+                        ? nil
+                        : String(localized: "Turn on HTTP proxy first.")
                 ) {
                     Toggle("", isOn: Binding(
                         get: { settings.upstreamHTTPEnabled },
@@ -247,6 +250,7 @@ struct SettingsView: View {
                     .toggleStyle(.switch)
                     .controlSize(.small)
                     .tint(DSColor.accent)
+                    .disabled(!state.isSystemProxyEnabled)
                     .accessibilityLabel("HTTP upstream proxy")
                 }
                 SettingsHairline()
@@ -355,7 +359,10 @@ struct SettingsView: View {
                 SettingsHairline()
                 SettingsRow(
                     title: "SOCKS5 upstream proxy",
-                    hint: "Chains traffic from the SOCKS5 listener through an existing SOCKS5 proxy. Only affects traffic entering through the SOCKS5 listener port."
+                    hint: "Chains traffic from the SOCKS5 listener through an existing SOCKS5 proxy. Only affects traffic entering through the SOCKS5 listener port.",
+                    hintText: settings.socksProxyEnabled
+                        ? nil
+                        : String(localized: "Turn on SOCKS5 proxy first.")
                 ) {
                     Toggle("", isOn: Binding(
                         get: { settings.upstreamSOCKSEnabled },
@@ -365,6 +372,7 @@ struct SettingsView: View {
                     .toggleStyle(.switch)
                     .controlSize(.small)
                     .tint(DSColor.accent)
+                    .disabled(!settings.socksProxyEnabled)
                     .accessibilityLabel("SOCKS5 upstream proxy")
                 }
                 SettingsHairline()

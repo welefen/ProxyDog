@@ -151,3 +151,5 @@
 
 /* Upstream hint */
 "Sends outbound traffic through an existing proxy such as a VPN client. Traffic from the HTTP proxy uses the HTTP address, traffic from the SOCKS5 listener uses the SOCKS5 address; when only one is filled both use it." = "Sends outbound traffic through an existing proxy such as a VPN client. Traffic from the HTTP proxy uses the HTTP address, traffic from the SOCKS5 listener uses the SOCKS5 address; when only one is filled both use it.";
+"Turn on HTTP proxy first." = "Turn on HTTP proxy first.";
+"Turn on SOCKS5 proxy first." = "Turn on SOCKS5 proxy first.";
