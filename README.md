@@ -38,7 +38,7 @@ WebSocket 消息：101 握手、双向消息列表、载荷（文本/JSON/二进
 
 ![WebSocket](Docs/screenshots/websocket.png)
 
-设置页：连接（端口、SSL 解密、HTTP 代理、上游代理/代理链、SOCKS5、SSL 与证书）、规则、外观，底部显示版本号。
+设置页：连接（HTTP 代理、端口、上游代理/代理链、SOCKS5、SSL 与证书）、规则、外观，底部显示版本号。
 
 ![设置](Docs/screenshots/settings.png)
 

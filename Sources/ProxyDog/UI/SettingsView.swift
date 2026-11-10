@@ -185,6 +185,24 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: DS.Space.x6) {
             SettingsSection(title: "HTTP / HTTPS") {
                 SettingsRow(
+                    title: "HTTP proxy",
+                    hint: state.isProxyRunning
+                        ? "Routes this Mac's HTTP and HTTPS traffic through ProxyDog."
+                        : "Start the proxy to change this."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { state.isSystemProxyEnabled },
+                        set: { state.setSystemProxy(enabled: $0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DSColor.accent)
+                    .disabled(!state.isProxyRunning)
+                    .accessibilityLabel("Set as System Proxy")
+                }
+                SettingsHairline()
+                SettingsRow(
                     title: "Proxy port",
                     hint: "Changing the port restarts the proxy when it is running.",
                     errorText: portError
@@ -215,24 +233,6 @@ struct SettingsView: View {
                             action: { state.restartProxy() }
                         )
                     }
-                }
-                SettingsHairline()
-                SettingsRow(
-                    title: "HTTP proxy",
-                    hint: state.isProxyRunning
-                        ? "Routes this Mac's HTTP and HTTPS traffic through ProxyDog."
-                        : "Start the proxy to change this."
-                ) {
-                    Toggle("", isOn: Binding(
-                        get: { state.isSystemProxyEnabled },
-                        set: { state.setSystemProxy(enabled: $0) }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .tint(DSColor.accent)
-                    .disabled(!state.isProxyRunning)
-                    .accessibilityLabel("Set as System Proxy")
                 }
                 SettingsHairline()
                 SettingsRow(
