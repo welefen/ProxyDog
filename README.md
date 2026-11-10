@@ -213,7 +213,7 @@ defaults write com.proxydog.app app.onboardingCompleted -bool true
 
 ## 已知限制
 
-- 仅支持 HTTP/1.1：TLS 握手时 ALPN 只协商 `http/1.1`，不支持 HTTP/2 帧解析。
+- 仅支持 HTTP/1.1：TLS 握手时 ALPN 只协商 `http/1.1`，不支持 HTTP/2 帧解析（浏览器会回退到 HTTP/1.1，抓包内容仍完整）；HTTP/3（QUIC）走 UDP，系统 HTTP 代理不转发，因此不会被抓取。
 - 上游 TLS 不校验证书，便于抓取自签名证书的开发服务器。
 - WebSocket 不解析 `permessage-deflate` 压缩帧，也不支持 WebSocket over HTTP/2。
 - 单个请求/响应体最多保存 2 MB（超出部分仍然透传，仅不入库）。
