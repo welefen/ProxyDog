@@ -150,15 +150,18 @@ final class UpdateManager: ObservableObject {
     }
 
     private func fetch(_ url: URL) async throws -> UpdateManifest {
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 15
-        request.cachePolicy = .reloadIgnoringLocalCacheData
+        var arguments = [
+            "-fsSL", "--max-time", "30",
+            "-H", "Accept: application/vnd.github.raw",
+        ]
         if let token = ProcessInfo.processInfo.environment["PROXYDOG_UPDATE_TOKEN"], !token.isEmpty {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            arguments += ["-H", "Authorization: Bearer \(token)"]
         }
-        request.setValue("application/vnd.github.raw", forHTTPHeaderField: "Accept")
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+        arguments.append(url.absoluteString)
+        let result = try await Self.runCurl(arguments)
+        guard result.succeeded,
+              let data = result.stdout.data(using: .utf8),
+              !data.isEmpty else {
             throw UpdateError.feedUnavailable
         }
         return try JSONDecoder().decode(UpdateManifest.self, from: data)
@@ -182,16 +185,16 @@ final class UpdateManager: ObservableObject {
             try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
             let archive = work.appendingPathComponent("update.zip")
 
-            var request = URLRequest(url: downloadURL)
-            request.timeoutInterval = 120
+            var arguments = ["-fsSL", "--max-time", "300", "-o", archive.path]
             if let token = ProcessInfo.processInfo.environment["PROXYDOG_UPDATE_TOKEN"], !token.isEmpty {
-                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                arguments += ["-H", "Authorization: Bearer \(token)"]
             }
-            let (temporaryFile, response) = try await URLSession.shared.download(for: request)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            arguments.append(downloadURL.absoluteString)
+            let result = try await Self.runCurl(arguments)
+            guard result.succeeded,
+                  FileManager.default.fileExists(atPath: archive.path) else {
                 throw UpdateError.downloadFailed
             }
-            try FileManager.default.moveItem(at: temporaryFile, to: archive)
 
             let expected = manifest.sha256.lowercased()
             let actual = try Self.sha256(of: archive)
@@ -288,6 +291,20 @@ final class UpdateManager: ObservableObject {
             try? handle.close()
         } else {
             try? line.write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
+    /// Runs `curl` off the main actor; the updater deliberately avoids URLSession because
+    /// the macOS system proxy may point at ProxyDog itself and break the TLS handshake.
+    private static func runCurl(_ arguments: [String]) async throws -> ProcessResult {
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    continuation.resume(returning: try ProcessRunner.run("/usr/bin/curl", arguments))
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
         }
     }
 

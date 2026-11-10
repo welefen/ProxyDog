@@ -4,6 +4,8 @@
 
 A native, lightweight HTTP/HTTPS debugging proxy for macOS with a Proxyman/Charles-style workflow that works out of the box: see which app each request came from, decrypt HTTPS with one click and read the decoded body, inspect WebSocket messages, rewrite traffic, pause requests with breakpoints, and route through SOCKS5 or an existing VPN proxy — all in one window.
 
+[![Download ProxyDog for macOS](https://img.shields.io/badge/Download-ProxyDog%201.0.0%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.0.zip)
+
 ## Features
 
 - **HTTP / HTTPS capture**: a local proxy listens on `127.0.0.1:8888` and decrypts TLS (MITM) using a locally generated root certificate, showing plain and encrypted traffic side by side. HTTP/2 is negotiated via ALPN and labelled (`HTTP/2`) in the inspector.

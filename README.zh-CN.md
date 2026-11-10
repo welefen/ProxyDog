@@ -4,6 +4,8 @@
 
 一款原生、轻量的 macOS HTTP/HTTPS 抓包调试工具，体验接近 Proxyman/Charles，但打开即用：自动识别每个请求来自哪个 App，一键解密 HTTPS 并还原压缩正文，WebSocket 消息、重写规则、断点调试、SOCKS5 入口和 VPN 代理链都内置在同一个窗口里，无需驱动、无需完整 Xcode。
 
+[![下载 ProxyDog for macOS](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-ProxyDog%201.0.0%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.0.zip)
+
 ## 功能
 
 - **HTTP / HTTPS 抓包**：本地 HTTP 代理监听 `127.0.0.1:8888`，通过本地根证书对 HTTPS 做 TLS 解密（MITM），明文与加密流量统一展示；HTTP/2 通过 ALPN 协商并在抓包中标记（`协议` 行显示 HTTP/2）。
