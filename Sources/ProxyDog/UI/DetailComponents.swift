@@ -39,6 +39,7 @@ struct DetailFieldRow: View {
                 .truncationMode(.middle)
                 .pdSelectable(selectable)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .clipped()
         }
         .frame(minHeight: 20)
     }

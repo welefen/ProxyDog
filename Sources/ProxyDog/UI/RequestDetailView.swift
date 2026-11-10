@@ -168,6 +168,51 @@ private struct DetailTabButton: View {
 
 // MARK: - Overview
 
+/// URL row that starts clamped to three lines and expands to the full value on click.
+/// Keeping the clamped and expanded layouts as real layout (instead of selecting an
+/// over-long selectable Text) avoids the text painting over the rows below it.
+private struct URLFieldRow: View {
+    let url: String
+
+    @State private var isExpanded = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.x3) {
+            Text("URL")
+                .font(DS.Typography.ui(11.5))
+                .foregroundStyle(DSColor.textSecondary)
+                .frame(width: 104, alignment: .leading)
+
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.x1 + 2) {
+                Text(url)
+                    .font(DS.Typography.mono(11.5))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(isExpanded ? nil : 3)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .clipped()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
+                } label: {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(DSColor.textMuted)
+                        .frame(width: 12, height: 14)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(isExpanded ? String(localized: "Collapse") : String(localized: "Expand"))
+                .accessibilityLabel(isExpanded ? String(localized: "Collapse") : String(localized: "Expand"))
+            }
+        }
+        .frame(minHeight: 20)
+    }
+}
+
 private struct OverviewTab: View {
     let request: CapturedRequest
 
@@ -176,7 +221,7 @@ private struct OverviewTab: View {
             VStack(alignment: .leading, spacing: DS.Space.x6) {
                 section(String(localized: "Request")) {
                     DetailFieldRow(label: String(localized: "Method"), value: request.method)
-                    DetailFieldRow(label: String(localized: "URL"), value: request.urlString, lineLimit: 3)
+                    URLFieldRow(url: request.urlString)
                     DetailFieldRow(label: String(localized: "Protocol"), value: request.httpVersion)
                     if let client = request.clientAppName {
                         DetailFieldRow(label: String(localized: "Client"), value: client)
