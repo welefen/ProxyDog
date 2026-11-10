@@ -35,7 +35,24 @@ struct StatusBarView: View {
         .padding(.trailing, DS.Space.x3)
         .frame(height: DS.Metric.statusBarHeight)
         .background(DSColor.chrome)
-        .overlay(alignment: .top) { PDHairline() }
+        // The sidebar visually runs to the bottom of the window: the strip's leading
+        // segment blends into it, so only the content part gets a top divider, and the
+        // column separator continues through the strip.
+        .overlay(alignment: .top) {
+            HStack(spacing: 0) {
+                Color.clear.frame(width: leadingInset)
+                PDHairline()
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            if leadingInset > 0 {
+                Rectangle()
+                    .fill(DSColor.border)
+                    .frame(width: DS.Metric.separator)
+                    .frame(maxHeight: .infinity)
+                    .offset(x: leadingInset)
+            }
+        }
     }
 
     private var errorCount: Int {
