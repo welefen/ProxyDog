@@ -150,11 +150,12 @@ private struct DetailTabButton: View {
                         ? DSColor.textPrimary
                         : (isHovering ? DSColor.textSecondary : DSColor.textMuted)
                 )
+                .padding(.bottom, DS.Metric.Tabs.textBottomInset)
                 .frame(height: DS.Metric.tabBarHeight, alignment: .bottom)
                 .overlay(alignment: .bottom) {
                     Rectangle()
                         .fill(isSelected ? DSColor.accent : Color.clear)
-                        .frame(height: 2)
+                        .frame(height: DS.Metric.Tabs.indicatorHeight)
                 }
                 .contentShape(Rectangle())
         }

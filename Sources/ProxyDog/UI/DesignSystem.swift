@@ -46,6 +46,13 @@ enum DS {
         static let statusBarHeight: CGFloat = 26
         static let detailHeaderHeight: CGFloat = 44
         static let tabBarHeight: CGFloat = 34
+
+        /// Detail tab strip geometry: the label keeps a small gap above the indicator
+        /// line instead of sitting flush on it.
+        enum Tabs {
+            static let textBottomInset: CGFloat = 7
+            static let indicatorHeight: CGFloat = 2
+        }
         static let controlHeight: CGFloat = 26
         static let iconButtonSize: CGFloat = 26
         static let separator: CGFloat = 0.5
