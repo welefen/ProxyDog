@@ -91,6 +91,7 @@ struct SidebarView: View {
                     SidebarRow(
                         symbol: "globe",
                         title: summary.domain,
+                        faviconDomain: summary.domain,
                         count: summary.count,
                         hasFailure: summary.hasFailure,
                         isSelected: state.sidebarSelection == .domain(summary.domain),
@@ -119,6 +120,7 @@ struct SidebarView: View {
 private struct SidebarRow: View {
     let symbol: String
     let title: String
+    var faviconDomain: String? = nil
     var count: Int?
     var hasFailure = false
     var isSelected = false
@@ -135,10 +137,14 @@ private struct SidebarRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: DS.Space.x2) {
-                Image(systemName: symbol)
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundStyle(isSelected ? DSColor.textSecondary : DSColor.textMuted)
-                    .frame(width: 14)
+                if let faviconDomain {
+                    DomainFavicon(domain: faviconDomain)
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(isSelected ? DSColor.textSecondary : DSColor.textMuted)
+                        .frame(width: 14)
+                }
                 Text(title)
                     .font(monoTitle ? DS.Typography.mono(11.5) : DS.Typography.ui(12))
                     .foregroundStyle(isSelected ? DSColor.textPrimary : DSColor.textSecondary)
