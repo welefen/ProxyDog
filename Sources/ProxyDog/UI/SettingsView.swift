@@ -90,7 +90,7 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 760, height: 620)
+        .frame(width: 760, height: 560)
         .onAppear {
             // The settings scene restores its previous frame, which can be narrower than the
             // sidebar + content split; pin the size when the pane appears.
@@ -99,7 +99,7 @@ struct SettingsView: View {
                     window.isVisible && (window.title.contains("设置") || window.title.localizedCaseInsensitiveContains("settings"))
                 }
                 target?.styleMask.remove(.resizable)
-                target?.setContentSize(NSSize(width: 760, height: 620))
+                target?.setContentSize(NSSize(width: 760, height: 560))
             }
             // Fill the upstream address from whatever proxy is already running so the user
             // never has to type it by hand.
@@ -147,7 +147,6 @@ struct SettingsView: View {
                 sidebarRow(tab)
             }
             Spacer(minLength: 0)
-            versionFooter
         }
         .padding(.horizontal, DS.Space.x2)
         .padding(.top, DS.Space.x3)
@@ -551,21 +550,6 @@ struct SettingsView: View {
                 .disabled(!state.isCertificateTrusted)
                 .accessibilityLabel("SSL proxying")
             }
-        }
-    }
-
-    // MARK: - Footer
-
-    private var versionFooter: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(DSColor.border)
-                .frame(height: 1)
-            Text(verbatim: "\(AppInfo.name) \(AppInfo.versionLabel)")
-                .font(DS.Typography.ui(11))
-                .foregroundStyle(DSColor.textMuted)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, DS.Space.x3)
         }
     }
 
