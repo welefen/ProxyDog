@@ -335,7 +335,7 @@ struct SettingsView: View {
                 }
                 SettingsHairline()
                 SettingsRow(
-                    title: "SOCKS5 port",
+                    title: "Proxy port",
                     errorText: socksError
                 ) {
                     TextField("8889", text: $socksPortText)
