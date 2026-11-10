@@ -204,6 +204,8 @@ private struct BodySectionView: View {
     /// When the captured body is larger than `displayLimit` the viewer starts trimmed;
     /// the notice offers "Show all" to render the whole payload on demand.
     @State private var showsFullBody = false
+    @State private var expandAllVersion = 0
+    @State private var collapseAllVersion = 0
 
     private var data: Data? {
         side == .request ? request.requestBody : request.responseBody
@@ -223,6 +225,12 @@ private struct BodySectionView: View {
     }
 
     private var isJSON: Bool { contentKind == .json }
+
+    /// True when the pretty JSON tree (not the raw text fallback) is what's on screen.
+    private var showsJSONTree: Bool {
+        guard isJSON, hasBody, !showsRaw, !isUndecodableCompressed else { return false }
+        return (data?.count ?? 0) <= Self.displayLimit
+    }
 
     /// `Content-Encoding` of the body on this side, when the upstream sent one.
     private var contentEncoding: String? {
@@ -297,6 +305,21 @@ private struct BodySectionView: View {
             }
 
             Spacer(minLength: DS.Space.x2)
+
+            if showsJSONTree {
+                PDIconButton(
+                    symbol: "arrow.up.left.and.arrow.down.right",
+                    help: String(localized: "Expand all")
+                ) {
+                    expandAllVersion += 1
+                }
+                PDIconButton(
+                    symbol: "arrow.down.right.and.arrow.up.left",
+                    help: String(localized: "Collapse all")
+                ) {
+                    collapseAllVersion += 1
+                }
+            }
 
             if isJSON && hasBody && !isUndecodableCompressed {
                 PDSegmented(
@@ -488,8 +511,12 @@ private struct BodySectionView: View {
         if showsRaw || data.count > Self.displayLimit {
             MonoTextBodyView(text: displayText(from: data))
         } else if let value = JSONValue.parse(data) {
-            JSONTreeView(value: value)
-                .id("\(request.id)-\(side.rawValue)-json")
+            JSONTreeView(
+                value: value,
+                expandAllSignal: expandAllVersion,
+                collapseAllSignal: collapseAllVersion
+            )
+            .id("\(request.id)-\(side.rawValue)-json")
         } else {
             MonoTextBodyView(text: displayText(from: data))
         }
@@ -688,6 +715,31 @@ struct JSONRow: Identifiable {
         return paths
     }
 
+    /// Every non-empty container path, used by "expand all".
+    static func allExpandablePaths(_ value: JSONValue) -> Set<String> {
+        var paths: Set<String> = []
+        func walk(_ value: JSONValue, path: String) {
+            switch value {
+            case .object(let dictionary):
+                guard !dictionary.isEmpty else { return }
+                paths.insert(path)
+                for (key, child) in dictionary {
+                    walk(child, path: path + "." + key)
+                }
+            case .array(let array):
+                guard !array.isEmpty else { return }
+                paths.insert(path)
+                for (index, child) in array.enumerated() {
+                    walk(child, path: path + "[\(index)]")
+                }
+            default:
+                break
+            }
+        }
+        walk(value, path: "$")
+        return paths
+    }
+
     static func flatten(_ value: JSONValue, expanded: Set<String>) -> [JSONRow] {
         var rows: [JSONRow] = []
 
@@ -811,6 +863,10 @@ enum JSONValue {
 /// Collapsible JSON tree with a restrained two-hue syntax tint.
 struct JSONTreeView: View {
     let value: JSONValue
+    /// Increment to expand every node; increment the second one to collapse everything.
+    var expandAllSignal: Int = 0
+    var collapseAllSignal: Int = 0
+    var expandAllResetsToDefault: Bool = false
 
     @State private var expanded: Set<String> = []
     @State private var didInitialize = false
@@ -838,6 +894,12 @@ struct JSONTreeView: View {
             guard !didInitialize else { return }
             didInitialize = true
             expanded = JSONRow.defaultExpandedPaths(value)
+        }
+        .onChange(of: expandAllSignal) { _, _ in
+            expanded = JSONRow.allExpandablePaths(value)
+        }
+        .onChange(of: collapseAllSignal) { _, _ in
+            expanded = []
         }
     }
 }

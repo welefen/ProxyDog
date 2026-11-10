@@ -172,3 +172,7 @@
 
 /* Headers */
 "Copy all headers" = "复制全部表头";
+
+/* JSON tree */
+"Expand all" = "完全展开";
+"Collapse all" = "完全收起";

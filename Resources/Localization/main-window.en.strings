@@ -170,3 +170,7 @@
 
 /* Headers */
 "Copy all headers" = "Copy all headers";
+
+/* JSON tree */
+"Expand all" = "Expand all";
+"Collapse all" = "Collapse all";
