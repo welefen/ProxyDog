@@ -7,6 +7,8 @@
 
 /* Settings · connection */
 "Proxy port" = "Proxy port";
+"Ignore own requests" = "Ignore own requests";
+"Keeps ProxyDog's own analytics and update traffic out of the request list." = "Keeps ProxyDog's own analytics and update traffic out of the request list.";
 "Changing the port restarts the proxy when it is running." = "Changing the port restarts the proxy when it is running.";
 "Restart proxy" = "Restart proxy";
 "SSL proxying" = "SSL proxying";

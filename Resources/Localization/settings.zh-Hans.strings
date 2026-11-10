@@ -7,6 +7,8 @@
 
 /* Settings · connection */
 "Proxy port" = "代理端口";
+"Ignore own requests" = "忽略自身请求";
+"Keeps ProxyDog's own analytics and update traffic out of the request list." = "ProxyDog 自身的数据埋点、更新检查等请求不会出现在抓包列表里。";
 "Changing the port restarts the proxy when it is running." = "修改端口后，代理将在运行状态下自动重启。";
 "Restart proxy" = "重启代理";
 "SSL proxying" = "SSL 解密";

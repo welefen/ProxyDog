@@ -78,8 +78,12 @@ enum SampleTraffic {
     static func runDevProbesIfNeeded() {
         guard DevLaunchOptions.analyticsProbeEnabled else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-            Analytics.shared.track("probe_self_request")
-            FileHandle.standardError.write(Data("[probe] sent analytics probe event\n".utf8))
+            // Plain HTTP so the probe is captured regardless of MITM certificate trust.
+            let url = URL(string: "http://example.org/")!
+            URLSession.shared.dataTask(with: url) { _, _, _ in
+                FileHandle.standardError.write(Data("[probe] self request finished\n".utf8))
+            }.resume()
+            FileHandle.standardError.write(Data("[probe] sent self request probe\n".utf8))
         }
     }
 

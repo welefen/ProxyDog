@@ -26,6 +26,7 @@ final class AppState: ObservableObject {
     private var hasBootstrapped = false
     private var storeCancellable: AnyCancellable?
     private var settingsCancellable: AnyCancellable?
+    private var ignoreOwnTrafficCancellable: AnyCancellable?
 
     convenience init() {
         self.init(settings: AppSettings(), store: CaptureStore())
@@ -60,6 +61,12 @@ final class AppState: ObservableObject {
         settingsCancellable = settings.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async {
                 self?.objectWillChange.send()
+            }
+        }
+        store.ignoresOwnTraffic = settings.ignoreOwnTraffic
+        ignoreOwnTrafficCancellable = settings.$ignoreOwnTraffic.sink { [weak self] value in
+            Task { @MainActor in
+                self?.store.ignoresOwnTraffic = value
             }
         }
     }

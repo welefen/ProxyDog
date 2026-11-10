@@ -137,6 +137,21 @@ struct SettingsView: View {
             }
             SettingsHairline()
             SettingsRow(
+                title: "Ignore own requests",
+                hint: "Keeps ProxyDog's own analytics and update traffic out of the request list."
+            ) {
+                Toggle("", isOn: Binding(
+                    get: { settings.ignoreOwnTraffic },
+                    set: { settings.ignoreOwnTraffic = $0 }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .tint(DSColor.accent)
+                .accessibilityLabel("Ignore own requests")
+            }
+            SettingsHairline()
+            SettingsRow(
                 title: "System proxy",
                 hint: state.isProxyRunning
                     ? "Routes this Mac's HTTP and HTTPS traffic through ProxyDog."
