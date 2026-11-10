@@ -156,3 +156,4 @@
 "Sends outbound traffic through an existing proxy such as a VPN client. Traffic from the HTTP proxy uses the HTTP address, traffic from the SOCKS5 listener uses the SOCKS5 address; when only one is filled both use it." = "通过已有的 HTTP 或 SOCKS5 代理（例如 VPN 客户端）出站：HTTP 入口使用 HTTP 上游地址，SOCKS5 入口使用 SOCKS5 上游地址；只填写一个时两个入口都用它。";
 "Turn on HTTP proxy first." = "请先开启 HTTP 代理";
 "Turn on SOCKS5 proxy first." = "请先开启 SOCKS5 代理";
+"Fill from system SOCKS5 proxy" = "从系统 SOCKS 代理填入";

@@ -375,6 +375,56 @@ final class AppState: ObservableObject {
         upstreamProxy(for: .socks5)
     }
 
+    /// Reads the SOCKS proxy of the first active network service and fills the SOCKS5
+    /// upstream address. Used by the fill button in the SOCKS5 card.
+    @discardableResult
+    func detectSocksUpstreamProxyFromSystem() -> Bool {
+        guard let detected = Self.systemSOCKSProxy() else { return false }
+        settings.setUpstreamAddress(host: detected.host, port: detected.port, kind: .socks5)
+        if settings.upstreamSOCKSEnabled {
+            _ = applyUpstreamProxy(enabled: true, host: detected.host, port: detected.port, kind: .socks5)
+        }
+        return true
+    }
+
+    /// The macOS SOCKS proxy as an upstream candidate, for placeholder hints.
+    func detectSystemSocksUpstreamProxy() -> (host: String, port: Int)? {
+        Self.systemSOCKSProxy()
+    }
+
+    /// Reads the system SOCKS proxy of the first network service that has one enabled.
+    private static func systemSOCKSProxy() -> (host: String, port: Int)? {
+        guard let services = try? ProcessRunner.run("/usr/sbin/networksetup", ["-listallnetworkservices"]) else {
+            return nil
+        }
+        let candidates = services.stdout
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("An asterisk") && !$0.hasPrefix("*") }
+        for service in candidates {
+            guard let result = try? ProcessRunner.run("/usr/sbin/networksetup", ["-getsocksfirewallproxy", service]) else {
+                continue
+            }
+            var enabled = false
+            var host = ""
+            var port = 0
+            for line in result.stdout.split(separator: "\n") {
+                let parts = line.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+                guard parts.count == 2 else { continue }
+                switch parts[0] {
+                case "Enabled": enabled = parts[1].lowercased() == "yes"
+                case "Server": host = parts[1]
+                case "Port": port = Int(parts[1]) ?? 0
+                default: break
+                }
+            }
+            if enabled, !host.isEmpty, (1...65535).contains(port) {
+                return (host, port)
+            }
+        }
+        return nil
+    }
+
     /// Reads the web proxy of the first active network service via `networksetup`.
     private static func systemHTTPProxy() -> (host: String, port: Int)? {
         guard let services = try? ProcessRunner.run("/usr/sbin/networksetup", ["-listallnetworkservices"]) else {

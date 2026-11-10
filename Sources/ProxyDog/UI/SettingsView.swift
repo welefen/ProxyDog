@@ -26,6 +26,8 @@ struct SettingsView: View {
     /// the app would use instead of a made-up default.
     @State private var detectedUpstreamHost: String = "127.0.0.1"
     @State private var detectedUpstreamPort: String = "8080"
+    @State private var detectedSocksUpstreamHost: String = "127.0.0.1"
+    @State private var detectedSocksUpstreamPort: String = "1080"
     @FocusState private var upstreamHTTPHostFocused: Bool
     @FocusState private var upstreamHTTPPortFocused: Bool
     @FocusState private var upstreamSOCKSHostFocused: Bool
@@ -357,6 +359,12 @@ struct SettingsView: View {
                             if !focused { commitSocksPort() }
                         }
                         .disabled(!socksAddressAvailable)
+                    SettingsIconButton(
+                        systemName: "arrow.clockwise",
+                        help: String(localized: "Restart proxy"),
+                        action: { state.restartProxy() }
+                    )
+                    .disabled(!settings.socksProxyEnabled)
                 }
                 SettingsHairline()
                 SettingsRow(
@@ -383,7 +391,7 @@ struct SettingsView: View {
                     errorText: upstreamErrorKind == .socks5 ? upstreamError : nil
                 ) {
                     HStack(spacing: DS.Space.x2) {
-                        TextField("127.0.0.1", text: $upstreamSOCKSHostText)
+                        TextField(detectedSocksUpstreamHost, text: $upstreamSOCKSHostText)
                             .textFieldStyle(.plain)
                             .font(DS.Typography.mono(12))
                             .foregroundStyle(DSColor.textPrimary)
@@ -397,7 +405,7 @@ struct SettingsView: View {
                                 if !focused { commitUpstreamAddress(.socks5) }
                             }
                             .disabled(!settings.upstreamSOCKSEnabled)
-                        TextField("1080", text: $upstreamSOCKSPortText)
+                        TextField(detectedSocksUpstreamPort, text: $upstreamSOCKSPortText)
                             .textFieldStyle(.plain)
                             .font(DS.Typography.mono(12))
                             .foregroundStyle(DSColor.textPrimary)
@@ -416,6 +424,12 @@ struct SettingsView: View {
                                 if !focused { commitUpstreamAddress(.socks5) }
                             }
                             .disabled(!settings.upstreamSOCKSEnabled)
+                        SettingsIconButton(
+                            systemName: "arrow.down.to.line",
+                            help: String(localized: "Fill from system SOCKS5 proxy"),
+                            action: fillSocksUpstreamFromSystem
+                        )
+                        .disabled(!settings.upstreamSOCKSEnabled)
                     }
                 }
             }
@@ -605,9 +619,14 @@ struct SettingsView: View {
 
     /// Keeps the placeholder in sync with the proxy that is currently running on this Mac.
     private func refreshDetectedUpstream() {
-        guard let detected = state.detectSystemUpstreamProxy() else { return }
-        detectedUpstreamHost = detected.host
-        detectedUpstreamPort = String(detected.port)
+        if let detected = state.detectSystemUpstreamProxy() {
+            detectedUpstreamHost = detected.host
+            detectedUpstreamPort = String(detected.port)
+        }
+        if let detected = state.detectSystemSocksUpstreamProxy() {
+            detectedSocksUpstreamHost = detected.host
+            detectedSocksUpstreamPort = String(detected.port)
+        }
     }
 
     private func syncFromSettings() {
@@ -707,6 +726,16 @@ struct SettingsView: View {
             upstreamErrorKind = nil
             syncUpstreamFields()
         }
+    }
+
+    private func fillSocksUpstreamFromSystem() {
+        upstreamSOCKSHostFocused = false
+        upstreamSOCKSPortFocused = false
+        guard state.detectSocksUpstreamProxyFromSystem() else { return }
+        refreshDetectedUpstream()
+        syncUpstreamFields(for: .socks5)
+        upstreamError = nil
+        upstreamErrorKind = nil
     }
 
     private func syncUpstreamFields(for kind: UpstreamProxyKind? = nil) {
