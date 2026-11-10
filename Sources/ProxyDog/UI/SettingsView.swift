@@ -500,7 +500,7 @@ struct SettingsView: View {
                         }
                         SettingsIconButton(
                             systemName: "square.and.arrow.up",
-                            help: String(localized: "Export root certificate"),
+                            help: String(localized: "Export the root certificate file for other devices"),
                             action: { state.presentCertificateExportPanel() }
                         )
                     }

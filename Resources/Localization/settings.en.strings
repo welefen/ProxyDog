@@ -139,3 +139,6 @@
 
 /* Sections */
 "SSL & Certificate" = "SSL & Certificate";
+
+/* Certificate actions */
+"Export the root certificate file for other devices" = "Export the root certificate file for other devices";

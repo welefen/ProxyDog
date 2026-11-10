@@ -139,3 +139,6 @@
 
 /* Sections */
 "SSL & Certificate" = "SSL 与证书";
+
+/* Certificate actions */
+"Export the root certificate file for other devices" = "导出根证书文件（可安装到 iPhone 等其它设备）";
