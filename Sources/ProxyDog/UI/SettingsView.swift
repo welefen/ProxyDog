@@ -21,6 +21,7 @@ struct SettingsView: View {
     @State private var upstreamSOCKSHostText: String = ""
     @State private var upstreamSOCKSPortText: String = ""
     @State private var upstreamError: String?
+    @State private var upstreamErrorKind: UpstreamProxyKind?
     /// Placeholders come from the detected system proxy, so the HTTP row shows the address
     /// the app would use instead of a made-up default.
     @State private var detectedUpstreamHost: String = "127.0.0.1"
@@ -251,7 +252,7 @@ struct SettingsView: View {
                 SettingsHairline()
                 SettingsRow(
                     title: "Upstream proxy",
-                    hint: "Sends outbound traffic through an existing proxy such as a VPN client. The HTTP address is used when filled, otherwise SOCKS5; ProxyDog still captures and decrypts."
+                    hint: "Sends outbound traffic through an existing proxy such as a VPN client. Traffic from the HTTP proxy uses the HTTP address, traffic from the SOCKS5 listener uses the SOCKS5 address; when only one is filled both use it."
                 ) {
                     Toggle("", isOn: Binding(
                         get: { settings.upstreamProxyEnabled },
@@ -266,7 +267,7 @@ struct SettingsView: View {
                 SettingsHairline()
                 SettingsRow(
                     title: "HTTP upstream",
-                    errorText: settings.effectiveUpstreamKind == .httpConnect ? upstreamError : nil
+                    errorText: upstreamErrorKind == .httpConnect ? upstreamError : nil
                 ) {
                     HStack(spacing: DS.Space.x2) {
                         TextField(detectedUpstreamHost, text: $upstreamHTTPHostText)
@@ -354,7 +355,7 @@ struct SettingsView: View {
                 SettingsHairline()
                 SettingsRow(
                     title: "SOCKS5 upstream",
-                    errorText: settings.effectiveUpstreamKind == .socks5 ? upstreamError : nil
+                    errorText: upstreamErrorKind == .socks5 ? upstreamError : nil
                 ) {
                     HStack(spacing: DS.Space.x2) {
                         TextField("127.0.0.1", text: $upstreamSOCKSHostText)
@@ -635,9 +636,11 @@ struct SettingsView: View {
         ) {
             // Nothing is applied on failure, so the switch falls back to off.
             upstreamError = error
+            upstreamErrorKind = settings.effectiveUpstreamKind
             return
         }
         upstreamError = nil
+        upstreamErrorKind = nil
         syncUpstreamFields()
     }
 
@@ -651,8 +654,10 @@ struct SettingsView: View {
             kind: kind
         ) {
             upstreamError = error
+            upstreamErrorKind = kind
         } else {
             upstreamError = nil
+            upstreamErrorKind = nil
         }
         syncUpstreamFields()
     }
@@ -669,10 +674,12 @@ struct SettingsView: View {
         let port = settings.upstreamPort(for: .httpConnect)
         if let error = state.applyUpstreamProxy(enabled: true, host: host, port: port, kind: .httpConnect) {
             upstreamError = error
+            upstreamErrorKind = .httpConnect
             // Keep the pane consistent: an invalid detected address never stays enabled.
             _ = state.applyUpstreamProxy(enabled: false, host: host, port: port, kind: .httpConnect)
         } else {
             upstreamError = nil
+            upstreamErrorKind = nil
             syncUpstreamFields()
         }
     }

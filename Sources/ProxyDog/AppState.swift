@@ -176,6 +176,7 @@ final class AppState: ObservableObject {
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
         proxy.upstreamProxy = upstreamProxyFromSettings()
+        proxy.socksUpstreamProxy = socksUpstreamProxyFromSettings()
         proxy.socksPort = socksProxyFromSettings()
         proxyStatus = .starting
         proxy.start()
@@ -206,6 +207,7 @@ final class AppState: ObservableObject {
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
         proxy.upstreamProxy = upstreamProxyFromSettings()
+        proxy.socksUpstreamProxy = socksUpstreamProxyFromSettings()
         proxy.socksPort = socksProxyFromSettings()
         proxyStatus = .starting
         proxy.start()
@@ -250,9 +252,7 @@ final class AppState: ObservableObject {
         let previousEnabled = settings.upstreamProxyEnabled
         let previousKind = settings.upstreamProxyKind
 
-        // Store the edited address first; the protocol in use is derived from what is filled.
         settings.setUpstreamAddress(host: trimmedHost, port: port, kind: kind)
-        let effectiveKind = settings.effectiveUpstreamKind
         func rollback() {
             settings.setUpstreamAddress(host: previousHost, port: previousPort, kind: kind)
             settings.upstreamProxyKind = previousKind
@@ -260,36 +260,42 @@ final class AppState: ObservableObject {
         }
 
         if enabled {
-            let effectiveHost = settings.upstreamHost(for: effectiveKind)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let effectivePort = settings.upstreamPort(for: effectiveKind)
-            guard !effectiveHost.isEmpty else {
-                rollback()
-                return String(localized: "Enter the host of the upstream proxy.")
+            let pairs = [UpstreamProxyKind.httpConnect, .socks5].compactMap { candidateKind -> UpstreamProxy? in
+                let candidateHost = settings.upstreamHost(for: candidateKind)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let candidatePort = settings.upstreamPort(for: candidateKind)
+                guard !candidateHost.isEmpty, (1...65535).contains(candidatePort) else { return nil }
+                return UpstreamProxy(kind: candidateKind, host: candidateHost, port: candidatePort)
             }
-            guard (1...65535).contains(effectivePort) else {
+            guard !pairs.isEmpty else {
                 rollback()
+                if trimmedHost.isEmpty {
+                    return String(localized: "Enter the host of the upstream proxy.")
+                }
                 return String(localized: "Port must be between 1 and 65535.")
             }
-            let candidate = UpstreamProxy(kind: effectiveKind, host: effectiveHost, port: effectivePort)
-            if candidate.isLoopback, candidate.port == settings.port {
-                rollback()
-                return String(localized: "The upstream proxy cannot be ProxyDog itself.")
-            }
-            if candidate.isLoopback, settings.socksProxyEnabled, candidate.port == settings.socksProxyPort {
-                rollback()
-                return String(localized: "The upstream proxy cannot be ProxyDog itself.")
+            for candidate in pairs {
+                if candidate.isLoopback, candidate.port == settings.port {
+                    rollback()
+                    return String(localized: "The upstream proxy cannot be ProxyDog itself.")
+                }
+                if candidate.isLoopback, settings.socksProxyEnabled, candidate.port == settings.socksProxyPort {
+                    rollback()
+                    return String(localized: "The upstream proxy cannot be ProxyDog itself.")
+                }
             }
         }
 
+        let effectiveKind = upstreamProxy(for: .httpConnect) != nil ? UpstreamProxyKind.httpConnect : .socks5
         let changed = previousEnabled != enabled
             || previousKind != effectiveKind
-            || settings.upstreamHost(for: effectiveKind) != previousHost
-            || settings.upstreamPort(for: effectiveKind) != previousPort
+            || settings.upstreamHost(for: kind) != previousHost
+            || settings.upstreamPort(for: kind) != previousPort
 
         settings.upstreamProxyEnabled = enabled
         settings.upstreamProxyKind = effectiveKind
         proxy.upstreamProxy = upstreamProxyFromSettings()
+        proxy.socksUpstreamProxy = socksUpstreamProxyFromSettings()
 
         if changed, proxy.status.isRunning || proxyStatus.isRunning {
             restartProxy()
@@ -371,14 +377,25 @@ final class AppState: ObservableObject {
         return true
     }
 
-    /// Current upstream configuration derived from settings, nil when disabled/invalid.
-    func upstreamProxyFromSettings() -> UpstreamProxy? {
+    /// Valid upstream for one protocol, nil when disabled or the address is incomplete.
+    func upstreamProxy(for kind: UpstreamProxyKind) -> UpstreamProxy? {
         guard settings.upstreamProxyEnabled else { return nil }
-        let kind = settings.effectiveUpstreamKind
         let host = settings.upstreamHost(for: kind).trimmingCharacters(in: .whitespacesAndNewlines)
         let port = settings.upstreamPort(for: kind)
         guard !host.isEmpty, (1...65535).contains(port) else { return nil }
         return UpstreamProxy(kind: kind, host: host, port: port)
+    }
+
+    /// Upstream for traffic arriving through the HTTP proxy: HTTP entry uses the HTTP
+    /// address; when only SOCKS5 is configured it falls back to that one.
+    func upstreamProxyFromSettings() -> UpstreamProxy? {
+        upstreamProxy(for: .httpConnect) ?? upstreamProxy(for: .socks5)
+    }
+
+    /// Upstream for traffic arriving through the SOCKS5 listener: SOCKS5 entry uses the
+    /// SOCKS5 address, falling back to the HTTP one when it is the only one configured.
+    func socksUpstreamProxyFromSettings() -> UpstreamProxy? {
+        upstreamProxy(for: .socks5) ?? upstreamProxy(for: .httpConnect)
     }
 
     /// Reads the web proxy of the first active network service via `networksetup`.

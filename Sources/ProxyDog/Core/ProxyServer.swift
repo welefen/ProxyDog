@@ -54,9 +54,13 @@ final class ProxyServer: @unchecked Sendable {
     var port: Int
     var sslProxyingEnabled: Bool
 
-    /// When set, every outbound connection is tunnelled through this proxy
-    /// (e.g. a local VPN client) instead of connecting to the target directly.
+    /// When set, outbound connections made for HTTP-proxy clients are tunnelled through
+    /// this proxy (e.g. a local VPN client) instead of connecting to the target directly.
     var upstreamProxy: UpstreamProxy?
+
+    /// Upstream used for connections that arrive through the SOCKS5 listener, so the two
+    /// entry points can chain through different proxies.
+    var socksUpstreamProxy: UpstreamProxy?
 
     /// When set, ProxyDog also accepts SOCKS5 clients on 127.0.0.1:<socksPort> and
     /// intercepts their traffic the same way it does for HTTP-proxy clients.
@@ -142,6 +146,11 @@ final class ProxyServer: @unchecked Sendable {
         let upstreamProxyProvider: @Sendable () -> UpstreamProxy? = { [weak self] in
             self?.upstreamProxy
         }
+        let socksUpstreamProxyProvider: @Sendable () -> UpstreamProxy? = { [weak self] in
+            // Headless runs and single-upstream setups only set the HTTP slot; fall back to
+            // it so the SOCKS5 listener still chains through the configured proxy.
+            self?.socksUpstreamProxy ?? self?.upstreamProxy
+        }
         let bootstrap = ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .serverChannelOption(ChannelOptions.backlog, value: 128)
@@ -182,7 +191,7 @@ final class ProxyServer: @unchecked Sendable {
                         let handler = SOCKS5ListenerHandler(
                             sink: sink,
                             certificateAuthority: certificateAuthority,
-                            upstreamProxyProvider: upstreamProxyProvider,
+                            upstreamProxyProvider: socksUpstreamProxyProvider,
                             sslProxyingEnabled: sslEnabled
                         )
                         return socksChannel.pipeline.addHandler(handler)
