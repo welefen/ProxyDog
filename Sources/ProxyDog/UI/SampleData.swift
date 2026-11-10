@@ -522,6 +522,7 @@ enum SampleTraffic {
             exports.createElement = createElement;
             //# sourceMappingURL=index.js.map
             """.utf8),
+            wireResponseBytes: 420,
             httpVersion: "HTTP/2",
             client: "Safari 17.4",
             clientPID: 1234,
@@ -853,6 +854,7 @@ enum SampleTraffic {
         requestBody: Data? = nil,
         responseHeaders: [HeaderField] = [],
         responseBody: Data? = nil,
+        wireResponseBytes: Int? = nil,
         intercepted: Bool = true,
         pinned: Bool = false,
         httpVersion: String = "HTTP/1.1",
@@ -890,6 +892,7 @@ enum SampleTraffic {
             statusCode: status,
             responseHeaders: responseHeaders,
             responseBody: responseBody,
+            wireResponseBytes: wireResponseBytes ?? (responseBody?.count ?? 0),
             state: state,
             errorMessage: error,
             isPinned: pinned,
