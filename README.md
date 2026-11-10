@@ -199,7 +199,7 @@ Auto-update is implemented in-app (the same approach as the sibling TidyMac proj
 1. Three seconds after launch the app fetches the manifest from `https://api.github.com/repos/welefen/ProxyDog/contents/updates/latest.json?ref=master`, falling back to `https://raw.githubusercontent.com/welefen/ProxyDog/master/updates/latest.json`.
 2. The manifest contains `version`, `downloadURL`, `sha256` and `releaseNotes`; when the version is newer the ZIP is downloaded and its SHA-256 verified.
 3. The archive is extracted; the bundle identifier (`com.proxydog.app`) and version are verified, and the new `ProxyDog.app` is staged. “Install and restart” swaps it in after the app quits and relaunches it.
-4. When an update is available the version label in the main-window sidebar turns into a clickable “↑ version” badge: click it to open the update section, or to install directly once downloaded.
+4. When an update is available the version label in the main-window sidebar is replaced by a circular update button: a pulsing down arrow while downloading, then an up arrow once ready. Hovering expands it into a “Finish update” pill; clicking installs and restarts (same interaction as TidyMac).
 5. Automatic checks only run for installed builds (development builds under `build/` opt out). Debug overrides: `PROXYDOG_UPDATE_FEED`, `PROXYDOG_CURRENT_VERSION`, `PROXYDOG_UPDATE_TOKEN`, and `PROXYDOG_UPDATE_DEBUG=1` (log to `/tmp/proxydog-update-debug.log`).
 
 Publishing a release:

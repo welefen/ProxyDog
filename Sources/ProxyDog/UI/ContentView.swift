@@ -66,6 +66,18 @@ struct ContentView: View {
             SampleTraffic.injectSampleBreakpointIfRequested(state: state)
             SampleTraffic.runDevProbesIfNeeded()
             SampleTraffic.openSettingsIfRequested(state: state, openSettings: openSettings)
+            if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--sample-update-phase"),
+               ProcessInfo.processInfo.arguments.indices.contains(index + 1) {
+                let raw = ProcessInfo.processInfo.arguments[index + 1]
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    switch raw {
+                    case "downloading": UpdateManager.shared.qaSetPhase(.downloading("1.1.0"))
+                    case "ready": UpdateManager.shared.qaSetPhase(.ready("1.1.0"))
+                    case "available": UpdateManager.shared.qaSetPhase(.available("1.1.0"))
+                    default: break
+                    }
+                }
+            }
             if ProcessInfo.processInfo.arguments.contains("--sample-update-check") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     Task { await UpdateManager.shared.check(manual: true) }

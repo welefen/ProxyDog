@@ -130,6 +130,11 @@ final class UpdateManager: ObservableObject {
         }
     }
 
+    /// QA hook: force a phase so the sidebar badge states can be reviewed without a feed.
+    func qaSetPhase(_ phase: UpdatePhase) {
+        self.phase = phase
+    }
+
     func installDownloadedUpdate() {
         guard case .ready(let version) = phase, let staged = stagedAppURL else { return }
         installAndRelaunch(staged: staged, version: version)

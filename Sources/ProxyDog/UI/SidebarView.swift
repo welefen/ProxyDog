@@ -7,6 +7,7 @@ struct SidebarView: View {
     @EnvironmentObject private var state: AppState
     @ObservedObject private var updater = UpdateManager.shared
     @Environment(\.openSettings) private var openSettings
+    @State private var hoveringUpdateBadge = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -42,15 +43,7 @@ struct SidebarView: View {
             Text("ProxyDog")
                 .font(DS.Typography.ui(16, .semibold))
                 .foregroundStyle(DSColor.textPrimary)
-            if let version = updater.availableVersion {
-                updateBadge(version)
-            } else {
-                Text(AppInfo.versionLabel)
-                    .font(DS.Typography.ui(11))
-                    .foregroundStyle(DSColor.textMuted)
-                    .monospacedDigit()
-                    .padding(.leading, 1)
-            }
+            versionBadge
             Spacer(minLength: 0)
         }
         .padding(.horizontal, DS.Space.x3)
@@ -58,38 +51,95 @@ struct SidebarView: View {
         .padding(.bottom, DS.Space.x4)
     }
 
-    private func updateBadge(_ version: String) -> some View {
+    @ViewBuilder
+    private var versionBadge: some View {
+        switch updater.phase {
+        case .available(let version), .downloading(let version):
+            downloadingBadge(version: version)
+        case .ready(let version):
+            updateBadge(version: version)
+        default:
+            Text(verbatim: "v\(updater.currentVersion)")
+                .font(DS.Typography.ui(10.5))
+                .foregroundStyle(DSColor.textMuted)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.leading, 1)
+        }
+    }
+
+    /// Pulsing down-arrow circle while the update downloads.
+    private func downloadingBadge(version: String) -> some View {
+        ZStack {
+            Circle()
+                .fill(DSColor.accent)
+            ZStack {
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.88), lineWidth: 1.1)
+                    .frame(width: 12.5, height: 12.5)
+                Image(systemName: "arrow.down")
+                    .font(.system(size: 7, weight: .heavy))
+                    .foregroundStyle(Color.white)
+            }
+            .symbolEffect(.pulse, options: .repeating)
+        }
+        .frame(width: 22, height: 22)
+        .overlay(Circle().strokeBorder(Color.white.opacity(0.30), lineWidth: 0.8))
+        .shadow(color: DSColor.accent.opacity(0.24), radius: 4, x: 0, y: 2)
+        .fastTooltip(String(format: String(localized: "Downloading v%@…"), version))
+    }
+
+    /// Accent update button: a small up-arrow circle that expands into a labelled
+    /// pill on hover and installs the staged update when clicked.
+    private func updateBadge(version: String) -> some View {
         Button {
-            if updater.canInstall {
-                updater.installDownloadedUpdate()
-            } else {
-                state.requestSettings(destination: .appearance)
-                openSettings()
-            }
+            updater.installDownloadedUpdate()
         } label: {
-            HStack(spacing: 3) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 9, weight: .semibold))
-                Text(verbatim: version)
-                    .font(DS.Typography.ui(10, .semibold))
-                    .monospacedDigit()
+            HStack(spacing: 0) {
+                if hoveringUpdateBadge {
+                    Text("完成更新")
+                        .font(DS.Typography.ui(9, .semibold))
+                        .foregroundStyle(Color.white)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 8)
+                } else {
+                    updateBadgeGlyph()
+                }
             }
-            .foregroundStyle(DSColor.accent)
-            .padding(.horizontal, 5)
-            .frame(height: 16)
-            .background(
+            .frame(height: 22)
+            .frame(minWidth: 22)
+            .background(Capsule(style: .continuous).fill(DSColor.accent))
+            .overlay(
                 Capsule(style: .continuous)
-                    .fill(DSColor.accent.opacity(0.12))
+                    .strokeBorder(Color.white.opacity(0.30), lineWidth: 0.8)
             )
-            .contentShape(Capsule())
+            .shadow(
+                color: DSColor.accent.opacity(hoveringUpdateBadge ? 0.34 : 0.24),
+                radius: hoveringUpdateBadge ? 6 : 4,
+                x: 0,
+                y: 2
+            )
+            .contentShape(Capsule(style: .continuous))
+            .animation(.spring(response: 0.26, dampingFraction: 0.82), value: hoveringUpdateBadge)
         }
         .buttonStyle(.plain)
-        .fixedSize(horizontal: true, vertical: false)
-        .fastTooltip(
-            updater.canInstall
-                ? String(format: String(localized: "Update %@ is ready to install"), version)
-                : String(format: String(localized: "Update %@ is available"), version)
-        )
+        .onHover { hovering in
+            hoveringUpdateBadge = hovering
+        }
+        .fastTooltip(String(format: String(localized: "Update %@ is ready to install"), version))
+    }
+
+    private func updateBadgeGlyph() -> some View {
+        ZStack {
+            Circle()
+                .strokeBorder(Color.white.opacity(0.88), lineWidth: 1.1)
+                .frame(width: 12.5, height: 12.5)
+            Image(systemName: "arrow.up")
+                .font(.system(size: 7, weight: .heavy))
+                .foregroundStyle(Color.white)
+        }
+        .frame(width: 22, height: 22)
     }
 
     // MARK: Sections

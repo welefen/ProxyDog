@@ -205,3 +205,4 @@
 /* Updater badge */
 "Update %@ is available" = "Update %@ is available";
 "Update %@ is ready to install" = "Update %@ is ready to install";
+"完成更新" = "Finish update";
