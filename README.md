@@ -153,6 +153,10 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 | 修改请求 Modify request | 对请求正文做正则查找/替换 | 把 `code:0` 批量改成 `code:-1` |
 | 修改响应 Modify response | 对响应正文做正则查找/替换 | 测试前端对 `code:-1` 的报错逻辑 |
 
+![重写规则设置](Docs/screenshots/rewrite-settings.png)
+
+![规则编辑器](Docs/screenshots/rewrite-editor.png)
+
 说明：
 
 - 同一阶段只有**第一条匹配且启用**的规则生效；禁用规则不参与匹配
