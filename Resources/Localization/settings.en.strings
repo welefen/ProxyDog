@@ -125,3 +125,6 @@
 /* Onboarding · chrome and actions */
 "Close setup" = "Close setup";
 "Done" = "Done";
+
+/* Tabs */
+"Rules" = "Rules";

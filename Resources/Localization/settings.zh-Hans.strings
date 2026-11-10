@@ -125,3 +125,6 @@
 /* Onboarding · chrome and actions */
 "Close setup" = "关闭引导";
 "Done" = "完成";
+
+/* Tabs */
+"Rules" = "规则";

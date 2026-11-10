@@ -32,16 +32,47 @@ struct SettingsView: View {
     @FocusState private var socksPortFocused: Bool
 
     @State private var language: AppLanguage = AppLanguage.stored
+    @State private var selectedTab: SettingsTab = .connection
+
+    /// The settings pane is tabbed so each group stays a comfortable page instead of one
+    /// very long scroll.
+    private enum SettingsTab: String, CaseIterable, Identifiable {
+        case connection
+        case rules
+        case appearance
+        case certificates
+
+        var id: String { rawValue }
+
+        var label: LocalizedStringKey {
+            switch self {
+            case .connection: return "Connection"
+            case .rules: return "Rules"
+            case .appearance: return "Appearance"
+            case .certificates: return "Certificate"
+            }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
+            tabBar
+            PDHairline()
             ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.x6) {
-                    connectionSection
-                    rewriteSection
-                    breakpointSection
-                    appearanceSection
-                    certificateSection
+                Group {
+                    switch selectedTab {
+                    case .connection:
+                        connectionSection
+                    case .rules:
+                        VStack(alignment: .leading, spacing: DS.Space.x6) {
+                            rewriteSection
+                            breakpointSection
+                        }
+                    case .appearance:
+                        appearanceSection
+                    case .certificates:
+                        certificateSection
+                    }
                 }
                 .padding(.horizontal, DS.Space.x5)
                 .padding(.top, DS.Space.x5)
@@ -50,7 +81,7 @@ struct SettingsView: View {
             }
             versionFooter
         }
-        .frame(width: 560, height: 920)
+        .frame(width: 560, height: 700)
         .onAppear {
             // Fill the upstream address from whatever proxy is already running so the user
             // never has to type it by hand.
@@ -84,6 +115,37 @@ struct SettingsView: View {
     }
 
     // MARK: - Connection
+
+    // MARK: - Tabs
+
+    private var tabBar: some View {
+        HStack(spacing: DS.Space.x5) {
+            ForEach(SettingsTab.allCases) { tab in
+                let isSelected = selectedTab == tab
+                Button {
+                    selectedTab = tab
+                } label: {
+                    Text(tab.label)
+                        .font(DS.Typography.ui(12, isSelected ? .semibold : .regular))
+                        .foregroundStyle(isSelected ? DSColor.textPrimary : DSColor.textSecondary)
+                        .padding(.bottom, DS.Metric.Tabs.textBottomInset)
+                        .frame(height: DS.Metric.tabBarHeight, alignment: .bottom)
+                        .overlay(alignment: .bottom) {
+                            Rectangle()
+                                .fill(isSelected ? DSColor.accent : Color.clear)
+                                .frame(height: DS.Metric.Tabs.indicatorHeight)
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, DS.Space.x5)
+        .frame(height: DS.Metric.tabBarHeight)
+        .background(DSColor.chrome)
+    }
 
     private var connectionSection: some View {
         SettingsSection(title: "Connection") {
