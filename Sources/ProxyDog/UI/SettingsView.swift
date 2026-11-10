@@ -217,27 +217,6 @@ struct SettingsView: View {
                 }
                 SettingsHairline()
                 SettingsRow(
-                    title: "SSL proxying",
-                    hint: "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners.",
-                    hintText: sslWarning
-                ) {
-                    Toggle("", isOn: Binding(
-                        get: { settings.sslProxyingEnabled && state.isCertificateTrusted },
-                        set: { newValue in
-                            guard state.isCertificateTrusted else { return }
-                            settings.sslProxyingEnabled = newValue
-                            if state.isProxyRunning { state.restartProxy() }
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .tint(DSColor.accent)
-                    .disabled(!state.isCertificateTrusted)
-                    .accessibilityLabel("SSL proxying")
-                }
-                SettingsHairline()
-                SettingsRow(
                     title: "Ignore own requests",
                     hint: "Keeps ProxyDog's own analytics and update traffic out of the request list."
                 ) {
@@ -515,7 +494,29 @@ struct SettingsView: View {
     // MARK: - Certificate
 
     private var certificateSection: some View {
-        SettingsSection(title: "Certificate") {
+        SettingsSection(title: "SSL & Certificate") {
+            SettingsHairline()
+            SettingsRow(
+                title: "SSL proxying",
+                hint: "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners.",
+                hintText: sslWarning
+            ) {
+                Toggle("", isOn: Binding(
+                    get: { settings.sslProxyingEnabled && state.isCertificateTrusted },
+                    set: { newValue in
+                        guard state.isCertificateTrusted else { return }
+                        settings.sslProxyingEnabled = newValue
+                        if state.isProxyRunning { state.restartProxy() }
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .tint(DSColor.accent)
+                .disabled(!state.isCertificateTrusted)
+                .accessibilityLabel("SSL proxying")
+            }
+            SettingsHairline()
             SettingsRow(
                 title: "Root certificate",
                 hint: "Required to inspect HTTPS. Stored in your login keychain."
@@ -580,7 +581,7 @@ struct SettingsView: View {
     /// trusted yet (HTTPS handshakes would fail until it is installed).
     private var sslWarning: String? {
         guard !state.isCertificateTrusted else { return nil }
-        return String(localized: "The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it in the certificate section below.")
+        return String(localized: "The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it below.")
     }
 
     private var proxyStatusText: String {

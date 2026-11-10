@@ -135,4 +135,7 @@
 "Rules" = "规则";
 
 /* Certificate warning */
-"The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it in the certificate section below." = "根证书尚未安装或未被信任，无法开启 HTTPS 解密。请在下方证书模块中安装根证书。";
+"The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it below." = "根证书尚未安装或未被信任，无法开启 HTTPS 解密。请在下方安装根证书。";
+
+/* Sections */
+"SSL & Certificate" = "SSL 与证书";

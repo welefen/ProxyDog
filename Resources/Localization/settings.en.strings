@@ -135,4 +135,7 @@
 "Rules" = "Rules";
 
 /* Certificate warning */
-"The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it in the certificate section below." = "The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it in the certificate section below.";
+"The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it below." = "The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it below.";
+
+/* Sections */
+"SSL & Certificate" = "SSL & Certificate";
