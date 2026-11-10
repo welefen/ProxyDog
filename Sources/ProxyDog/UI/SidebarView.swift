@@ -28,12 +28,17 @@ struct SidebarView: View {
 
     private var header: some View {
         HStack(spacing: DS.Space.x2) {
+            AppBrandIcon(size: 22)
             Text("ProxyDog")
-                .font(DS.Typography.ui(13, .semibold))
+                .font(DS.Typography.ui(13.5, .semibold))
                 .foregroundStyle(DSColor.textPrimary)
+            Text(AppInfo.versionLabel)
+                .font(DS.Typography.ui(10))
+                .foregroundStyle(DSColor.textMuted)
+                .monospacedDigit()
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, DS.Space.x4)
+        .padding(.horizontal, DS.Space.x3)
         .padding(.top, DS.Space.x2)
         .padding(.bottom, DS.Space.x3)
     }
