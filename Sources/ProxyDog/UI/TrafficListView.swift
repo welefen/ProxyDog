@@ -214,6 +214,10 @@ struct TrafficListView: View {
                             Button("Copy as cURL") {
                                 state.copyCurl(for: request)
                             }
+                            Button("Show only this URL") {
+                                state.searchText = request.urlString
+                                listFocused = true
+                            }
                             Divider()
                             Button("Delete", role: .destructive) {
                                 delete(request.id)

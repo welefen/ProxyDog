@@ -164,3 +164,6 @@
 
 /* Sidebar */
 "Clients" = "Clients";
+
+/* Context menu */
+"Show only this URL" = "Show only this URL";

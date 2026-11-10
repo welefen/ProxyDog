@@ -166,3 +166,6 @@
 
 /* Sidebar */
 "Clients" = "客户端";
+
+/* Context menu */
+"Show only this URL" = "只显示该地址";
