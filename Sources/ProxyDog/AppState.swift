@@ -226,7 +226,8 @@ final class AppState: ObservableObject {
         proxy.upstreamProxy = upstreamProxyFromSettings()
         proxy.socksUpstreamProxy = socksUpstreamProxyFromSettings()
         proxy.socksPort = socksProxyFromSettings()
-        proxyStatus = .starting
+        // Keep the previous .running status while restarting: flipping to .starting here
+        // made the HTTP proxy switch (disabled unless the proxy runs) flash.
         proxy.start()
     }
 
