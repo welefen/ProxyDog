@@ -188,279 +188,277 @@ struct SettingsView: View {
     private var connectionSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.x6) {
             SettingsSection(title: "HTTP / HTTPS") {
-            SettingsRow(
-                title: "Proxy port",
-                hint: "Changing the port restarts the proxy when it is running.",
-                errorText: portError
-            ) {
-                HStack(spacing: DS.Space.x2) {
-                    TextField("8888", text: $portText)
-                        .textFieldStyle(.plain)
-                        .font(DS.Typography.mono(13))
-                        .foregroundStyle(DSColor.textPrimary)
-                        .multilineTextAlignment(.trailing)
-                        .focused($portFocused)
-                        .frame(width: 56)
-                        .padding(.horizontal, DS.Space.x2)
-                        .padding(.vertical, 5)
-                        .background(fieldBackground(isFocused: portFocused))
-                        .onSubmit(commitPort)
-                        .onChange(of: portText) { _, newValue in
-                            let filtered = String(newValue.filter(\.isNumber).prefix(5))
-                            if filtered != newValue { portText = filtered }
-                            if portError != nil { portError = nil }
-                        }
-                        .onChange(of: portFocused) { _, focused in
-                            if !focused { commitPort() }
-                        }
-                    SettingsIconButton(
-                        systemName: "arrow.clockwise",
-                        help: String(localized: "Restart proxy"),
-                        action: { state.restartProxy() }
-                    )
-                }
-            }
-            SettingsHairline()
-            SettingsRow(
-                title: "SSL proxying",
-                hint: "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners."
-            ) {
-                Toggle("", isOn: Binding(
-                    get: { settings.sslProxyingEnabled },
-                    set: { newValue in
-                        settings.sslProxyingEnabled = newValue
-                        if state.isProxyRunning { state.restartProxy() }
+                SettingsRow(
+                    title: "Proxy port",
+                    hint: "Changing the port restarts the proxy when it is running.",
+                    errorText: portError
+                ) {
+                    HStack(spacing: DS.Space.x2) {
+                        TextField("8888", text: $portText)
+                            .textFieldStyle(.plain)
+                            .font(DS.Typography.mono(13))
+                            .foregroundStyle(DSColor.textPrimary)
+                            .multilineTextAlignment(.trailing)
+                            .focused($portFocused)
+                            .frame(width: 56)
+                            .padding(.horizontal, DS.Space.x2)
+                            .padding(.vertical, 5)
+                            .background(fieldBackground(isFocused: portFocused))
+                            .onSubmit(commitPort)
+                            .onChange(of: portText) { _, newValue in
+                                let filtered = String(newValue.filter(\.isNumber).prefix(5))
+                                if filtered != newValue { portText = filtered }
+                                if portError != nil { portError = nil }
+                            }
+                            .onChange(of: portFocused) { _, focused in
+                                if !focused { commitPort() }
+                            }
+                        SettingsIconButton(
+                            systemName: "arrow.clockwise",
+                            help: String(localized: "Restart proxy"),
+                            action: { state.restartProxy() }
+                        )
                     }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(DSColor.accent)
-                .accessibilityLabel("SSL proxying")
-            }
-            SettingsHairline()
-            SettingsRow(
-                title: "Ignore own requests",
-                hint: "Keeps ProxyDog's own analytics and update traffic out of the request list."
-            ) {
-                Toggle("", isOn: Binding(
-                    get: { settings.ignoreOwnTraffic },
-                    set: { settings.ignoreOwnTraffic = $0 }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(DSColor.accent)
-                .accessibilityLabel("Ignore own requests")
-            }
-            SettingsHairline()
-            SettingsRow(
-                title: "System proxy",
-                hint: state.isProxyRunning
-                    ? "Routes this Mac's HTTP and HTTPS traffic through ProxyDog."
-                    : "Start the proxy to change this."
-            ) {
-                Toggle("", isOn: Binding(
-                    get: { state.isSystemProxyEnabled },
-                    set: { state.setSystemProxy(enabled: $0) }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(DSColor.accent)
-                .disabled(!state.isProxyRunning)
-                .accessibilityLabel("Set as System Proxy")
-            }
-            }
-            SettingsSection(title: "Upstream proxy") {
-            SettingsRow(
-                title: "Upstream proxy",
-                hint: "Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts."
-            ) {
-                Toggle("", isOn: Binding(
-                    get: { settings.upstreamProxyEnabled },
-                    set: { setUpstreamEnabled($0) }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(DSColor.accent)
-                .accessibilityLabel("Upstream proxy")
-            }
-            SettingsHairline()
-            SettingsRow(
-                title: "Upstream protocol",
-                hint: "Both addresses are stored; the selected protocol is used."
-            ) {
-                PDSegmented(
-                    items: UpstreamProxyKind.allCases.map { kind in
-                        PDSegmented<UpstreamProxyKind>.Item(value: kind, label: kind.label)
-                    },
-                    selection: Binding(
-                        get: { settings.upstreamProxyKind },
-                        set: { applyUpstreamKindChange($0) }
-                    )
-                )
-                .disabled(!settings.upstreamProxyEnabled)
-            }
-            SettingsHairline()
-            SettingsRow(
-                title: "HTTP upstream",
-                errorText: settings.upstreamProxyKind == .httpConnect ? upstreamError : nil
-            ) {
-                HStack(spacing: DS.Space.x2) {
-                    TextField(detectedUpstreamHost, text: $upstreamHTTPHostText)
-                        .textFieldStyle(.plain)
-                        .font(DS.Typography.mono(12))
-                        .foregroundStyle(DSColor.textPrimary)
-                        .focused($upstreamHTTPHostFocused)
-                        .frame(width: 112)
-                        .padding(.horizontal, DS.Space.x2)
-                        .padding(.vertical, 5)
-                        .background(fieldBackground(isFocused: upstreamHTTPHostFocused, isEnabled: settings.upstreamProxyEnabled))
-                        .onSubmit { commitUpstreamAddress(.httpConnect) }
-                        .onChange(of: upstreamHTTPHostFocused) { _, focused in
-                            if !focused { commitUpstreamAddress(.httpConnect) }
+                }
+                SettingsHairline()
+                SettingsRow(
+                    title: "SSL proxying",
+                    hint: "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.sslProxyingEnabled },
+                        set: { newValue in
+                            settings.sslProxyingEnabled = newValue
+                            if state.isProxyRunning { state.restartProxy() }
                         }
-                        .disabled(!settings.upstreamProxyEnabled)
-                    TextField(detectedUpstreamPort, text: $upstreamHTTPPortText)
-                        .textFieldStyle(.plain)
-                        .font(DS.Typography.mono(12))
-                        .foregroundStyle(DSColor.textPrimary)
-                        .multilineTextAlignment(.trailing)
-                        .focused($upstreamHTTPPortFocused)
-                        .frame(width: 56)
-                        .padding(.horizontal, DS.Space.x2)
-                        .padding(.vertical, 5)
-                        .background(fieldBackground(isFocused: upstreamHTTPPortFocused, isEnabled: settings.upstreamProxyEnabled))
-                        .onSubmit { commitUpstreamAddress(.httpConnect) }
-                        .onChange(of: upstreamHTTPPortText) { _, newValue in
-                            let filtered = String(newValue.filter(\.isNumber).prefix(5))
-                            if filtered != newValue { upstreamHTTPPortText = filtered }
-                        }
-                        .onChange(of: upstreamHTTPPortFocused) { _, focused in
-                            if !focused { commitUpstreamAddress(.httpConnect) }
-                        }
-                        .disabled(!settings.upstreamProxyEnabled)
-                    SettingsIconButton(
-                        systemName: "arrow.down.to.line",
-                        help: String(localized: "Fill from system proxy"),
-                        action: fillUpstreamFromSystem
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DSColor.accent)
+                    .accessibilityLabel("SSL proxying")
+                }
+                SettingsHairline()
+                SettingsRow(
+                    title: "Ignore own requests",
+                    hint: "Keeps ProxyDog's own analytics and update traffic out of the request list."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.ignoreOwnTraffic },
+                        set: { settings.ignoreOwnTraffic = $0 }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DSColor.accent)
+                    .accessibilityLabel("Ignore own requests")
+                }
+                SettingsHairline()
+                SettingsRow(
+                    title: "System proxy",
+                    hint: state.isProxyRunning
+                        ? "Routes this Mac's HTTP and HTTPS traffic through ProxyDog."
+                        : "Start the proxy to change this."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { state.isSystemProxyEnabled },
+                        set: { state.setSystemProxy(enabled: $0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DSColor.accent)
+                    .disabled(!state.isProxyRunning)
+                    .accessibilityLabel("Set as System Proxy")
+                }
+                SettingsHairline()
+                SettingsRow(
+                    title: "Upstream proxy",
+                    hint: "Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.upstreamProxyEnabled },
+                        set: { setUpstreamEnabled($0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DSColor.accent)
+                    .accessibilityLabel("Upstream proxy")
+                }
+                SettingsHairline()
+                SettingsRow(
+                    title: "Upstream protocol",
+                    hint: "Both addresses are stored; the selected protocol is used."
+                ) {
+                    PDSegmented(
+                        items: UpstreamProxyKind.allCases.map { kind in
+                            PDSegmented<UpstreamProxyKind>.Item(value: kind, label: kind.label)
+                        },
+                        selection: Binding(
+                            get: { settings.upstreamProxyKind },
+                            set: { applyUpstreamKindChange($0) }
+                        )
                     )
                     .disabled(!settings.upstreamProxyEnabled)
                 }
-            }
-            SettingsHairline()
-            SettingsRow(
-                title: "SOCKS5 upstream",
-                errorText: settings.upstreamProxyKind == .socks5 ? upstreamError : nil
-            ) {
-                HStack(spacing: DS.Space.x2) {
-                    TextField("127.0.0.1", text: $upstreamSOCKSHostText)
-                        .textFieldStyle(.plain)
-                        .font(DS.Typography.mono(12))
-                        .foregroundStyle(DSColor.textPrimary)
-                        .focused($upstreamSOCKSHostFocused)
-                        .frame(width: 112)
-                        .padding(.horizontal, DS.Space.x2)
-                        .padding(.vertical, 5)
-                        .background(fieldBackground(isFocused: upstreamSOCKSHostFocused, isEnabled: settings.upstreamProxyEnabled))
-                        .onSubmit { commitUpstreamAddress(.socks5) }
-                        .onChange(of: upstreamSOCKSHostFocused) { _, focused in
-                            if !focused { commitUpstreamAddress(.socks5) }
-                        }
+                SettingsHairline()
+                SettingsRow(
+                    title: "HTTP upstream",
+                    errorText: settings.upstreamProxyKind == .httpConnect ? upstreamError : nil
+                ) {
+                    HStack(spacing: DS.Space.x2) {
+                        TextField(detectedUpstreamHost, text: $upstreamHTTPHostText)
+                            .textFieldStyle(.plain)
+                            .font(DS.Typography.mono(12))
+                            .foregroundStyle(DSColor.textPrimary)
+                            .focused($upstreamHTTPHostFocused)
+                            .frame(width: 112)
+                            .padding(.horizontal, DS.Space.x2)
+                            .padding(.vertical, 5)
+                            .background(fieldBackground(isFocused: upstreamHTTPHostFocused, isEnabled: settings.upstreamProxyEnabled))
+                            .onSubmit { commitUpstreamAddress(.httpConnect) }
+                            .onChange(of: upstreamHTTPHostFocused) { _, focused in
+                                if !focused { commitUpstreamAddress(.httpConnect) }
+                            }
+                            .disabled(!settings.upstreamProxyEnabled)
+                        TextField(detectedUpstreamPort, text: $upstreamHTTPPortText)
+                            .textFieldStyle(.plain)
+                            .font(DS.Typography.mono(12))
+                            .foregroundStyle(DSColor.textPrimary)
+                            .multilineTextAlignment(.trailing)
+                            .focused($upstreamHTTPPortFocused)
+                            .frame(width: 56)
+                            .padding(.horizontal, DS.Space.x2)
+                            .padding(.vertical, 5)
+                            .background(fieldBackground(isFocused: upstreamHTTPPortFocused, isEnabled: settings.upstreamProxyEnabled))
+                            .onSubmit { commitUpstreamAddress(.httpConnect) }
+                            .onChange(of: upstreamHTTPPortText) { _, newValue in
+                                let filtered = String(newValue.filter(\.isNumber).prefix(5))
+                                if filtered != newValue { upstreamHTTPPortText = filtered }
+                            }
+                            .onChange(of: upstreamHTTPPortFocused) { _, focused in
+                                if !focused { commitUpstreamAddress(.httpConnect) }
+                            }
+                            .disabled(!settings.upstreamProxyEnabled)
+                        SettingsIconButton(
+                            systemName: "arrow.down.to.line",
+                            help: String(localized: "Fill from system proxy"),
+                            action: fillUpstreamFromSystem
+                        )
                         .disabled(!settings.upstreamProxyEnabled)
-                    TextField("1080", text: $upstreamSOCKSPortText)
+                    }
+                }
+            }
+            SettingsSection(title: "SOCKS5") {
+                SettingsRow(
+                    title: "SOCKS5 proxy",
+                    hint: "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.socksProxyEnabled },
+                        set: { setSocksEnabled($0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DSColor.accent)
+                    .accessibilityLabel("SOCKS5 proxy")
+                }
+                SettingsHairline()
+                SettingsRow(
+                    title: "SOCKS5 port",
+                    errorText: socksError
+                ) {
+                    TextField("8889", text: $socksPortText)
                         .textFieldStyle(.plain)
                         .font(DS.Typography.mono(12))
                         .foregroundStyle(DSColor.textPrimary)
                         .multilineTextAlignment(.trailing)
-                        .focused($upstreamSOCKSPortFocused)
+                        .focused($socksPortFocused)
                         .frame(width: 56)
                         .padding(.horizontal, DS.Space.x2)
                         .padding(.vertical, 5)
-                        .background(fieldBackground(isFocused: upstreamSOCKSPortFocused, isEnabled: settings.upstreamProxyEnabled))
-                        .onSubmit { commitUpstreamAddress(.socks5) }
-                        .onChange(of: upstreamSOCKSPortText) { _, newValue in
+                        .background(fieldBackground(isFocused: socksPortFocused, isEnabled: socksAddressAvailable))
+                        .onSubmit(commitSocksPort)
+                        .onChange(of: socksPortText) { _, newValue in
                             let filtered = String(newValue.filter(\.isNumber).prefix(5))
-                            if filtered != newValue { upstreamSOCKSPortText = filtered }
+                            if filtered != newValue { socksPortText = filtered }
                         }
-                        .onChange(of: upstreamSOCKSPortFocused) { _, focused in
-                            if !focused { commitUpstreamAddress(.socks5) }
+                        .onChange(of: socksPortFocused) { _, focused in
+                            if !focused { commitSocksPort() }
                         }
-                        .disabled(!settings.upstreamProxyEnabled)
+                        .disabled(!socksAddressAvailable)
                 }
-            }
-            }
-            SettingsSection(title: "SOCKS5") {
-            SettingsRow(
-                title: "SOCKS5 proxy",
-                hint: "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way."
-            ) {
-                Toggle("", isOn: Binding(
-                    get: { settings.socksProxyEnabled },
-                    set: { setSocksEnabled($0) }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(DSColor.accent)
-                .accessibilityLabel("SOCKS5 proxy")
-            }
-            SettingsHairline()
-            SettingsRow(
-                title: "SOCKS5 port",
-                errorText: socksError
-            ) {
-                TextField("8889", text: $socksPortText)
-                    .textFieldStyle(.plain)
-                    .font(DS.Typography.mono(12))
-                    .foregroundStyle(DSColor.textPrimary)
-                    .multilineTextAlignment(.trailing)
-                    .focused($socksPortFocused)
-                    .frame(width: 56)
-                    .padding(.horizontal, DS.Space.x2)
-                    .padding(.vertical, 5)
-                    .background(fieldBackground(isFocused: socksPortFocused, isEnabled: socksAddressAvailable))
-                    .onSubmit(commitSocksPort)
-                    .onChange(of: socksPortText) { _, newValue in
-                        let filtered = String(newValue.filter(\.isNumber).prefix(5))
-                        if filtered != newValue { socksPortText = filtered }
+                SettingsHairline()
+                SettingsRow(
+                    title: "SOCKS5 upstream",
+                    errorText: settings.upstreamProxyKind == .socks5 ? upstreamError : nil
+                ) {
+                    HStack(spacing: DS.Space.x2) {
+                        TextField("127.0.0.1", text: $upstreamSOCKSHostText)
+                            .textFieldStyle(.plain)
+                            .font(DS.Typography.mono(12))
+                            .foregroundStyle(DSColor.textPrimary)
+                            .focused($upstreamSOCKSHostFocused)
+                            .frame(width: 112)
+                            .padding(.horizontal, DS.Space.x2)
+                            .padding(.vertical, 5)
+                            .background(fieldBackground(isFocused: upstreamSOCKSHostFocused, isEnabled: settings.upstreamProxyEnabled))
+                            .onSubmit { commitUpstreamAddress(.socks5) }
+                            .onChange(of: upstreamSOCKSHostFocused) { _, focused in
+                                if !focused { commitUpstreamAddress(.socks5) }
+                            }
+                            .disabled(!settings.upstreamProxyEnabled)
+                        TextField("1080", text: $upstreamSOCKSPortText)
+                            .textFieldStyle(.plain)
+                            .font(DS.Typography.mono(12))
+                            .foregroundStyle(DSColor.textPrimary)
+                            .multilineTextAlignment(.trailing)
+                            .focused($upstreamSOCKSPortFocused)
+                            .frame(width: 56)
+                            .padding(.horizontal, DS.Space.x2)
+                            .padding(.vertical, 5)
+                            .background(fieldBackground(isFocused: upstreamSOCKSPortFocused, isEnabled: settings.upstreamProxyEnabled))
+                            .onSubmit { commitUpstreamAddress(.socks5) }
+                            .onChange(of: upstreamSOCKSPortText) { _, newValue in
+                                let filtered = String(newValue.filter(\.isNumber).prefix(5))
+                                if filtered != newValue { upstreamSOCKSPortText = filtered }
+                            }
+                            .onChange(of: upstreamSOCKSPortFocused) { _, focused in
+                                if !focused { commitUpstreamAddress(.socks5) }
+                            }
+                            .disabled(!settings.upstreamProxyEnabled)
                     }
-                    .onChange(of: socksPortFocused) { _, focused in
-                        if !focused { commitSocksPort() }
-                    }
-                    .disabled(!socksAddressAvailable)
-            }
+                }
             }
             SettingsSection(title: "Status") {
-            SettingsRow(
-                title: "Proxy status",
-                hint: "Listens on the loopback interface only.",
-                hintText: proxyFailureMessage
-            ) {
-                HStack(spacing: DS.Space.x2) {
-                    Circle()
-                        .fill(proxyStatusColor)
-                        .frame(width: 6, height: 6)
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(proxyStatusText)
-                            .font(DS.Typography.mono(12))
-                            .foregroundStyle(state.proxyStatus.isRunning ? DSColor.textPrimary : DSColor.textSecondary)
-                            .monospacedDigit()
-                        if let socksPort = state.socksProxyFromSettings() {
-                            Text(verbatim: "SOCKS5 127.0.0.1:\(socksPort)")
-                                .font(DS.Typography.mono(11))
-                                .foregroundStyle(DSColor.textSecondary)
+                SettingsRow(
+                    title: "Proxy status",
+                    hint: "Listens on the loopback interface only.",
+                    hintText: proxyFailureMessage
+                ) {
+                    HStack(spacing: DS.Space.x2) {
+                        Circle()
+                            .fill(proxyStatusColor)
+                            .frame(width: 6, height: 6)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(proxyStatusText)
+                                .font(DS.Typography.mono(12))
+                                .foregroundStyle(state.proxyStatus.isRunning ? DSColor.textPrimary : DSColor.textSecondary)
                                 .monospacedDigit()
+                            if let socksPort = state.socksProxyFromSettings() {
+                                Text(verbatim: "SOCKS5 127.0.0.1:\(socksPort)")
+                                    .font(DS.Typography.mono(11))
+                                    .foregroundStyle(DSColor.textSecondary)
+                                    .monospacedDigit()
+                            }
                         }
                     }
                 }
-            }
             }
         }
     }
-
     // MARK: - Rewrite
 
     private var rewriteSection: some View {
