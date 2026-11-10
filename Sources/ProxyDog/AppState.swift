@@ -444,6 +444,18 @@ final class AppState: ObservableObject {
         Task { @MainActor in
             let trusted = await Task.detached { CertificateAuthority.shared.isTrustedInKeychain() }.value
             isCertificateTrusted = trusted
+            enforceCertificateRequirement()
+        }
+    }
+
+    /// HTTPS decryption cannot work without a trusted root certificate, so it is switched
+    /// off (and the proxy restarted) when the certificate is missing or untrusted.
+    private func enforceCertificateRequirement() {
+        guard !isCertificateTrusted, settings.sslProxyingEnabled else { return }
+        settings.sslProxyingEnabled = false
+        proxy.sslProxyingEnabled = false
+        if proxy.status.isRunning || proxyStatus.isRunning {
+            restartProxy()
         }
     }
 

@@ -185,6 +185,8 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 
 ## 根证书
 
+> HTTPS 解密依赖受信任的根证书：证书未安装/未受信任时「SSL 解密」开关不可开启，代理会自动关闭解密（HTTPS 只显示为隧道）。安装入口在「设置 → 连接」页面最下方的证书模块。
+
 - 位置：`~/Library/Application Support/ProxyDog/Certificates/ca.crt`
 - 安装 / 移除：设置页 → Certificate；安装会把证书加入登录钥匙串并写入用户信任域，系统会弹出标准授权弹窗。如果安装后仍显示「未受信任」，可在「钥匙串访问」中把 `ProxyDog Root CA` 手动设为「始终信任」，然后回到应用点一次刷新。
 - 证书仅用于本机抓包调试，卸载应用后建议在「钥匙串访问」中删除该根证书。

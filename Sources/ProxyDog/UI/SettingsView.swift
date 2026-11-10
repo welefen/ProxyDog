@@ -42,7 +42,6 @@ struct SettingsView: View {
         case connection
         case rules
         case appearance
-        case certificates
 
         var id: String { rawValue }
 
@@ -51,7 +50,6 @@ struct SettingsView: View {
             case .connection: return "Connection"
             case .rules: return "Rules"
             case .appearance: return "Appearance"
-            case .certificates: return "Certificate"
             }
         }
 
@@ -60,7 +58,6 @@ struct SettingsView: View {
             case .connection: return "network"
             case .rules: return "slider.horizontal.3"
             case .appearance: return "circle.lefthalf.filled"
-            case .certificates: return "checkmark.shield"
             }
         }
     }
@@ -81,8 +78,6 @@ struct SettingsView: View {
                         }
                     case .appearance:
                         appearanceSection
-                    case .certificates:
-                        certificateSection
                     }
                 }
                 .padding(.horizontal, DS.Space.x5)
@@ -227,8 +222,9 @@ struct SettingsView: View {
                     hintText: sslWarning
                 ) {
                     Toggle("", isOn: Binding(
-                        get: { settings.sslProxyingEnabled },
+                        get: { settings.sslProxyingEnabled && state.isCertificateTrusted },
                         set: { newValue in
+                            guard state.isCertificateTrusted else { return }
                             settings.sslProxyingEnabled = newValue
                             if state.isProxyRunning { state.restartProxy() }
                         }
@@ -237,6 +233,7 @@ struct SettingsView: View {
                     .toggleStyle(.switch)
                     .controlSize(.small)
                     .tint(DSColor.accent)
+                    .disabled(!state.isCertificateTrusted)
                     .accessibilityLabel("SSL proxying")
                 }
                 SettingsHairline()
@@ -458,6 +455,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            certificateSection
         }
     }
     // MARK: - Rewrite
@@ -581,8 +579,8 @@ struct SettingsView: View {
     /// Shown under the SSL row while decryption is on but the root certificate has not been
     /// trusted yet (HTTPS handshakes would fail until it is installed).
     private var sslWarning: String? {
-        guard settings.sslProxyingEnabled, !state.isCertificateTrusted else { return nil }
-        return String(localized: "The root certificate is not trusted yet, so HTTPS decryption will fail. Install it on the Certificate page.")
+        guard !state.isCertificateTrusted else { return nil }
+        return String(localized: "The root certificate is not installed or trusted, so HTTPS decryption is unavailable. Install it in the certificate section below.")
     }
 
     private var proxyStatusText: String {
