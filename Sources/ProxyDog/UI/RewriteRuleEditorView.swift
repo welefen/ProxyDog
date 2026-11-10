@@ -6,6 +6,7 @@ import SwiftUI
 /// presented from here so the section owns its own sheet.
 struct RewriteRulesSectionView: View {
     @ObservedObject var store: RewriteRuleStore
+    @EnvironmentObject private var appState: AppState
     @State private var editingRule: RewriteRule?
 
     private let maxListHeight: CGFloat = 240
@@ -34,6 +35,16 @@ struct RewriteRulesSectionView: View {
                 store: store
             )
         }
+        .onAppear { openPendingEditorIfNeeded() }
+        .onChange(of: appState.requestedRuleEditor) { _, _ in
+            openPendingEditorIfNeeded()
+        }
+    }
+
+    private func openPendingEditorIfNeeded() {
+        guard appState.requestedRuleEditor == .rewrite else { return }
+        appState.requestedRuleEditor = nil
+        editingRule = RewriteRule()
     }
 
     // MARK: - List

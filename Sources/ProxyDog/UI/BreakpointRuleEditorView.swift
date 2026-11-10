@@ -6,6 +6,7 @@ import SwiftUI
 /// owned by this view, mirroring the rewrite-rules section.
 struct BreakpointsSectionView: View {
     @ObservedObject var store: BreakpointRuleStore
+    @EnvironmentObject private var appState: AppState
     @State private var editingRule: BreakpointRule?
 
     private let maxListHeight: CGFloat = 200
@@ -34,6 +35,16 @@ struct BreakpointsSectionView: View {
                 store: store
             )
         }
+        .onAppear { openPendingEditorIfNeeded() }
+        .onChange(of: appState.requestedRuleEditor) { _, _ in
+            openPendingEditorIfNeeded()
+        }
+    }
+
+    private func openPendingEditorIfNeeded() {
+        guard appState.requestedRuleEditor == .breakpoint else { return }
+        appState.requestedRuleEditor = nil
+        editingRule = BreakpointRule()
     }
 
     // MARK: - List

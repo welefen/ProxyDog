@@ -97,12 +97,12 @@ struct TrafficListView: View {
                     .padding(.horizontal, DS.Space.x1)
 
                 PDIconButton(symbol: "wand.and.stars", help: String(localized: "Rewrite rules")) {
-                    state.requestSettings(destination: .rules)
+                    state.requestRuleEditor(.rewrite)
                     openSettings()
                 }
 
                 PDIconButton(symbol: "pause.circle", help: String(localized: "Breakpoints")) {
-                    state.requestSettings(destination: .rules)
+                    state.requestRuleEditor(.breakpoint)
                     openSettings()
                 }
 

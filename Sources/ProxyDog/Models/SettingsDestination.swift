@@ -8,3 +8,11 @@ enum SettingsDestination: String, Identifiable {
 
     var id: String { rawValue }
 }
+
+/// Which rule editor should open from an external entry point.
+enum RuleEditorTarget: String, Identifiable {
+    case rewrite
+    case breakpoint
+
+    var id: String { rawValue }
+}

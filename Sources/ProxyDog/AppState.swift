@@ -22,6 +22,8 @@ final class AppState: ObservableObject {
 
     /// Set when another window wants the settings pane on a specific page.
     @Published var settingsDestinationRequest: SettingsDestination?
+    /// Set when another window wants the rule editor for the given kind opened.
+    @Published var requestedRuleEditor: RuleEditorTarget?
     let proxy: ProxyServer
 
     @Published private(set) var proxyStatus: ProxyServer.Status = .stopped
@@ -121,6 +123,12 @@ final class AppState: ObservableObject {
     /// SwiftUI's `openSettings` environment action.
     func requestSettings(destination: SettingsDestination) {
         settingsDestinationRequest = destination
+    }
+
+    /// Asks the settings window to open the rules page and the "new rule" editor.
+    func requestRuleEditor(_ target: RuleEditorTarget) {
+        settingsDestinationRequest = .rules
+        requestedRuleEditor = target
     }
 
     // MARK: - Rule drafts

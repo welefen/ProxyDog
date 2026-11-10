@@ -60,6 +60,11 @@ enum DevLaunchOptions {
         value(for: "--sample-settings-tab")
     }
 
+    /// QA: opens a specific rule editor (e.g. `--sample-rule-editor breakpoint`).
+    static var sampleRuleEditor: String? {
+        value(for: "--sample-rule-editor")
+    }
+
     /// QA: opens the rewrite/breakpoint editor pre-filled from the first sample request.
     static var sampleRuleDraft: String? {
         value(for: "--sample-rule-draft")
@@ -109,10 +114,15 @@ enum SampleTraffic {
 
     /// QA helper: open the settings window at the requested page.
     static func openSettingsIfRequested(state: AppState, openSettings: OpenSettingsAction) {
-        guard let raw = DevLaunchOptions.sampleSettingsTab,
-              let destination = SettingsDestination(rawValue: raw) else { return }
+        let destination = DevLaunchOptions.sampleSettingsTab.flatMap(SettingsDestination.init(rawValue:))
+        let editor = DevLaunchOptions.sampleRuleEditor.flatMap(RuleEditorTarget.init(rawValue:))
+        guard destination != nil || editor != nil else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            state.requestSettings(destination: destination)
+            if let editor {
+                state.requestRuleEditor(editor)
+            } else if let destination {
+                state.requestSettings(destination: destination)
+            }
             openSettings()
         }
     }
