@@ -10,6 +10,7 @@
 - **检索与清理**：全文搜索、按域名过滤、暂停/恢复抓包、清空、单条删除、收藏。
 - **导出**：HAR 1.2 文件导出、复制为 cURL。
 - **系统代理**：一键设置/关闭 macOS 系统 HTTP/HTTPS 代理（需要管理员授权）。
+- **上游代理（代理链）**：出站流量可以再交给已有的 HTTP 代理（例如本机正在运行的 VPN 客户端），抓包解密与 VPN 出网同时生效。
 - **外观与语言**：浅色为默认设计，完整支持深色模式，默认跟随系统；界面内置简体中文与 English，默认跟随系统语言，可在设置中切换（切换后自动重启生效）。
 - **数据埋点**：使用 Aptabase，App Key 由开发者在构建时配置一次（`Support/AppConfig.plist`，不随仓库提交），最终用户无需填写；不采集任何请求内容。
 
@@ -23,7 +24,7 @@ Body 详情：JSON 树与 Pretty/Raw 切换。
 
 ![请求详情](Docs/screenshots/request-body.png)
 
-设置页：连接、外观（主题与语言）、证书，底部显示版本号。
+设置页：连接（端口、SSL 解密、系统代理、上游代理/代理链）、外观（主题与语言）、证书，底部显示版本号。
 
 ![设置](Docs/screenshots/settings.png)
 
@@ -68,6 +69,23 @@ curl -x http://127.0.0.1:8888 https://example.com/    # 未安装根证书时 cu
 
 抓到的请求会实时出现在列表中，点击任意一条查看详情。
 
+## 复用已有的代理 / VPN
+
+系统里已经开着一个代理（VPN 客户端、Clash/Surge 之类）时，不需要关掉它：ProxyDog 支持设置**上游代理**，把出站流量再链给它。
+
+1. 打开 设置 → 连接 → 上游代理，点「从系统代理填入」自动读取当前系统 HTTP 代理（例如 `127.0.0.1:1235`），再打开开关。
+2. 然后把系统代理（或你要调试的 App）指向 ProxyDog：`127.0.0.1:8888`。
+3. 此后请求先经 ProxyDog 解密抓包，再由 VPN 代理出网；抓包列表里只会出现客户端真实访问的域名，上游代理本身不会出现。
+
+也可以用命令行验证：
+
+```bash
+./.build/debug/ProxyDog --headless --port 8889 --upstream 127.0.0.1:1235 --out /tmp/chained.jsonl
+curl -x http://127.0.0.1:8889 https://example.com/
+```
+
+限制：上游代理需支持 HTTP CONNECT（不支持 SOCKS5，也不支持需要认证的代理）；上游地址不能指向 ProxyDog 自身，否则设置页会报错。
+
 ## 根证书
 
 - 位置：`~/Library/Application Support/ProxyDog/Certificates/ca.crt`
@@ -103,6 +121,10 @@ Support/                     # Info.plist、应用图标、AppConfig.plist(.exam
 
 # 端到端代理测试：明文 HTTP、HTTPS 解密、POST、失败请求、抓包断言、端口复用
 ./scripts/test_proxy.sh
+
+# 上游代理（代理链）测试：内置本地 CONNECT 代理，验证流量确实经上游转发
+./scripts/test_upstream.sh
+UPSTREAM_REAL=127.0.0.1:1235 ./scripts/test_upstream.sh   # 再用真实 VPN 代理跑一遍
 
 # 无界面自检：证书签发、HAR 导出、cURL 导出、进程内重启、端口占用、设置持久化
 ./.build/debug/ProxyDog --headless --selftest

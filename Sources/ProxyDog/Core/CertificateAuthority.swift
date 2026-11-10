@@ -546,6 +546,7 @@ enum ProxyError: LocalizedError {
     case authorizationFailed(String)
     case systemProxyFailed(String)
     case tlsUnavailable
+    case upstreamProxyFailed(String)
 
     var errorDescription: String? {
         switch self {
@@ -563,6 +564,8 @@ enum ProxyError: LocalizedError {
             return detail
         case .tlsUnavailable:
             return "Could not create the outbound TLS configuration."
+        case .upstreamProxyFailed(let detail):
+            return detail
         }
     }
 }

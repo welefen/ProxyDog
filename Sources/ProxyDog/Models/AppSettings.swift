@@ -35,6 +35,9 @@ final class AppSettings: ObservableObject {
         static let sslEnabled = "proxy.sslProxyingEnabled"
         static let systemProxy = "proxy.systemProxyEnabled"
         static let capacity = "capture.capacity"
+        static let upstreamEnabled = "proxy.upstreamEnabled"
+        static let upstreamHost = "proxy.upstreamHost"
+        static let upstreamPort = "proxy.upstreamPort"
     }
 
     private let defaults: UserDefaults
@@ -59,6 +62,19 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(systemProxyEnabled, forKey: Key.systemProxy) }
     }
 
+    /// Chain outbound traffic through an existing HTTP proxy (VPN client).
+    @Published var upstreamProxyEnabled: Bool {
+        didSet { defaults.set(upstreamProxyEnabled, forKey: Key.upstreamEnabled) }
+    }
+
+    @Published var upstreamProxyHost: String {
+        didSet { defaults.set(upstreamProxyHost, forKey: Key.upstreamHost) }
+    }
+
+    @Published var upstreamProxyPort: Int {
+        didSet { defaults.set(upstreamProxyPort, forKey: Key.upstreamPort) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let storedPort = defaults.integer(forKey: Key.port)
@@ -67,5 +83,8 @@ final class AppSettings: ObservableObject {
         self.hasCompletedOnboarding = defaults.bool(forKey: Key.onboarding)
         self.sslProxyingEnabled = defaults.object(forKey: Key.sslEnabled) as? Bool ?? true
         self.systemProxyEnabled = defaults.bool(forKey: Key.systemProxy)
+        self.upstreamProxyEnabled = defaults.bool(forKey: Key.upstreamEnabled)
+        self.upstreamProxyHost = defaults.string(forKey: Key.upstreamHost) ?? ""
+        self.upstreamProxyPort = defaults.integer(forKey: Key.upstreamPort)
     }
 }

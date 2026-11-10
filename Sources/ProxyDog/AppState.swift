@@ -106,6 +106,7 @@ final class AppState: ObservableObject {
         guard !proxy.status.isRunning else { return }
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
+        proxy.upstreamProxy = upstreamProxyFromSettings()
         proxyStatus = .starting
         proxy.start()
         Analytics.shared.track("proxy_started", properties: ["port": String(settings.port)])
@@ -134,6 +135,7 @@ final class AppState: ObservableObject {
         }
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
+        proxy.upstreamProxy = upstreamProxyFromSettings()
         proxyStatus = .starting
         proxy.start()
     }
@@ -148,6 +150,92 @@ final class AppState: ObservableObject {
         if wasRunning {
             restartProxy()
         }
+    }
+
+    // MARK: - Upstream proxy (proxy chaining)
+
+    /// Applies the upstream proxy configuration. Returns a localized error message when
+    /// the configuration is invalid (nothing is applied in that case).
+    @discardableResult
+    func applyUpstreamProxy(enabled: Bool, host: String, port: Int) -> String? {
+        let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        if enabled {
+            guard !trimmedHost.isEmpty else {
+                return String(localized: "Enter the host of the upstream proxy.")
+            }
+            guard (1...65535).contains(port) else {
+                return String(localized: "Port must be between 1 and 65535.")
+            }
+            let candidate = UpstreamProxy(host: trimmedHost, port: port)
+            if candidate.isLoopback, candidate.port == settings.port {
+                return String(localized: "The upstream proxy cannot be ProxyDog itself.")
+            }
+        }
+
+        let changed = settings.upstreamProxyEnabled != enabled
+            || settings.upstreamProxyHost != trimmedHost
+            || settings.upstreamProxyPort != port
+
+        settings.upstreamProxyEnabled = enabled
+        settings.upstreamProxyHost = trimmedHost
+        settings.upstreamProxyPort = port
+        proxy.upstreamProxy = upstreamProxyFromSettings()
+
+        if changed, proxy.status.isRunning || proxyStatus.isRunning {
+            restartProxy()
+        }
+        return nil
+    }
+
+    /// Reads the current macOS system proxy and fills in the upstream fields. This is the
+    /// "reuse the proxy/VPN that is already running" shortcut.
+    @discardableResult
+    func detectUpstreamProxyFromSystem() -> Bool {
+        guard let detected = Self.systemHTTPProxy() else { return false }
+        settings.upstreamProxyHost = detected.host
+        settings.upstreamProxyPort = detected.port
+        return true
+    }
+
+    /// Current upstream configuration derived from settings, nil when disabled/invalid.
+    func upstreamProxyFromSettings() -> UpstreamProxy? {
+        guard settings.upstreamProxyEnabled else { return nil }
+        let host = settings.upstreamProxyHost.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !host.isEmpty, (1...65535).contains(settings.upstreamProxyPort) else { return nil }
+        return UpstreamProxy(host: host, port: settings.upstreamProxyPort)
+    }
+
+    /// Reads the web proxy of the first active network service via `networksetup`.
+    private static func systemHTTPProxy() -> (host: String, port: Int)? {
+        guard let services = try? ProcessRunner.run("/usr/sbin/networksetup", ["-listallnetworkservices"]) else {
+            return nil
+        }
+        let candidates = services.stdout
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("An asterisk") && !$0.hasPrefix("*") }
+        for service in candidates {
+            guard let result = try? ProcessRunner.run("/usr/sbin/networksetup", ["-getwebproxy", service]) else {
+                continue
+            }
+            var enabled = false
+            var host = ""
+            var port = 0
+            for line in result.stdout.split(separator: "\n") {
+                let parts = line.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+                guard parts.count == 2 else { continue }
+                switch parts[0] {
+                case "Enabled": enabled = parts[1].lowercased() == "yes"
+                case "Server": host = parts[1]
+                case "Port": port = Int(parts[1]) ?? 0
+                default: break
+                }
+            }
+            if enabled, !host.isEmpty, (1...65535).contains(port) {
+                return (host, port)
+            }
+        }
+        return nil
     }
 
     func applySSLProxying(_ enabled: Bool) {

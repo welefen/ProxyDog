@@ -54,6 +54,10 @@ final class ProxyServer: @unchecked Sendable {
     var port: Int
     var sslProxyingEnabled: Bool
 
+    /// When set, every outbound connection is tunnelled through this HTTP CONNECT proxy
+    /// (e.g. a local VPN client) instead of connecting to the target directly.
+    var upstreamProxy: UpstreamProxy?
+
     private(set) var status: Status = .stopped
 
     let sink: CaptureSink
@@ -116,6 +120,11 @@ final class ProxyServer: @unchecked Sendable {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         let sink = self.sink
         let certificateAuthority = certificateAuthority
+        // Read the upstream proxy lazily per accepted connection so a running server picks
+        // up a changed value for newly opened exchanges (AppState also restarts on changes).
+        let upstreamProxyProvider: @Sendable () -> UpstreamProxy? = { [weak self] in
+            self?.upstreamProxy
+        }
         let bootstrap = ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .serverChannelOption(ChannelOptions.backlog, value: 128)
@@ -125,7 +134,8 @@ final class ProxyServer: @unchecked Sendable {
                 let handler = ProxyFrontendHandler(
                     sink: sink,
                     certificateAuthority: certificateAuthority,
-                    sslProxyingEnabled: sslEnabled
+                    sslProxyingEnabled: sslEnabled,
+                    upstreamProxyProvider: upstreamProxyProvider
                 )
                 return channel.pipeline.addHandler(handler)
             }

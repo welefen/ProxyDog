@@ -16,6 +16,12 @@ struct SettingsView: View {
     @State private var portError: String?
     @FocusState private var portFocused: Bool
 
+    @State private var upstreamHostText: String = ""
+    @State private var upstreamPortText: String = ""
+    @State private var upstreamError: String?
+    @FocusState private var upstreamHostFocused: Bool
+    @FocusState private var upstreamPortFocused: Bool
+
     @State private var language: AppLanguage = AppLanguage.stored
 
     var body: some View {
@@ -33,7 +39,7 @@ struct SettingsView: View {
             }
             versionFooter
         }
-        .frame(width: 560, height: 600)
+        .frame(width: 560, height: 740)
         .onAppear {
             syncFromSettings()
             // Do not steal keyboard focus into the port field when the pane opens.
@@ -45,6 +51,14 @@ struct SettingsView: View {
         }
         .onChange(of: settings.port) { _, newValue in
             if !portFocused { portText = String(newValue) }
+        }
+        .onChange(of: settings.upstreamProxyHost) { _, newValue in
+            if !upstreamHostFocused { upstreamHostText = newValue }
+        }
+        .onChange(of: settings.upstreamProxyPort) { _, newValue in
+            if !upstreamPortFocused {
+                upstreamPortText = newValue > 0 ? String(newValue) : ""
+            }
         }
     }
 
@@ -119,6 +133,66 @@ struct SettingsView: View {
                 .tint(DSColor.accent)
                 .disabled(!state.isProxyRunning)
                 .accessibilityLabel("Set as System Proxy")
+            }
+            SettingsHairline()
+            SettingsRow(
+                title: "Upstream proxy",
+                hint: "Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts."
+            ) {
+                Toggle("", isOn: Binding(
+                    get: { settings.upstreamProxyEnabled },
+                    set: { setUpstreamEnabled($0) }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .tint(DSColor.accent)
+                .accessibilityLabel("Upstream proxy")
+            }
+            SettingsHairline()
+            SettingsRow(
+                title: "Upstream address",
+                errorText: upstreamError
+            ) {
+                HStack(spacing: DS.Space.x2) {
+                    TextField("127.0.0.1", text: $upstreamHostText)
+                        .textFieldStyle(.plain)
+                        .font(DS.Typography.mono(12))
+                        .foregroundStyle(DSColor.textPrimary)
+                        .focused($upstreamHostFocused)
+                        .frame(width: 132)
+                        .padding(.horizontal, DS.Space.x2)
+                        .padding(.vertical, 5)
+                        .background(fieldBackground(isFocused: upstreamHostFocused))
+                        .onSubmit(commitUpstreamAddress)
+                        .onChange(of: upstreamHostFocused) { _, focused in
+                            if !focused { commitUpstreamAddress() }
+                        }
+                    TextField("8080", text: $upstreamPortText)
+                        .textFieldStyle(.plain)
+                        .font(DS.Typography.mono(12))
+                        .foregroundStyle(DSColor.textPrimary)
+                        .multilineTextAlignment(.trailing)
+                        .focused($upstreamPortFocused)
+                        .frame(width: 56)
+                        .padding(.horizontal, DS.Space.x2)
+                        .padding(.vertical, 5)
+                        .background(fieldBackground(isFocused: upstreamPortFocused))
+                        .onSubmit(commitUpstreamAddress)
+                        .onChange(of: upstreamPortText) { _, newValue in
+                            let filtered = String(newValue.filter(\.isNumber).prefix(5))
+                            if filtered != newValue { upstreamPortText = filtered }
+                        }
+                        .onChange(of: upstreamPortFocused) { _, focused in
+                            if !focused { commitUpstreamAddress() }
+                        }
+                    SettingsIconButton(
+                        systemName: "arrow.down.to.line",
+                        help: "Fill from system proxy",
+                        action: fillUpstreamFromSystem
+                    )
+                }
+                .disabled(!upstreamAddressAvailable)
             }
             SettingsHairline()
             SettingsRow(
@@ -284,6 +358,9 @@ struct SettingsView: View {
     private func syncFromSettings() {
         portText = String(settings.port)
         portError = nil
+        upstreamHostText = settings.upstreamProxyHost
+        upstreamPortText = settings.upstreamProxyPort > 0 ? String(settings.upstreamProxyPort) : ""
+        upstreamError = nil
         language = AppLanguage.stored
         state.refreshCertificateStatus()
         state.refreshSystemProxyState()
@@ -300,6 +377,82 @@ struct SettingsView: View {
         portText = String(port)
         if port != settings.port {
             state.applyPort(port)
+        }
+    }
+
+    // MARK: - Upstream proxy
+
+    /// The address row is editable while upstream proxying is on, and also while a
+    /// validation error is on screen so the user can correct an invalid configuration.
+    private var upstreamAddressAvailable: Bool {
+        settings.upstreamProxyEnabled || upstreamError != nil
+    }
+
+    private var parsedUpstreamPort: Int {
+        Int(upstreamPortText.trimmingCharacters(in: .whitespaces)) ?? 0
+    }
+
+    private func setUpstreamEnabled(_ enabled: Bool) {
+        upstreamHostFocused = false
+        upstreamPortFocused = false
+
+        if enabled {
+            if let error = state.applyUpstreamProxy(enabled: true, host: upstreamHostText, port: parsedUpstreamPort) {
+                // Nothing is applied on failure, so the switch falls back to off.
+                upstreamError = error
+                return
+            }
+            upstreamError = nil
+            syncUpstreamText()
+        } else {
+            _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: parsedUpstreamPort)
+            upstreamError = nil
+            syncUpstreamText()
+        }
+    }
+
+    private func commitUpstreamAddress() {
+        guard upstreamAddressAvailable else { return }
+        let port = parsedUpstreamPort
+        if let error = state.applyUpstreamProxy(enabled: true, host: upstreamHostText, port: port) {
+            upstreamError = error
+            if settings.upstreamProxyEnabled {
+                // Never leave an invalid configuration switched on.
+                _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: port)
+            }
+            return
+        }
+        upstreamError = nil
+        syncUpstreamText()
+    }
+
+    private func fillUpstreamFromSystem() {
+        upstreamHostFocused = false
+        upstreamPortFocused = false
+        guard state.detectUpstreamProxyFromSystem() else { return }
+
+        upstreamHostText = state.settings.upstreamProxyHost
+        upstreamPortText = state.settings.upstreamProxyPort > 0 ? String(state.settings.upstreamProxyPort) : ""
+
+        guard upstreamAddressAvailable else { return }
+        if let error = state.applyUpstreamProxy(
+            enabled: true,
+            host: upstreamHostText,
+            port: state.settings.upstreamProxyPort
+        ) {
+            upstreamError = error
+            // Keep the pane consistent: an invalid detected address never stays enabled.
+            _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: state.settings.upstreamProxyPort)
+        } else {
+            upstreamError = nil
+            syncUpstreamText()
+        }
+    }
+
+    private func syncUpstreamText() {
+        upstreamHostText = settings.upstreamProxyHost
+        if settings.upstreamProxyPort > 0 {
+            upstreamPortText = String(settings.upstreamProxyPort)
         }
     }
 
