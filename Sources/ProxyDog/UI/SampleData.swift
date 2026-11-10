@@ -456,7 +456,7 @@ enum SampleTraffic {
                 ("User-Agent", "ProxyDog/1.0 (macOS 14.4)"),
                 ("Accept", "application/vnd.github+json"),
                 ("Accept-Encoding", "gzip, deflate, br"),
-                ("Authorization", "Bearer ghp_x9K4mQ2rT7vB1nL8sW3cY6pD5fH0jA2e"),
+                ("Authorization", "Bearer demo-token-not-a-real-secret"),
                 ("X-GitHub-Api-Version", "2022-11-28"),
             ]),
             responseHeaders: headers([
