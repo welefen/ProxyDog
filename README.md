@@ -38,9 +38,9 @@ WebSocket 消息：101 握手、双向消息列表、载荷（文本/JSON/二进
 
 ![设置](Docs/screenshots/settings.png)
 
-首次启动向导：安装根证书、确认代理地址、设置系统代理。
+首次启动：一页完成根证书信任、代理地址确认与系统代理设置。
 
-![首次启动向导](Docs/screenshots/onboarding.png)
+![首次启动](Docs/screenshots/onboarding.png)
 
 ## 语言
 
@@ -68,7 +68,7 @@ WebSocket 消息：101 握手、双向消息列表、载荷（文本/JSON/二进
 ## 使用
 
 1. 启动后代理自动监听 `127.0.0.1:8888`（可在设置中修改端口）。
-2. 首次启动向导中安装 ProxyDog 根证书，否则 HTTPS 流量只能看到 CONNECT 隧道。
+2. 首次启动页中安装 ProxyDog 根证书，否则 HTTPS 流量只能看到 CONNECT 隧道。
 3. 打开设置页的「System proxy」，或手动把客户端代理指向 `127.0.0.1:8888`。
 4. 用 curl 验证：
 
@@ -133,7 +133,7 @@ curl --socks5-hostname 127.0.0.1:8889 https://example.com/
 
 ## 数据埋点
 
-埋点使用 Aptabase。App Key 只在**开发构建时**配置一次：`Support/AppConfig.plist` 中的 `AptabaseAppKey` 由 `scripts/build_app.sh` 注入到 App 包的 `Info.plist`，最终用户的设置页和首次启动向导里都没有 Key 输入项。该文件不提交到仓库，留空则埋点完全关闭。
+埋点使用 Aptabase。App Key 只在**开发构建时**配置一次：`Support/AppConfig.plist` 中的 `AptabaseAppKey` 由 `scripts/build_app.sh` 注入到 App 包的 `Info.plist`，最终用户的设置页和首次启动页里都没有 Key 输入项。该文件不提交到仓库，留空则埋点完全关闭。
 
 事件只包含启动、开始/停止代理、导出等行为与操作系统版本等基础信息，不含任何请求内容，因此不提供隐私协议页面。调试时也可以用环境变量 `PROXYDOG_APTABASE_KEY` 或启动参数 `--aptabase-key` 临时覆盖。
 
@@ -146,7 +146,7 @@ Sources/ProxyDog/
 ├── main.swift               # 正常启动 / --headless 分流
 ├── Models/                  # 抓包数据模型、存储、设置、构建期配置、HAR、埋点
 ├── Core/                    # NIO 代理引擎、证书颁发、系统代理
-├── UI/                      # 主窗口、设置页、首次启动向导、设计系统
+├── UI/                      # 主窗口、设置页、首次启动页、设计系统
 └── Dev/                     # headless 运行与自检
 scripts/                     # 构建、运行、测试、截图、图标、演示流量
 Support/                     # Info.plist、应用图标、AppConfig.plist(.example)

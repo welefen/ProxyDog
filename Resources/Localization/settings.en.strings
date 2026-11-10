@@ -46,13 +46,13 @@
 "Not trusted" = "Not trusted";
 "Remove certificate trust" = "Remove certificate trust";
 "Install root certificate" = "Install root certificate";
+"Refresh certificate" = "Refresh certificate";
 "Export root certificate" = "Export root certificate";
 
 /* Settings · analytics */
 
 /* Onboarding · welcome */
 "Welcome to ProxyDog" = "Welcome to ProxyDog";
-"Inspect the HTTP and HTTPS traffic flowing through your Mac and the apps running on it." = "Inspect the HTTP and HTTPS traffic flowing through your Mac and the apps running on it.";
 "Local HTTPS interception through a root certificate" = "Local HTTPS interception through a root certificate";
 "Captured traffic stays on this Mac" = "Captured traffic stays on this Mac";
 "Copy as curl or export as HAR" = "Copy as curl or export as HAR";
@@ -62,21 +62,15 @@
 "ProxyDog decrypts HTTPS with a local root certificate. macOS has to trust it before encrypted traffic can be inspected." = "ProxyDog decrypts HTTPS with a local root certificate. macOS has to trust it before encrypted traffic can be inspected.";
 "You can remove the certificate at any time in Settings." = "You can remove the certificate at any time in Settings.";
 
-/* Onboarding · analytics */
-
 /* Onboarding · ready */
-"You are all set" = "You are all set";
-"Point an app or device at the address below, or route this Mac through the system proxy." = "Point an app or device at the address below, or route this Mac through the system proxy.";
+"Get started" = "Get started";
+
 "Proxy address" = "Proxy address";
 "Copy proxy address" = "Copy proxy address";
 "HTTPS traffic stays encrypted until the root certificate is trusted." = "HTTPS traffic stays encrypted until the root certificate is trusted.";
 "The proxy starts automatically when ProxyDog launches." = "The proxy starts automatically when ProxyDog launches.";
 
-/* Onboarding · chrome and navigation */
-"Back" = "Back";
+/* Onboarding · chrome and actions */
 "Close setup" = "Close setup";
 "Skip setup" = "Skip setup";
-"Skip" = "Skip";
-"Continue" = "Continue";
 "Done" = "Done";
-"Step %lld of %lld" = "Step %lld of %lld";

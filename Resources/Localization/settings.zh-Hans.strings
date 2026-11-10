@@ -46,13 +46,13 @@
 "Not trusted" = "未受信任";
 "Remove certificate trust" = "移除信任";
 "Install root certificate" = "安装根证书";
+"Refresh certificate" = "刷新证书";
 "Export root certificate" = "导出根证书";
 
 /* Settings · analytics */
 
 /* Onboarding · welcome */
 "Welcome to ProxyDog" = "欢迎使用 ProxyDog";
-"Inspect the HTTP and HTTPS traffic flowing through your Mac and the apps running on it." = "检查流经本机以及各类应用的 HTTP 和 HTTPS 流量。";
 "Local HTTPS interception through a root certificate" = "通过根证书在本地解密 HTTPS";
 "Captured traffic stays on this Mac" = "抓取到的流量仅保留在本机";
 "Copy as curl or export as HAR" = "可复制为 curl 或导出 HAR";
@@ -62,21 +62,15 @@
 "ProxyDog decrypts HTTPS with a local root certificate. macOS has to trust it before encrypted traffic can be inspected." = "ProxyDog 使用本地根证书解密 HTTPS。需先在 macOS 中信任该证书，才能检查加密流量。";
 "You can remove the certificate at any time in Settings." = "之后可随时在设置中移除该证书。";
 
-/* Onboarding · analytics */
-
 /* Onboarding · ready */
-"You are all set" = "一切就绪";
-"Point an app or device at the address below, or route this Mac through the system proxy." = "将应用或设备指向下方地址，或将本机流量接入系统代理。";
+"Get started" = "开始使用";
+
 "Proxy address" = "代理地址";
 "Copy proxy address" = "复制代理地址";
 "HTTPS traffic stays encrypted until the root certificate is trusted." = "未信任根证书前，HTTPS 流量将保持加密。";
 "The proxy starts automatically when ProxyDog launches." = "代理会在 ProxyDog 启动时自动开启。";
 
-/* Onboarding · chrome and navigation */
-"Back" = "上一步";
+/* Onboarding · chrome and actions */
 "Close setup" = "关闭引导";
 "Skip setup" = "跳过引导";
-"Skip" = "跳过";
-"Continue" = "继续";
 "Done" = "完成";
-"Step %lld of %lld" = "第 %lld 步，共 %lld 步";
