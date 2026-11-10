@@ -367,7 +367,6 @@ private struct TrafficRowView: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .help(request.urlString)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
