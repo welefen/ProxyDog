@@ -15,11 +15,17 @@
 "Routes this Mac's HTTP and HTTPS traffic through ProxyDog." = "Routes this Mac's HTTP and HTTPS traffic through ProxyDog.";
 "Start the proxy to change this." = "Start the proxy to change this.";
 "Upstream proxy" = "Upstream proxy";
-"Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts." = "Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts.";
+"Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts." = "Sends outbound traffic through an existing HTTP or SOCKS5 proxy such as a VPN client. ProxyDog still captures and decrypts.";
 "Upstream address" = "Upstream address";
 "Fill from system proxy" = "Fill from system proxy";
 "Enter the host of the upstream proxy." = "Enter the host of the upstream proxy.";
 "The upstream proxy cannot be ProxyDog itself." = "The upstream proxy cannot be ProxyDog itself.";
+
+"SOCKS5 proxy" = "SOCKS5 proxy";
+"For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way." = "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way.";
+"SOCKS5 port" = "SOCKS5 port";
+"The SOCKS5 port must differ from the HTTP proxy port." = "The SOCKS5 port must differ from the HTTP proxy port.";
+"The SOCKS5 port must differ from the upstream proxy port." = "The SOCKS5 port must differ from the upstream proxy port.";
 
 "Proxy status" = "Proxy status";
 "Listens on the loopback interface only." = "Listens on the loopback interface only.";

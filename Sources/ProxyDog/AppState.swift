@@ -107,6 +107,7 @@ final class AppState: ObservableObject {
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
         proxy.upstreamProxy = upstreamProxyFromSettings()
+        proxy.socksPort = socksProxyFromSettings()
         proxyStatus = .starting
         proxy.start()
         Analytics.shared.track("proxy_started", properties: ["port": String(settings.port)])
@@ -136,6 +137,7 @@ final class AppState: ObservableObject {
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
         proxy.upstreamProxy = upstreamProxyFromSettings()
+        proxy.socksPort = socksProxyFromSettings()
         proxyStatus = .starting
         proxy.start()
     }
@@ -158,6 +160,11 @@ final class AppState: ObservableObject {
     /// the configuration is invalid (nothing is applied in that case).
     @discardableResult
     func applyUpstreamProxy(enabled: Bool, host: String, port: Int) -> String? {
+        applyUpstreamProxy(enabled: enabled, host: host, port: port, kind: settings.upstreamProxyKind)
+    }
+
+    @discardableResult
+    func applyUpstreamProxy(enabled: Bool, host: String, port: Int, kind: UpstreamProxyKind) -> String? {
         let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
         if enabled {
             guard !trimmedHost.isEmpty else {
@@ -166,8 +173,11 @@ final class AppState: ObservableObject {
             guard (1...65535).contains(port) else {
                 return String(localized: "Port must be between 1 and 65535.")
             }
-            let candidate = UpstreamProxy(host: trimmedHost, port: port)
+            let candidate = UpstreamProxy(kind: kind, host: trimmedHost, port: port)
             if candidate.isLoopback, candidate.port == settings.port {
+                return String(localized: "The upstream proxy cannot be ProxyDog itself.")
+            }
+            if candidate.isLoopback, settings.socksProxyEnabled, candidate.port == settings.socksProxyPort {
                 return String(localized: "The upstream proxy cannot be ProxyDog itself.")
             }
         }
@@ -175,10 +185,12 @@ final class AppState: ObservableObject {
         let changed = settings.upstreamProxyEnabled != enabled
             || settings.upstreamProxyHost != trimmedHost
             || settings.upstreamProxyPort != port
+            || settings.upstreamProxyKind != kind
 
         settings.upstreamProxyEnabled = enabled
         settings.upstreamProxyHost = trimmedHost
         settings.upstreamProxyPort = port
+        settings.upstreamProxyKind = kind
         proxy.upstreamProxy = upstreamProxyFromSettings()
 
         if changed, proxy.status.isRunning || proxyStatus.isRunning {
@@ -187,11 +199,50 @@ final class AppState: ObservableObject {
         return nil
     }
 
+    // MARK: - SOCKS5 listener
+
+    /// Enables/disables the extra SOCKS5 listener. Returns a localized error message when
+    /// the port is invalid or would collide with another ProxyDog listener.
+    @discardableResult
+    func applySocksProxy(enabled: Bool, port: Int) -> String? {
+        if enabled {
+            guard (1...65535).contains(port) else {
+                return String(localized: "Port must be between 1 and 65535.")
+            }
+            if port == settings.port {
+                return String(localized: "The SOCKS5 port must differ from the HTTP proxy port.")
+            }
+            if settings.upstreamProxyEnabled,
+               UpstreamProxy(host: settings.upstreamProxyHost, port: settings.upstreamProxyPort).isLoopback,
+               port == settings.upstreamProxyPort {
+                return String(localized: "The SOCKS5 port must differ from the upstream proxy port.")
+            }
+        }
+
+        let changed = settings.socksProxyEnabled != enabled || settings.socksProxyPort != port
+        settings.socksProxyEnabled = enabled
+        settings.socksProxyPort = port
+        proxy.socksPort = socksProxyFromSettings()
+
+        if changed, proxy.status.isRunning || proxyStatus.isRunning {
+            restartProxy()
+        }
+        return nil
+    }
+
+    /// Port of the SOCKS5 listener derived from settings, nil when disabled.
+    func socksProxyFromSettings() -> Int? {
+        guard settings.socksProxyEnabled else { return nil }
+        guard (1...65535).contains(settings.socksProxyPort) else { return nil }
+        return settings.socksProxyPort
+    }
+
     /// Reads the current macOS system proxy and fills in the upstream fields. This is the
     /// "reuse the proxy/VPN that is already running" shortcut.
     @discardableResult
     func detectUpstreamProxyFromSystem() -> Bool {
         guard let detected = Self.systemHTTPProxy() else { return false }
+        settings.upstreamProxyKind = .httpConnect
         settings.upstreamProxyHost = detected.host
         settings.upstreamProxyPort = detected.port
         return true
@@ -202,7 +253,11 @@ final class AppState: ObservableObject {
         guard settings.upstreamProxyEnabled else { return nil }
         let host = settings.upstreamProxyHost.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !host.isEmpty, (1...65535).contains(settings.upstreamProxyPort) else { return nil }
-        return UpstreamProxy(host: host, port: settings.upstreamProxyPort)
+        return UpstreamProxy(
+            kind: settings.upstreamProxyKind,
+            host: host,
+            port: settings.upstreamProxyPort
+        )
     }
 
     /// Reads the web proxy of the first active network service via `networksetup`.

@@ -552,7 +552,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             .flatMap { channel.pipeline.addHandler(clientPipe) }
             .flatMap { channel.pipeline.removeHandler(frontend) }
             .flatMap { _ in
-                frontend.connectTunnelChannel(eventLoop: channel.eventLoop, host: host, port: port, proxy: proxy)
+                ProxyOutboundConnector.connect(eventLoop: channel.eventLoop, host: host, port: port, proxy: proxy)
             }
             .flatMap { (upstream: Channel, targetLeftover: ByteBuffer) -> EventLoopFuture<Void> in
                 let serverPipe = TunnelPipeHandler(allocator: upstream.allocator)
@@ -592,11 +592,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             .whenFailure { error in
                 let message: String
                 if let proxy {
-                    if let proxyError = error as? ProxyError {
-                        message = proxyError.localizedDescription
-                    } else {
-                        message = "Upstream proxy \(proxy.displayName) could not be reached: \(ProxyWire.readableError(error))"
-                    }
+                    message = ProxyOutboundConnector.connectionFailureMessage(error, proxy: proxy)
                 } else {
                     message = ProxyWire.readableError(error)
                 }
@@ -622,38 +618,6 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
 
     // MARK: Helpers
 
-    /// Connects to a raw tunnel target directly, or through the upstream HTTP proxy when set.
-    /// The returned buffer contains bytes the target sent immediately after the proxy's CONNECT
-    /// response head and must be forwarded to the client.
-    private func connectTunnelChannel(
-        eventLoop: EventLoop,
-        host: String,
-        port: Int,
-        proxy: UpstreamProxy?
-    ) -> EventLoopFuture<(Channel, ByteBuffer)> {
-        let bootstrap = ClientBootstrap(group: eventLoop)
-            .channelOption(ChannelOptions.socketOption(.tcp_nodelay), value: 1)
-            .connectTimeout(.seconds(20))
-
-        if let proxy {
-            return bootstrap.connect(host: proxy.host, port: proxy.port)
-                .flatMap { (proxyChannel: Channel) -> EventLoopFuture<(Channel, ByteBuffer)> in
-                    let handshake = UpstreamConnectHandshakeHandler(
-                        proxy: proxy,
-                        targetHost: host,
-                        targetPort: port,
-                        eventLoop: proxyChannel.eventLoop
-                    )
-                    return proxyChannel.pipeline.addHandler(handshake).flatMap {
-                        handshake.future.map { leftover in (proxyChannel, leftover) }
-                    }
-                }
-        }
-        return bootstrap.connect(host: host, port: port).map { channel in
-            (channel, ByteBufferAllocator().buffer(capacity: 0))
-        }
-    }
-
     private func respondRaw(context: ChannelHandlerContext, head: String) {
         var output = context.channel.allocator.buffer(capacity: head.utf8.count)
         output.writeString(head)
@@ -674,7 +638,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
 ///
 /// `ByteToMessageHandler`/`HTTPDecoder` instances are single-use, so this class (and every
 /// handler added afterwards) is created per candidate channel, never shared.
-final class UpstreamConnectHandshakeHandler: ChannelInboundHandler, RemovableChannelHandler, @unchecked Sendable {
+final class UpstreamConnectHandshakeHandler: ChannelInboundHandler, RemovableChannelHandler, UpstreamTunnelHandshakeHandler, @unchecked Sendable {
     typealias InboundIn = ByteBuffer
 
     let proxy: UpstreamProxy
@@ -1160,22 +1124,12 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         let host = state.host
         let port = state.port
 
-        let bootstrap = ClientBootstrap(group: channel.eventLoop)
-            .channelOption(ChannelOptions.socketOption(.tcp_nodelay), value: 1)
-            .connectTimeout(.seconds(20))
-
-        bootstrap.connect(host: proxy.host, port: proxy.port)
-            .flatMap { (proxyChannel: Channel) -> EventLoopFuture<(Channel, ByteBuffer)> in
-                let handshake = UpstreamConnectHandshakeHandler(
-                    proxy: proxy,
-                    targetHost: host,
-                    targetPort: port,
-                    eventLoop: proxyChannel.eventLoop
-                )
-                return proxyChannel.pipeline.addHandler(handshake).flatMap {
-                    handshake.future.map { leftover in (proxyChannel, leftover) }
-                }
-            }
+        ProxyOutboundConnector.connect(
+            eventLoop: channel.eventLoop,
+            host: host,
+            port: port,
+            proxy: proxy
+        )
             .flatMap { (proxyChannel: Channel, leftover: ByteBuffer) -> EventLoopFuture<(Channel, UpstreamHTTPRelayHandler)> in
                 let handles = self.makeUpstreamHandles(state: state, head: head, clientChannel: channel)
 
@@ -1233,15 +1187,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
     }
 
     private static func describeUpstreamProxyFailure(_ error: Error, proxy: UpstreamProxy) -> String {
-        if let proxyError = error as? ProxyError {
-            switch proxyError {
-            case .upstreamProxyFailed(let message):
-                return message
-            default:
-                return proxyError.localizedDescription
-            }
-        }
-        return "Upstream proxy \(proxy.displayName) could not be reached: \(ProxyWire.readableError(error))"
+        ProxyOutboundConnector.connectionFailureMessage(error, proxy: proxy)
     }
 
     private func startUpstreamRequest(state: ExchangeState, head: HTTPRequestHead, upstream: Channel) {

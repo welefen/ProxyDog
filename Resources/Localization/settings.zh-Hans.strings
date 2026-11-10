@@ -15,11 +15,17 @@
 "Routes this Mac's HTTP and HTTPS traffic through ProxyDog." = "将本机的 HTTP 和 HTTPS 流量转发到 ProxyDog。";
 "Start the proxy to change this." = "启动代理后才能修改。";
 "Upstream proxy" = "上游代理";
-"Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts." = "通过已有的 HTTP 代理（例如 VPN 客户端）出站；ProxyDog 仍然负责抓包与解密。";
+"Sends outbound traffic through an existing HTTP proxy such as a VPN client. ProxyDog still captures and decrypts." = "通过已有的 HTTP / SOCKS5 代理（例如 VPN 客户端）出站；ProxyDog 仍然负责抓包与解密。";
 "Upstream address" = "上游地址";
 "Fill from system proxy" = "从系统代理填入";
 "Enter the host of the upstream proxy." = "请输入上游代理的主机地址。";
 "The upstream proxy cannot be ProxyDog itself." = "上游代理不能指向 ProxyDog 自身。";
+
+"SOCKS5 proxy" = "SOCKS5 代理";
+"For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way." = "给只支持 SOCKS5 的 App 使用，例如 Telegram；ProxyDog 同样会抓包并解密 HTTPS。";
+"SOCKS5 port" = "SOCKS5 端口";
+"The SOCKS5 port must differ from the HTTP proxy port." = "SOCKS5 端口必须与 HTTP 代理端口不同。";
+"The SOCKS5 port must differ from the upstream proxy port." = "SOCKS5 端口必须与上游代理端口不同。";
 
 "Proxy status" = "代理状态";
 "Listens on the loopback interface only." = "仅监听本机回环地址。";

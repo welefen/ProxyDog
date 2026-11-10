@@ -16,11 +16,16 @@ struct SettingsView: View {
     @State private var portError: String?
     @FocusState private var portFocused: Bool
 
+    @State private var upstreamKind: UpstreamProxyKind = .httpConnect
     @State private var upstreamHostText: String = ""
     @State private var upstreamPortText: String = ""
     @State private var upstreamError: String?
     @FocusState private var upstreamHostFocused: Bool
     @FocusState private var upstreamPortFocused: Bool
+
+    @State private var socksPortText: String = ""
+    @State private var socksError: String?
+    @FocusState private var socksPortFocused: Bool
 
     @State private var language: AppLanguage = AppLanguage.stored
 
@@ -39,7 +44,7 @@ struct SettingsView: View {
             }
             versionFooter
         }
-        .frame(width: 560, height: 740)
+        .frame(width: 560, height: 880)
         .onAppear {
             syncFromSettings()
             // Do not steal keyboard focus into the port field when the pane opens.
@@ -59,6 +64,12 @@ struct SettingsView: View {
             if !upstreamPortFocused {
                 upstreamPortText = newValue > 0 ? String(newValue) : ""
             }
+        }
+        .onChange(of: settings.upstreamProxyKind) { _, newValue in
+            if upstreamKind != newValue { upstreamKind = newValue }
+        }
+        .onChange(of: settings.socksProxyPort) { _, newValue in
+            if !socksPortFocused { socksPortText = String(newValue) }
         }
     }
 
@@ -155,12 +166,23 @@ struct SettingsView: View {
                 errorText: upstreamError
             ) {
                 HStack(spacing: DS.Space.x2) {
+                    Picker("", selection: $upstreamKind) {
+                        ForEach(UpstreamProxyKind.allCases) { kind in
+                            Text(kind.label).tag(kind)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(width: 84)
+                    .onChange(of: upstreamKind) { _, newValue in
+                        applyUpstreamKindChange(newValue)
+                    }
                     TextField("127.0.0.1", text: $upstreamHostText)
                         .textFieldStyle(.plain)
                         .font(DS.Typography.mono(12))
                         .foregroundStyle(DSColor.textPrimary)
                         .focused($upstreamHostFocused)
-                        .frame(width: 132)
+                        .frame(width: 104)
                         .padding(.horizontal, DS.Space.x2)
                         .padding(.vertical, 5)
                         .background(fieldBackground(isFocused: upstreamHostFocused))
@@ -168,6 +190,7 @@ struct SettingsView: View {
                         .onChange(of: upstreamHostFocused) { _, focused in
                             if !focused { commitUpstreamAddress() }
                         }
+                        .disabled(!upstreamAddressAvailable)
                     TextField("8080", text: $upstreamPortText)
                         .textFieldStyle(.plain)
                         .font(DS.Typography.mono(12))
@@ -186,13 +209,54 @@ struct SettingsView: View {
                         .onChange(of: upstreamPortFocused) { _, focused in
                             if !focused { commitUpstreamAddress() }
                         }
+                        .disabled(!upstreamAddressAvailable)
                     SettingsIconButton(
                         systemName: "arrow.down.to.line",
                         help: "Fill from system proxy",
                         action: fillUpstreamFromSystem
                     )
+                    .disabled(!upstreamAddressAvailable)
                 }
-                .disabled(!upstreamAddressAvailable)
+            }
+            SettingsHairline()
+            SettingsRow(
+                title: "SOCKS5 proxy",
+                hint: "For apps that only speak SOCKS5, e.g. Telegram. ProxyDog captures and decrypts the traffic the same way."
+            ) {
+                Toggle("", isOn: Binding(
+                    get: { settings.socksProxyEnabled },
+                    set: { setSocksEnabled($0) }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .tint(DSColor.accent)
+                .accessibilityLabel("SOCKS5 proxy")
+            }
+            SettingsHairline()
+            SettingsRow(
+                title: "SOCKS5 port",
+                errorText: socksError
+            ) {
+                TextField("8889", text: $socksPortText)
+                    .textFieldStyle(.plain)
+                    .font(DS.Typography.mono(12))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .multilineTextAlignment(.trailing)
+                    .focused($socksPortFocused)
+                    .frame(width: 56)
+                    .padding(.horizontal, DS.Space.x2)
+                    .padding(.vertical, 5)
+                    .background(fieldBackground(isFocused: socksPortFocused))
+                    .onSubmit(commitSocksPort)
+                    .onChange(of: socksPortText) { _, newValue in
+                        let filtered = String(newValue.filter(\.isNumber).prefix(5))
+                        if filtered != newValue { socksPortText = filtered }
+                    }
+                    .onChange(of: socksPortFocused) { _, focused in
+                        if !focused { commitSocksPort() }
+                    }
+                    .disabled(!socksAddressAvailable)
             }
             SettingsHairline()
             SettingsRow(
@@ -204,10 +268,18 @@ struct SettingsView: View {
                     Circle()
                         .fill(proxyStatusColor)
                         .frame(width: 6, height: 6)
-                    Text(proxyStatusText)
-                        .font(DS.Typography.mono(12))
-                        .foregroundStyle(state.proxyStatus.isRunning ? DSColor.textPrimary : DSColor.textSecondary)
-                        .monospacedDigit()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(proxyStatusText)
+                            .font(DS.Typography.mono(12))
+                            .foregroundStyle(state.proxyStatus.isRunning ? DSColor.textPrimary : DSColor.textSecondary)
+                            .monospacedDigit()
+                        if let socksPort = state.socksProxyFromSettings() {
+                            Text(verbatim: "SOCKS5 127.0.0.1:\(socksPort)")
+                                .font(DS.Typography.mono(11))
+                                .foregroundStyle(DSColor.textSecondary)
+                                .monospacedDigit()
+                        }
+                    }
                 }
             }
         }
@@ -358,9 +430,12 @@ struct SettingsView: View {
     private func syncFromSettings() {
         portText = String(settings.port)
         portError = nil
+        upstreamKind = settings.upstreamProxyKind
         upstreamHostText = settings.upstreamProxyHost
         upstreamPortText = settings.upstreamProxyPort > 0 ? String(settings.upstreamProxyPort) : ""
         upstreamError = nil
+        socksPortText = String(settings.socksProxyPort)
+        socksError = nil
         language = AppLanguage.stored
         state.refreshCertificateStatus()
         state.refreshSystemProxyState()
@@ -397,7 +472,12 @@ struct SettingsView: View {
         upstreamPortFocused = false
 
         if enabled {
-            if let error = state.applyUpstreamProxy(enabled: true, host: upstreamHostText, port: parsedUpstreamPort) {
+            if let error = state.applyUpstreamProxy(
+                enabled: true,
+                host: upstreamHostText,
+                port: parsedUpstreamPort,
+                kind: upstreamKind
+            ) {
                 // Nothing is applied on failure, so the switch falls back to off.
                 upstreamError = error
                 return
@@ -405,20 +485,49 @@ struct SettingsView: View {
             upstreamError = nil
             syncUpstreamText()
         } else {
-            _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: parsedUpstreamPort)
+            _ = state.applyUpstreamProxy(
+                enabled: false,
+                host: upstreamHostText,
+                port: parsedUpstreamPort,
+                kind: upstreamKind
+            )
             upstreamError = nil
             syncUpstreamText()
         }
     }
 
+    private func applyUpstreamKindChange(_ kind: UpstreamProxyKind) {
+        let port = parsedUpstreamPort
+        if let error = state.applyUpstreamProxy(
+            enabled: settings.upstreamProxyEnabled,
+            host: upstreamHostText,
+            port: port,
+            kind: kind
+        ) {
+            upstreamError = error
+            upstreamKind = settings.upstreamProxyKind
+            if settings.upstreamProxyEnabled {
+                _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: port, kind: kind)
+            }
+            return
+        }
+        upstreamError = nil
+        syncUpstreamText()
+    }
+
     private func commitUpstreamAddress() {
         guard upstreamAddressAvailable else { return }
         let port = parsedUpstreamPort
-        if let error = state.applyUpstreamProxy(enabled: true, host: upstreamHostText, port: port) {
+        if let error = state.applyUpstreamProxy(
+            enabled: true,
+            host: upstreamHostText,
+            port: port,
+            kind: upstreamKind
+        ) {
             upstreamError = error
             if settings.upstreamProxyEnabled {
                 // Never leave an invalid configuration switched on.
-                _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: port)
+                _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: port, kind: upstreamKind)
             }
             return
         }
@@ -431,6 +540,7 @@ struct SettingsView: View {
         upstreamPortFocused = false
         guard state.detectUpstreamProxyFromSystem() else { return }
 
+        upstreamKind = state.settings.upstreamProxyKind
         upstreamHostText = state.settings.upstreamProxyHost
         upstreamPortText = state.settings.upstreamProxyPort > 0 ? String(state.settings.upstreamProxyPort) : ""
 
@@ -438,11 +548,12 @@ struct SettingsView: View {
         if let error = state.applyUpstreamProxy(
             enabled: true,
             host: upstreamHostText,
-            port: state.settings.upstreamProxyPort
+            port: state.settings.upstreamProxyPort,
+            kind: upstreamKind
         ) {
             upstreamError = error
             // Keep the pane consistent: an invalid detected address never stays enabled.
-            _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: state.settings.upstreamProxyPort)
+            _ = state.applyUpstreamProxy(enabled: false, host: upstreamHostText, port: state.settings.upstreamProxyPort, kind: upstreamKind)
         } else {
             upstreamError = nil
             syncUpstreamText()
@@ -450,10 +561,50 @@ struct SettingsView: View {
     }
 
     private func syncUpstreamText() {
+        upstreamKind = settings.upstreamProxyKind
         upstreamHostText = settings.upstreamProxyHost
         if settings.upstreamProxyPort > 0 {
             upstreamPortText = String(settings.upstreamProxyPort)
         }
+    }
+
+    // MARK: - SOCKS5 listener
+
+    private var socksAddressAvailable: Bool {
+        settings.socksProxyEnabled || socksError != nil
+    }
+
+    private var parsedSocksPort: Int {
+        Int(socksPortText.trimmingCharacters(in: .whitespaces)) ?? 0
+    }
+
+    private func setSocksEnabled(_ enabled: Bool) {
+        socksPortFocused = false
+        if let error = state.applySocksProxy(enabled: enabled, port: parsedSocksPort) {
+            socksError = error
+            return
+        }
+        socksError = nil
+        syncSocksText()
+    }
+
+    private func commitSocksPort() {
+        guard socksAddressAvailable else { return }
+        let port = parsedSocksPort
+        if let error = state.applySocksProxy(enabled: true, port: port) {
+            socksError = error
+            if settings.socksProxyEnabled {
+                // Never leave an invalid configuration switched on.
+                _ = state.applySocksProxy(enabled: false, port: port)
+            }
+            return
+        }
+        socksError = nil
+        syncSocksText()
+    }
+
+    private func syncSocksText() {
+        socksPortText = String(settings.socksProxyPort)
     }
 
     private func fieldBackground(isFocused: Bool) -> some View {

@@ -15,6 +15,7 @@ enum AppInfo {
 /// Layout / product constants shared by the UI.
 enum AppDefaults {
     static let proxyPort = 8888
+    static let socksPort = 8889
     static let maxCapturedRequests = 2_000
     static let maxBodyBytes = 2 * 1024 * 1024
     static let defaultWindowWidth: CGFloat = 1280

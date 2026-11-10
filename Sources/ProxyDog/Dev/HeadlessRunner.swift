@@ -60,6 +60,7 @@ enum HeadlessRunner {
         let outputPath = flagValue("--out")
         let sslEnabled = !arguments.contains("--no-ssl")
         let upstream = flagValue("--upstream").flatMap { UpstreamProxy(string: $0) }
+        let socksPort = Int(flagValue("--socks-port") ?? "")
         let exitAfter = Double(flagValue("--exit-after") ?? "")
 
         if arguments.contains("--selftest") {
@@ -82,8 +83,12 @@ enum HeadlessRunner {
             certificateAuthority: ca
         )
         server.upstreamProxy = upstream
+        server.socksPort = socksPort
         if let upstream {
             print("{\"type\":\"upstream\",\"proxy\":\"\(upstream.displayName)\"}")
+        }
+        if let socksPort {
+            print("{\"type\":\"socks\",\"port\":\(socksPort)}")
         }
         server.onStatusChange = { status in
             let value: String

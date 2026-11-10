@@ -38,6 +38,9 @@ final class AppSettings: ObservableObject {
         static let upstreamEnabled = "proxy.upstreamEnabled"
         static let upstreamHost = "proxy.upstreamHost"
         static let upstreamPort = "proxy.upstreamPort"
+        static let upstreamKind = "proxy.upstreamKind"
+        static let socksEnabled = "proxy.socksEnabled"
+        static let socksPort = "proxy.socksPort"
     }
 
     private let defaults: UserDefaults
@@ -75,6 +78,19 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(upstreamProxyPort, forKey: Key.upstreamPort) }
     }
 
+    @Published var upstreamProxyKind: UpstreamProxyKind {
+        didSet { defaults.set(upstreamProxyKind.rawValue, forKey: Key.upstreamKind) }
+    }
+
+    /// Extra SOCKS5 listener so apps that only speak SOCKS5 can be inspected.
+    @Published var socksProxyEnabled: Bool {
+        didSet { defaults.set(socksProxyEnabled, forKey: Key.socksEnabled) }
+    }
+
+    @Published var socksProxyPort: Int {
+        didSet { defaults.set(socksProxyPort, forKey: Key.socksPort) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let storedPort = defaults.integer(forKey: Key.port)
@@ -86,5 +102,9 @@ final class AppSettings: ObservableObject {
         self.upstreamProxyEnabled = defaults.bool(forKey: Key.upstreamEnabled)
         self.upstreamProxyHost = defaults.string(forKey: Key.upstreamHost) ?? ""
         self.upstreamProxyPort = defaults.integer(forKey: Key.upstreamPort)
+        self.upstreamProxyKind = UpstreamProxyKind(rawValue: defaults.string(forKey: Key.upstreamKind) ?? "") ?? .httpConnect
+        self.socksProxyEnabled = defaults.object(forKey: Key.socksEnabled) as? Bool ?? false
+        let storedSocksPort = defaults.integer(forKey: Key.socksPort)
+        self.socksProxyPort = storedSocksPort > 0 ? storedSocksPort : AppDefaults.socksPort
     }
 }

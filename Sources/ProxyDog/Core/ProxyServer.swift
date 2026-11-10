@@ -54,9 +54,13 @@ final class ProxyServer: @unchecked Sendable {
     var port: Int
     var sslProxyingEnabled: Bool
 
-    /// When set, every outbound connection is tunnelled through this HTTP CONNECT proxy
+    /// When set, every outbound connection is tunnelled through this proxy
     /// (e.g. a local VPN client) instead of connecting to the target directly.
     var upstreamProxy: UpstreamProxy?
+
+    /// When set, ProxyDog also accepts SOCKS5 clients on 127.0.0.1:<socksPort> and
+    /// intercepts their traffic the same way it does for HTTP-proxy clients.
+    var socksPort: Int?
 
     private(set) var status: Status = .stopped
 
@@ -70,6 +74,7 @@ final class ProxyServer: @unchecked Sendable {
     private var generation: Int = 0
     private var loopGroup: MultiThreadedEventLoopGroup?
     private var serverChannel: Channel?
+    private var socksListenerChannel: Channel?
 
     init(port: Int, sslProxyingEnabled: Bool, sink: CaptureSink, certificateAuthority: CertificateAuthority = .shared) {
         self.port = port
@@ -88,10 +93,16 @@ final class ProxyServer: @unchecked Sendable {
 
         let bindPort = port
         let sslEnabled = sslProxyingEnabled
+        let socksBindPort = socksPort
         postStatus(.starting)
 
         lifecycleQueue.async { [weak self] in
-            self?.performStart(generation: requestGeneration, port: bindPort, sslEnabled: sslEnabled)
+            self?.performStart(
+                generation: requestGeneration,
+                port: bindPort,
+                sslEnabled: sslEnabled,
+                socksPort: socksBindPort
+            )
         }
     }
 
@@ -109,7 +120,7 @@ final class ProxyServer: @unchecked Sendable {
 
     // MARK: - Lifecycle implementation (runs on `lifecycleQueue`)
 
-    private func performStart(generation requestGeneration: Int, port bindPort: Int, sslEnabled: Bool) {
+    private func performStart(generation requestGeneration: Int, port bindPort: Int, sslEnabled: Bool, socksPort socksBindPort: Int?) {
         guard isCurrent(generation: requestGeneration) else { return }
 
         // Tear down any previous listener first (restart support, including port changes).
@@ -150,7 +161,41 @@ final class ProxyServer: @unchecked Sendable {
                 return
             }
 
+            // Optional second listener: SOCKS5 clients on 127.0.0.1:<socksPort>.
+            var socksChannel: Channel?
+            if let socksBindPort {
+                let socksBootstrap = ServerBootstrap(group: group)
+                    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                    .serverChannelOption(ChannelOptions.backlog, value: 128)
+                    .childChannelOption(ChannelOptions.socketOption(.tcp_nodelay), value: 1)
+                    .childChannelOption(ChannelOptions.autoRead, value: true)
+                    .childChannelInitializer { socksChannel in
+                        let handler = SOCKS5ListenerHandler(
+                            sink: sink,
+                            certificateAuthority: certificateAuthority,
+                            upstreamProxyProvider: upstreamProxyProvider
+                        )
+                        return socksChannel.pipeline.addHandler(handler)
+                    }
+                do {
+                    socksChannel = try socksBootstrap.bind(host: "127.0.0.1", port: socksBindPort).wait()
+                } catch {
+                    try? channel.close().wait()
+                    try? group.syncShutdownGracefully()
+                    guard isCurrent(generation: requestGeneration) else { return }
+                    postStatus(.failed(Self.describeSocksBindError(error, port: socksBindPort)))
+                    return
+                }
+                guard isCurrent(generation: requestGeneration) else {
+                    try? socksChannel?.close().wait()
+                    try? channel.close().wait()
+                    try? group.syncShutdownGracefully()
+                    return
+                }
+            }
+
             serverChannel = channel
+            socksListenerChannel = socksChannel
             loopGroup = group
             postStatus(.running(port: bindPort))
         } catch {
@@ -166,6 +211,10 @@ final class ProxyServer: @unchecked Sendable {
     }
 
     private func tearDownLocked() {
+        if let socksChannel = socksListenerChannel {
+            socksListenerChannel = nil
+            try? socksChannel.close().wait()
+        }
         if let channel = serverChannel {
             serverChannel = nil
             try? channel.close().wait()
@@ -206,5 +255,19 @@ final class ProxyServer: @unchecked Sendable {
             return "Timed out while starting the proxy on 127.0.0.1:\(port)."
         }
         return "Could not start the proxy on 127.0.0.1:\(port): \(error)"
+    }
+
+    private static func describeSocksBindError(_ error: Error, port: Int) -> String {
+        if let ioError = error as? IOError {
+            switch ioError.errnoCode {
+            case EADDRINUSE:
+                return "SOCKS5 port \(port) is already in use. Choose a different port."
+            case EACCES:
+                return "No permission to listen on SOCKS5 port \(port)."
+            default:
+                return "Could not start the SOCKS5 listener on 127.0.0.1:\(port) (errno \(ioError.errnoCode))."
+            }
+        }
+        return "Could not start the SOCKS5 listener on 127.0.0.1:\(port): \(error)"
     }
 }

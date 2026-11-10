@@ -10,7 +10,8 @@
 - **检索与清理**：全文搜索、按域名过滤、暂停/恢复抓包、清空、单条删除、收藏。
 - **导出**：HAR 1.2 文件导出、复制为 cURL。
 - **系统代理**：一键设置/关闭 macOS 系统 HTTP/HTTPS 代理（需要管理员授权）。
-- **上游代理（代理链）**：出站流量可以再交给已有的 HTTP 代理（例如本机正在运行的 VPN 客户端），抓包解密与 VPN 出网同时生效。
+- **上游代理（代理链）**：出站流量可以再交给已有的 HTTP CONNECT 或 SOCKS5 代理（例如本机正在运行的 VPN 客户端），抓包解密与 VPN 出网同时生效。
+- **SOCKS5 代理端口**：额外监听 `127.0.0.1:8889`（可修改），只支持 SOCKS5 的 App（如 Telegram）也能指向 ProxyDog 被抓包、解密。
 - **外观与语言**：浅色为默认设计，完整支持深色模式，默认跟随系统；界面内置简体中文与 English，默认跟随系统语言，可在设置中切换（切换后自动重启生效）。
 - **数据埋点**：使用 Aptabase，App Key 由开发者在构建时配置一次（`Support/AppConfig.plist`，不随仓库提交），最终用户无需填写；不采集任何请求内容。
 
@@ -24,7 +25,7 @@ Body 详情：JSON 树与 Pretty/Raw 切换。
 
 ![请求详情](Docs/screenshots/request-body.png)
 
-设置页：连接（端口、SSL 解密、系统代理、上游代理/代理链）、外观（主题与语言）、证书，底部显示版本号。
+设置页：连接（端口、SSL 解密、系统代理、上游代理/代理链、SOCKS5 端口）、外观（主题与语言）、证书，底部显示版本号。
 
 ![设置](Docs/screenshots/settings.png)
 
@@ -73,18 +74,31 @@ curl -x http://127.0.0.1:8888 https://example.com/    # 未安装根证书时 cu
 
 系统里已经开着一个代理（VPN 客户端、Clash/Surge 之类）时，不需要关掉它：ProxyDog 支持设置**上游代理**，把出站流量再链给它。
 
-1. 打开 设置 → 连接 → 上游代理，点「从系统代理填入」自动读取当前系统 HTTP 代理（例如 `127.0.0.1:1235`），再打开开关。
+1. 打开 设置 → 连接 → 上游代理，点「从系统代理填入」自动读取当前系统 HTTP 代理（例如 `127.0.0.1:1235`），按需把协议切换成 HTTP 或 SOCKS5（很多 VPN 客户端同时提供两个端口，例如 HTTP `1235` / SOCKS5 `1234`），再打开开关。
 2. 然后把系统代理（或你要调试的 App）指向 ProxyDog：`127.0.0.1:8888`。
 3. 此后请求先经 ProxyDog 解密抓包，再由 VPN 代理出网；抓包列表里只会出现客户端真实访问的域名，上游代理本身不会出现。
 
-也可以用命令行验证：
+也可以用命令行验证（`--upstream` 支持 `socks5://` 前缀）：
 
 ```bash
-./.build/debug/ProxyDog --headless --port 8889 --upstream 127.0.0.1:1235 --out /tmp/chained.jsonl
+./.build/debug/ProxyDog --headless --port 8889 --upstream socks5://127.0.0.1:1234 --out /tmp/chained.jsonl
 curl -x http://127.0.0.1:8889 https://example.com/
 ```
 
-限制：上游代理需支持 HTTP CONNECT（不支持 SOCKS5，也不支持需要认证的代理）；上游地址不能指向 ProxyDog 自身，否则设置页会报错。
+限制：上游代理需支持 HTTP CONNECT 或 SOCKS5 匿名连接（不支持需要认证的代理，也不支持 SOCKS5 的 UDP ASSOCIATE）；上游地址不能指向 ProxyDog 自身，否则设置页会报错。
+
+## 让只支持 SOCKS5 的 App 接入
+
+部分 App（例如 Telegram）只提供 SOCKS5 代理设置。ProxyDog 可以额外开一个 SOCKS5 监听端口：
+
+1. 设置 → 连接 → SOCKS5 代理，打开开关（默认端口 `8889`，可修改）。
+2. 在那个 App 里填 SOCKS5 代理：`127.0.0.1:8889`（Hostname 解析交给代理）。
+3. 请求出现在 ProxyDog 列表里：HTTPS 自动解密（`已解密`），明文 HTTP 也能抓；连到非 HTTP 协议的 TCP 流量（例如 SSH）只做转发、不显示为请求。
+
+```bash
+./.build/debug/ProxyDog --headless --port 8888 --socks-port 8889 --out /tmp/caps.jsonl
+curl --socks5-hostname 127.0.0.1:8889 https://example.com/
+```
 
 ## 根证书
 
@@ -122,9 +136,13 @@ Support/                     # Info.plist、应用图标、AppConfig.plist(.exam
 # 端到端代理测试：明文 HTTP、HTTPS 解密、POST、失败请求、抓包断言、端口复用
 ./scripts/test_proxy.sh
 
-# 上游代理（代理链）测试：内置本地 CONNECT 代理，验证流量确实经上游转发
+# 上游代理（代理链）测试：内置本地双协议代理（HTTP CONNECT + SOCKS5）
 ./scripts/test_upstream.sh
-UPSTREAM_REAL=127.0.0.1:1235 ./scripts/test_upstream.sh   # 再用真实 VPN 代理跑一遍
+UPSTREAM_REAL=127.0.0.1:1235 ./scripts/test_upstream.sh   # 再用真实 VPN 的 HTTP 代理跑一遍
+
+# SOCKS5 监听器测试：HTTPS 解密、HTTP 捕获、SOCKS5 上游链路、失败路径
+./scripts/test_socks.sh
+UPSTREAM_SOCKS_REAL=socks5://127.0.0.1:1234 ./scripts/test_socks.sh   # 再用真实 VPN 的 SOCKS5 端口跑一遍
 
 # 无界面自检：证书签发、HAR 导出、cURL 导出、进程内重启、端口占用、设置持久化
 ./.build/debug/ProxyDog --headless --selftest
