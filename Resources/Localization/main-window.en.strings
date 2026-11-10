@@ -181,3 +181,8 @@
 /* Status bar */
 "Total size" = "Total size";
 "Total response body size of the visible requests" = "Total response body size of the visible requests";
+
+/* Status bar sizes */
+"Wire" = "Wire";
+"Decoded" = "Decoded";
+"Response body size of the visible requests: on the wire (compressed) / after decompression" = "Response body size of the visible requests: on the wire (compressed) / after decompression";

@@ -68,15 +68,30 @@ struct StatusBarView: View {
         state.filteredRequests.lazy.filter(\.isFailure).count
     }
 
-    /// Total response body size of the visible requests.
+    /// Response body size as received on the wire (compressed) for the visible requests.
+    private var totalWireBytes: Int {
+        state.filteredRequests.reduce(0) { $0 + $1.responseWireBytes }
+    }
+
+    /// Response body size after decompression for the visible requests.
     private var totalResponseBytes: Int {
         state.filteredRequests.reduce(0) { $0 + $1.responseBytes }
     }
 
-    /// Label-first variant of `countItem`; reads naturally for sizes ("总大小 12.3 MB").
+    /// "Wire / decoded" pair, e.g. "线上 96 KB / 解压后 183 KB".
     private var sizeItem: some View {
         HStack(spacing: DS.Space.x1) {
-            Text(String(localized: "Total size"))
+            Text(String(localized: "Wire"))
+                .font(DS.Typography.ui(10.5))
+                .foregroundStyle(DSColor.textMuted)
+            Text(PDFormat.bytes(totalWireBytes))
+                .font(DS.Typography.mono(10.5, .medium))
+                .foregroundStyle(DSColor.textSecondary)
+                .monospacedDigit()
+            Text("/")
+                .font(DS.Typography.ui(10.5))
+                .foregroundStyle(DSColor.textMuted)
+            Text(String(localized: "Decoded"))
                 .font(DS.Typography.ui(10.5))
                 .foregroundStyle(DSColor.textMuted)
             Text(PDFormat.bytes(totalResponseBytes))
@@ -85,7 +100,7 @@ struct StatusBarView: View {
                 .monospacedDigit()
         }
         .accessibilityElement(children: .combine)
-        .help(String(localized: "Total response body size of the visible requests"))
+        .help(String(localized: "Response body size of the visible requests: on the wire (compressed) / after decompression"))
     }
 
     private var requestLabel: String {

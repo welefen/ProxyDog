@@ -288,6 +288,7 @@ final class ExchangeState {
             statusCode: responseStatusCode,
             responseHeaders: responseHeaders,
             responseBody: responseBody,
+            wireResponseBytes: responseBytesReceived,
             state: state,
             errorMessage: error,
             isPinned: false,

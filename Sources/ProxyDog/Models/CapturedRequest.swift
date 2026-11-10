@@ -40,6 +40,9 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
     var statusCode: Int?
     var responseHeaders: [HeaderField]
     var responseBody: Data?
+    /// Response body bytes as received on the wire (before gzip/deflate decoding and without
+    /// the 2 MB capture cap). Zero when unknown, e.g. for hand-made captures.
+    var wireResponseBytes: Int
 
     var state: CaptureState
     var errorMessage: String?
@@ -74,6 +77,7 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         statusCode: Int? = nil,
         responseHeaders: [HeaderField] = [],
         responseBody: Data? = nil,
+        wireResponseBytes: Int = 0,
         state: CaptureState = .pending,
         errorMessage: String? = nil,
         isPinned: Bool = false,
@@ -98,6 +102,7 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         self.statusCode = statusCode
         self.responseHeaders = responseHeaders
         self.responseBody = responseBody
+        self.wireResponseBytes = wireResponseBytes
         self.state = state
         self.errorMessage = errorMessage
         self.isPinned = isPinned
@@ -165,6 +170,11 @@ extension CapturedRequest {
 
     var responseBytes: Int {
         responseBody?.count ?? 0
+    }
+
+    /// Wire size of the response body; falls back to the decoded size when unknown.
+    var responseWireBytes: Int {
+        wireResponseBytes > 0 ? wireResponseBytes : responseBytes
     }
 
     var isFailure: Bool {

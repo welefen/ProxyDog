@@ -41,6 +41,7 @@ final class JSONLineCaptureSink: CaptureSink, @unchecked Sendable {
             "intercepted": request.intercepted,
             "request_bytes": request.requestBytes,
             "response_bytes": request.responseBytes,
+            "wire_response_bytes": request.responseWireBytes,
         ]
         if let status = request.statusCode { payload["status"] = status }
         if let duration = request.duration { payload["duration_ms"] = Int(duration * 1000) }

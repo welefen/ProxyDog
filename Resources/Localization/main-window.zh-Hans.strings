@@ -183,3 +183,8 @@
 /* Status bar */
 "Total size" = "总大小";
 "Total response body size of the visible requests" = "当前可见请求的响应正文总大小";
+
+/* Status bar sizes */
+"Wire" = "线上";
+"Decoded" = "解压后";
+"Response body size of the visible requests: on the wire (compressed) / after decompression" = "当前可见请求的响应正文大小：线上（压缩）/ 解压后";
