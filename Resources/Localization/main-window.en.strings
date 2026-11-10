@@ -177,3 +177,7 @@
 
 /* HTTP/3 hint */
 "Advertised by Alt-Svc · QUIC bypasses the proxy and cannot be captured" = "Advertised by Alt-Svc · QUIC bypasses the proxy and cannot be captured";
+
+/* Status bar */
+"Total size" = "Total size";
+"Total response body size of the visible requests" = "Total response body size of the visible requests";

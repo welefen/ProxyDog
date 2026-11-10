@@ -18,6 +18,8 @@ struct StatusBarView: View {
                 color: errorCount > 0 ? DSColor.red : DSColor.textMuted
             )
 
+            sizeItem
+
             if state.store.isPaused {
                 pausedChip
             }
@@ -64,6 +66,26 @@ struct StatusBarView: View {
     /// whole capture buffer.
     private var errorCount: Int {
         state.filteredRequests.lazy.filter(\.isFailure).count
+    }
+
+    /// Total response body size of the visible requests.
+    private var totalResponseBytes: Int {
+        state.filteredRequests.reduce(0) { $0 + $1.responseBytes }
+    }
+
+    /// Label-first variant of `countItem`; reads naturally for sizes ("总大小 12.3 MB").
+    private var sizeItem: some View {
+        HStack(spacing: DS.Space.x1) {
+            Text(String(localized: "Total size"))
+                .font(DS.Typography.ui(10.5))
+                .foregroundStyle(DSColor.textMuted)
+            Text(PDFormat.bytes(totalResponseBytes))
+                .font(DS.Typography.mono(10.5, .medium))
+                .foregroundStyle(DSColor.textSecondary)
+                .monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
+        .help(String(localized: "Total response body size of the visible requests"))
     }
 
     private var requestLabel: String {
