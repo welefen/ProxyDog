@@ -449,6 +449,7 @@ private struct WebSocketMessageRow: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
+        .help(message.kind.label + " · " + PDFormat.bytes(message.byteCount))
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }

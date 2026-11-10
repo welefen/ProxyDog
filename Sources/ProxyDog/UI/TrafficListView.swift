@@ -312,6 +312,7 @@ private struct TrafficRowView: View {
                 Image(systemName: request.contentKind.symbolName)
                     // Keep SF Symbol letterform variants in the Latin form (Aa, not 格式/甲乙丙).
                     .environment(\.locale, Locale(identifier: "en_US"))
+                    .help(request.contentKind.label)
                     .font(.system(size: 11.5, weight: .regular))
                     .foregroundStyle(isSelected ? DSColor.textSecondary : DSColor.textMuted)
                     .frame(width: DS.Metric.iconColumnWidth, alignment: .leading)

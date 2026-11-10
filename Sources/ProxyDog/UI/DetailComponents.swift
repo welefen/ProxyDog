@@ -730,6 +730,7 @@ private struct JSONRowView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .help(expanded ? String(localized: "Collapse") : String(localized: "Expand"))
                 .accessibilityLabel(
                     expanded ? String(localized: "Collapse") : String(localized: "Expand")
                 )

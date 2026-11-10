@@ -81,6 +81,7 @@ struct StatusBarView: View {
             RoundedRectangle(cornerRadius: DS.Radius.xs, style: .continuous)
                 .fill(DSColor.amber.opacity(0.10))
         )
+        .help("Capture paused")
         .accessibilityLabel("Capture paused")
     }
 

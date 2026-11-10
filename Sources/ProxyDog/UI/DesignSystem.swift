@@ -305,6 +305,27 @@ struct PDHairline: View {
     }
 }
 
+/// Applies a help tooltip only when there is text, so components with an optional
+/// tooltip never show an empty bubble on hover.
+private struct OptionalHelpModifier: ViewModifier {
+    let text: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let text, !text.isEmpty {
+            content.help(text)
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    func helpIfPresent(_ text: String?) -> some View {
+        modifier(OptionalHelpModifier(text: text))
+    }
+}
+
 /// Icon-only button used for all common actions. Quiet hover, help tooltip,
 /// accessible label, 26pt hit target, SF Symbol at 12.5pt.
 struct PDIconButton: View {
