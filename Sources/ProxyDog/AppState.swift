@@ -84,6 +84,9 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
         refreshCertificateStatus()
+        // Pre-fill the upstream proxy from whatever proxy is already running on this Mac
+        // so the user never has to type the host/port by hand.
+        autoFillUpstreamProxyIfEmpty()
         if settings.systemProxyEnabled {
             setSystemProxy(enabled: true)
         }
@@ -165,6 +168,16 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func applyUpstreamProxy(enabled: Bool, host: String, port: Int, kind: UpstreamProxyKind) -> String? {
+        var host = host
+        var port = port
+        var kind = kind
+        // Turning the switch on with an empty address: use the detected system proxy first.
+        if enabled, host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let detected = detectSystemUpstreamProxy() {
+            host = detected.host
+            port = detected.port
+            kind = .httpConnect
+        }
         let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
         if enabled {
             guard !trimmedHost.isEmpty else {
@@ -237,11 +250,36 @@ final class AppState: ObservableObject {
         return settings.socksProxyPort
     }
 
+    /// The system proxy as an upstream candidate, or nil when none is configured or it
+    /// points at ProxyDog itself (that would be a proxy loop).
+    func detectSystemUpstreamProxy() -> (host: String, port: Int)? {
+        guard let detected = Self.systemHTTPProxy() else { return nil }
+        let candidate = UpstreamProxy(kind: .httpConnect, host: detected.host, port: detected.port)
+        if candidate.isLoopback {
+            if candidate.port == settings.port { return nil }
+            if settings.socksProxyEnabled, candidate.port == settings.socksProxyPort { return nil }
+        }
+        return detected
+    }
+
+    /// Fills the upstream fields from the system proxy when they are still empty. Called on
+    /// launch so the settings show sensible defaults instead of empty placeholders.
+    @discardableResult
+    func autoFillUpstreamProxyIfEmpty() -> Bool {
+        let hostEmpty = settings.upstreamProxyHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || settings.upstreamProxyPort <= 0
+        guard hostEmpty, let detected = detectSystemUpstreamProxy() else { return false }
+        settings.upstreamProxyKind = .httpConnect
+        settings.upstreamProxyHost = detected.host
+        settings.upstreamProxyPort = detected.port
+        return true
+    }
+
     /// Reads the current macOS system proxy and fills in the upstream fields. This is the
     /// "reuse the proxy/VPN that is already running" shortcut.
     @discardableResult
     func detectUpstreamProxyFromSystem() -> Bool {
-        guard let detected = Self.systemHTTPProxy() else { return false }
+        guard let detected = detectSystemUpstreamProxy() else { return false }
         settings.upstreamProxyKind = .httpConnect
         settings.upstreamProxyHost = detected.host
         settings.upstreamProxyPort = detected.port

@@ -20,6 +20,10 @@ struct SettingsView: View {
     @State private var upstreamHostText: String = ""
     @State private var upstreamPortText: String = ""
     @State private var upstreamError: String?
+    /// Placeholders come from the detected system proxy, so the row shows the address the
+    /// app would use instead of a made-up default.
+    @State private var detectedUpstreamHost: String = "127.0.0.1"
+    @State private var detectedUpstreamPort: String = "8080"
     @FocusState private var upstreamHostFocused: Bool
     @FocusState private var upstreamPortFocused: Bool
 
@@ -46,6 +50,10 @@ struct SettingsView: View {
         }
         .frame(width: 560, height: 880)
         .onAppear {
+            // Fill the upstream address from whatever proxy is already running so the user
+            // never has to type it by hand.
+            state.autoFillUpstreamProxyIfEmpty()
+            refreshDetectedUpstream()
             syncFromSettings()
             // Do not steal keyboard focus into the port field when the pane opens.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -177,7 +185,7 @@ struct SettingsView: View {
                     .onChange(of: upstreamKind) { _, newValue in
                         applyUpstreamKindChange(newValue)
                     }
-                    TextField("127.0.0.1", text: $upstreamHostText)
+                    TextField(detectedUpstreamHost, text: $upstreamHostText)
                         .textFieldStyle(.plain)
                         .font(DS.Typography.mono(12))
                         .foregroundStyle(DSColor.textPrimary)
@@ -191,7 +199,7 @@ struct SettingsView: View {
                             if !focused { commitUpstreamAddress() }
                         }
                         .disabled(!upstreamAddressAvailable)
-                    TextField("8080", text: $upstreamPortText)
+                    TextField(detectedUpstreamPort, text: $upstreamPortText)
                         .textFieldStyle(.plain)
                         .font(DS.Typography.mono(12))
                         .foregroundStyle(DSColor.textPrimary)
@@ -426,6 +434,13 @@ struct SettingsView: View {
     }
 
     // MARK: - Actions
+
+    /// Keeps the placeholder in sync with the proxy that is currently running on this Mac.
+    private func refreshDetectedUpstream() {
+        guard let detected = state.detectSystemUpstreamProxy() else { return }
+        detectedUpstreamHost = detected.host
+        detectedUpstreamPort = String(detected.port)
+    }
 
     private func syncFromSettings() {
         portText = String(settings.port)
