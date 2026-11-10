@@ -194,6 +194,41 @@ extension HeadlessRunner {
             return "sensitive headers excluded"
         }
 
+        check("proxy-restart-in-process") {
+            let sink = NoopCaptureSink()
+            let firstPort = try Self.freePort()
+            let secondPort = try Self.freePort()
+            let server = ProxyServer(port: firstPort, sslProxyingEnabled: true, sink: sink)
+            server.start()
+            guard case .running(let boundFirst) = Self.waitForStatus(server) { $0.isRunning }, boundFirst == firstPort else {
+                throw ProxyError.bindFailed("first start did not reach running on \(firstPort)")
+            }
+            // Same sequence AppState.restartProxy uses: stop then start on a new port.
+            server.port = secondPort
+            server.stop()
+            server.start()
+            guard case .running(let boundSecond) = Self.waitForStatus(server) { $0.isRunning }, boundSecond == secondPort else {
+                throw ProxyError.bindFailed("restart did not reach running on \(secondPort)")
+            }
+            server.stop()
+            _ = Self.waitForStatus(server) { $0.isStopped }
+            return "listened on \(firstPort) then \(secondPort)"
+        }
+
+        check("port-in-use") {
+            let busyPort = try Self.freePort()
+            let descriptor = try Self.bindSocket(port: busyPort)
+            defer { close(descriptor) }
+            let server = ProxyServer(port: busyPort, sslProxyingEnabled: false, sink: NoopCaptureSink())
+            server.start()
+            let status = Self.waitForStatus(server) { $0.isFailed }
+            server.stop()
+            guard case .failed(let message) = status else {
+                throw ProxyError.bindFailed("expected a failed status for an occupied port")
+            }
+            return message
+        }
+
         check("system-proxy-state") {
             let enabled = SystemProxy.isEnabled(port: port)
             return "enabled=\(enabled)"
@@ -217,5 +252,75 @@ extension HeadlessRunner {
 
         print("{\"type\":\"selftest\",\"done\":true,\"failures\":\(failures)}")
         return failures == 0
+    }
+}
+
+/// Capture sink for self-test proxy instances.
+final class NoopCaptureSink: CaptureSink, @unchecked Sendable {
+    func captureDidUpdate(_ request: CapturedRequest) {}
+}
+
+extension HeadlessRunner {
+    /// Spins the main run loop until the proxy reaches a matching status or times out.
+    static func waitForStatus(
+        _ server: ProxyServer,
+        timeout: TimeInterval = 5,
+        matching predicate: (ProxyServer.Status) -> Bool
+    ) -> ProxyServer.Status {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+            if predicate(server.status) {
+                return server.status
+            }
+        }
+        return server.status
+    }
+
+    /// Returns a currently free loopback TCP port.
+    static func freePort() throws -> Int {
+        let descriptor = socket(AF_INET, SOCK_STREAM, 0)
+        guard descriptor >= 0 else { throw ProxyError.bindFailed("socket() failed") }
+        defer { close(descriptor) }
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = 0
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        let bindResult = withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+                bind(descriptor, sockaddrPointer, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        guard bindResult == 0 else { throw ProxyError.bindFailed("bind() failed while looking for a free port") }
+        var length = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let nameResult = withUnsafeMutablePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+                getsockname(descriptor, sockaddrPointer, &length)
+            }
+        }
+        guard nameResult == 0 else { throw ProxyError.bindFailed("getsockname() failed") }
+        return Int(UInt16(bigEndian: address.sin_port))
+    }
+
+    /// Binds and listens on the given port so another bind fails with EADDRINUSE.
+    static func bindSocket(port: Int) throws -> Int32 {
+        let descriptor = socket(AF_INET, SOCK_STREAM, 0)
+        guard descriptor >= 0 else { throw ProxyError.bindFailed("socket() failed") }
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = UInt16(port).bigEndian
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        let result = withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+                bind(descriptor, sockaddrPointer, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        guard result == 0, listen(descriptor, 1) == 0 else {
+            close(descriptor)
+            throw ProxyError.bindFailed("could not occupy port \(port)")
+        }
+        return descriptor
     }
 }

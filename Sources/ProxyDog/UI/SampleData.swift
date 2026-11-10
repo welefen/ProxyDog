@@ -28,10 +28,16 @@ enum DevLaunchOptions {
         }
     }
 
+    /// Accepts both `--flag=value` and the `open --args --flag value` spelling.
     private static func value(for flag: String) -> String? {
         let prefix = flag + "="
-        guard let argument = arguments.first(where: { $0.hasPrefix(prefix) }) else { return nil }
-        return String(argument.dropFirst(prefix.count))
+        if let argument = arguments.first(where: { $0.hasPrefix(prefix) }) {
+            return String(argument.dropFirst(prefix.count))
+        }
+        if let index = arguments.firstIndex(of: flag), arguments.indices.contains(index + 1) {
+            return arguments[index + 1]
+        }
+        return nil
     }
 }
 

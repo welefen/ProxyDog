@@ -23,7 +23,9 @@ enum DetailTab: String, CaseIterable, Identifiable {
 struct RequestDetailView: View {
     @EnvironmentObject private var state: AppState
 
-    @State private var tab: DetailTab = DevLaunchOptions.initialTab ?? .overview
+    @State private var tab: DetailTab = DevLaunchOptions.isSampleTrafficEnabled
+        ? (DevLaunchOptions.initialTab ?? .overview)
+        : .overview
 
     var body: some View {
         Group {
