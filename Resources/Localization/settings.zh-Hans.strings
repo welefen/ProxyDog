@@ -133,3 +133,6 @@
 
 /* Tabs */
 "Rules" = "规则";
+
+/* Certificate warning */
+"The root certificate is not trusted yet, so HTTPS decryption will fail. Install it on the Certificate page." = "根证书尚未被信任，HTTPS 解密会失败。请到「证书」页面安装根证书。";

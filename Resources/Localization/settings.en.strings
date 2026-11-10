@@ -133,3 +133,6 @@
 
 /* Tabs */
 "Rules" = "Rules";
+
+/* Certificate warning */
+"The root certificate is not trusted yet, so HTTPS decryption will fail. Install it on the Certificate page." = "The root certificate is not trusted yet, so HTTPS decryption will fail. Install it on the Certificate page.";

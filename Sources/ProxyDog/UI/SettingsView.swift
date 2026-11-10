@@ -223,7 +223,8 @@ struct SettingsView: View {
                 SettingsHairline()
                 SettingsRow(
                     title: "SSL proxying",
-                    hint: "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners."
+                    hint: "Decrypts HTTPS traffic with the ProxyDog root certificate, for both the HTTP and SOCKS5 listeners.",
+                    hintText: sslWarning
                 ) {
                     Toggle("", isOn: Binding(
                         get: { settings.sslProxyingEnabled },
@@ -575,6 +576,13 @@ struct SettingsView: View {
 
     private var certificateStatusKey: LocalizedStringKey {
         state.isCertificateTrusted ? "Trusted" : "Not trusted"
+    }
+
+    /// Shown under the SSL row while decryption is on but the root certificate has not been
+    /// trusted yet (HTTPS handshakes would fail until it is installed).
+    private var sslWarning: String? {
+        guard settings.sslProxyingEnabled, !state.isCertificateTrusted else { return nil }
+        return String(localized: "The root certificate is not trusted yet, so HTTPS decryption will fail. Install it on the Certificate page.")
     }
 
     private var proxyStatusText: String {
