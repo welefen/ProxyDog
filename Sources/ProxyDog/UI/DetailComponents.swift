@@ -206,6 +206,7 @@ private struct BodySectionView: View {
     @State private var showsFullBody = false
     @State private var expandAllVersion = 0
     @State private var collapseAllVersion = 0
+    @State private var isFullyExpanded = false
 
     private var data: Data? {
         side == .request ? request.requestBody : request.responseBody
@@ -263,6 +264,7 @@ private struct BodySectionView: View {
         .background(hasBody ? DSColor.raised : DSColor.base)
         .onChange(of: request.id) { _, _ in
             showsFullBody = false
+            isFullyExpanded = false
         }
     }
 
@@ -306,21 +308,6 @@ private struct BodySectionView: View {
 
             Spacer(minLength: DS.Space.x2)
 
-            if showsJSONTree {
-                PDIconButton(
-                    symbol: "arrow.up.left.and.arrow.down.right",
-                    help: String(localized: "Expand all")
-                ) {
-                    expandAllVersion += 1
-                }
-                PDIconButton(
-                    symbol: "arrow.down.right.and.arrow.up.left",
-                    help: String(localized: "Collapse all")
-                ) {
-                    collapseAllVersion += 1
-                }
-            }
-
             if isJSON && hasBody && !isUndecodableCompressed {
                 PDSegmented(
                     items: [
@@ -329,6 +316,20 @@ private struct BodySectionView: View {
                     ],
                     selection: $showsRaw
                 )
+            }
+
+            // One toggle instead of separate expand/collapse buttons.
+            if showsJSONTree {
+                PDIconButton(
+                    symbol: isFullyExpanded
+                        ? "arrow.down.right.and.arrow.up.left"
+                        : "arrow.up.left.and.arrow.down.right",
+                    help: isFullyExpanded
+                        ? String(localized: "Collapse all")
+                        : String(localized: "Expand all")
+                ) {
+                    toggleJSONExpansion()
+                }
             }
 
             PDIconButton(
@@ -536,6 +537,16 @@ private struct BodySectionView: View {
     }
 
     // MARK: Actions
+
+    private func toggleJSONExpansion() {
+        if isFullyExpanded {
+            collapseAllVersion += 1
+            isFullyExpanded = false
+        } else {
+            expandAllVersion += 1
+            isFullyExpanded = true
+        }
+    }
 
     private func copyBody() {
         guard let data else { return }
