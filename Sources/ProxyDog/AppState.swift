@@ -436,6 +436,8 @@ final class AppState: ObservableObject {
             break
         case .pinned:
             items = items.filter(\.isPinned)
+        case .client(let name):
+            items = items.filter { $0.clientAppName == name }
         case .domain(let domain):
             items = items.filter { $0.host == domain }
         }
@@ -456,6 +458,28 @@ final class AppState: ObservableObject {
     var selectedRequest: CapturedRequest? {
         guard let selectionID else { return nil }
         return store.request(id: selectionID)
+    }
+
+    /// Captured traffic grouped by the app that originated it, busiest first. Requests whose
+    /// process could not be attributed are not listed here.
+    var clientSummaries: [ClientSummary] {
+        var counts: [String: (count: Int, failed: Bool, iconPath: String?)] = [:]
+        for request in store.requests {
+            guard let name = request.clientAppName?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !name.isEmpty else { continue }
+            let current = counts[name] ?? (0, false, nil)
+            counts[name] = (
+                current.count + 1,
+                current.failed || request.isFailure,
+                current.iconPath ?? request.clientAppPath
+            )
+        }
+        return counts
+            .map { ClientSummary(name: $0.key, count: $0.value.count, hasFailure: $0.value.failed, iconPath: $0.value.iconPath) }
+            .sorted { lhs, rhs in
+                if lhs.count == rhs.count { return lhs.name < rhs.name }
+                return lhs.count > rhs.count
+            }
     }
 
     var domainSummaries: [DomainSummary] {

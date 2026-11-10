@@ -163,3 +163,6 @@
 /* Media preview */
 "This media format cannot be previewed; showing raw bytes" = "该媒体格式暂不支持预览，以下为原始字节";
 "Captured up to the 2 MB limit; playback may be incomplete" = "正文仅捕获前 2 MB，可能无法完整播放";
+
+/* Sidebar */
+"Clients" = "客户端";

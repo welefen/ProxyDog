@@ -12,6 +12,7 @@ struct SidebarView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     trafficSection
+                    clientsSection
                     domainsSection
                 }
                 .padding(.horizontal, DS.Space.x2)
@@ -74,6 +75,30 @@ struct SidebarView: View {
         }
     }
 
+    /// Traffic grouped by the app that sent it; hidden until at least one request was
+    /// attributed to a local process.
+    private var clientsSection: some View {
+        let summaries = state.clientSummaries
+        return VStack(alignment: .leading, spacing: 1) {
+            if !summaries.isEmpty {
+                sectionHeader(String(localized: "Clients"))
+                    .padding(.top, DS.Space.x3)
+                ForEach(summaries) { summary in
+                    SidebarRow(
+                        symbol: "app",
+                        title: summary.name,
+                        appIconPath: summary.iconPath,
+                        count: summary.count,
+                        hasFailure: summary.hasFailure,
+                        isSelected: state.sidebarSelection == .client(summary.name)
+                    ) {
+                        state.sidebarSelection = .client(summary.name)
+                    }
+                }
+            }
+        }
+    }
+
     private var domainsSection: some View {
         VStack(alignment: .leading, spacing: 1) {
             sectionHeader(String(localized: "Domains"))
@@ -121,6 +146,7 @@ private struct SidebarRow: View {
     let symbol: String
     let title: String
     var faviconDomain: String? = nil
+    var appIconPath: String? = nil
     var count: Int?
     var hasFailure = false
     var isSelected = false
@@ -137,7 +163,13 @@ private struct SidebarRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: DS.Space.x2) {
-                if let faviconDomain {
+                if let appIconPath, let appIcon = AppIconProvider.icon(for: appIconPath) {
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 14, height: 14)
+                        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                } else if let faviconDomain {
                     DomainFavicon(domain: faviconDomain)
                 } else {
                     Image(systemName: symbol)
