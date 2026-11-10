@@ -219,7 +219,7 @@ defaults write com.proxydog.app app.onboardingCompleted -bool true
 ## 已知限制
 
 - HTTP/2 只做到「客户端侧 h2」：与浏览器之间协商 HTTP/2 并按流抓包，但转发到源站时固定用 HTTP/1.1（不做 h2→h2 端到端），也不支持 HTTP/2 的 Server Push、h2 扩展 CONNECT / WebSocket、trailer 与 1xx 响应展示；SOCKS5 监听端口的 MITM 仍为 HTTP/1.1。
-- HTTP/3（QUIC）暂不支持：QUIC 走 UDP，macOS 的 HTTP/HTTPS 系统代理只转发 TCP，所以浏览器使用代理时会回退到 h2/h1，抓包内容依然完整；但真正基于 QUIC 的流量不会经过 ProxyDog。要拦截 QUIC 需要系统级 UDP 拦截（Network Extension / System Extension + 签名授权）和完整的 QUIC + HTTP/3 协议栈，不属于当前这个纯 App 形态能提供的功能。
+- HTTP/3（QUIC）暂不支持：QUIC 走 UDP，macOS 的 HTTP/HTTPS 系统代理只转发 TCP，所以浏览器使用代理时会回退到 h2/h1，抓包内容依然完整；但真正基于 QUIC 的流量不会经过 ProxyDog。要拦截 QUIC 需要系统级 UDP 拦截（Network Extension / System Extension + 签名授权）和完整的 QUIC + HTTP/3 协议栈，不属于当前这个纯 App 形态能提供的功能。响应头带 `Alt-Svc: h3` 时，详情页会在「响应」区标注该站点支持 HTTP/3（仅作提示，QUIC 流量本身仍无法抓取）。
 - 上游 TLS 不校验证书，便于抓取自签名证书的开发服务器。
 - WebSocket 不解析 `permessage-deflate` 压缩帧，也不支持 WebSocket over HTTP/2（h2 扩展 CONNECT 会以失败记录并在详情中说明）。
 - 单个请求/响应体最多保存 2 MB（超出部分仍然透传，仅不入库）。

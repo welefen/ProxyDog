@@ -174,3 +174,6 @@
 /* JSON tree */
 "Expand all" = "Expand all";
 "Collapse all" = "Collapse all";
+
+/* HTTP/3 hint */
+"Advertised by Alt-Svc · QUIC bypasses the proxy and cannot be captured" = "Advertised by Alt-Svc · QUIC bypasses the proxy and cannot be captured";

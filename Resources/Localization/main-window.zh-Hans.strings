@@ -176,3 +176,6 @@
 /* JSON tree */
 "Expand all" = "完全展开";
 "Collapse all" = "完全收起";
+
+/* HTTP/3 hint */
+"Advertised by Alt-Svc · QUIC bypasses the proxy and cannot be captured" = "站点通过 Alt-Svc 通告 HTTP/3 · QUIC 流量不经过代理，无法抓取";

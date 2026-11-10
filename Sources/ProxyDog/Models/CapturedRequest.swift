@@ -171,6 +171,13 @@ extension CapturedRequest {
         state == .failed || (statusCode.map { $0 >= 400 } ?? false)
     }
 
+    /// The response advertised HTTP/3 via `Alt-Svc`. QUIC traffic bypasses the system HTTP
+    /// proxy, so this is an informational hint — those flows cannot be captured here.
+    var advertisesHTTP3: Bool {
+        guard let altSvc = responseHeaders.firstValue(forName: "Alt-Svc") else { return false }
+        return altSvc.lowercased().contains("h3")
+    }
+
     /// User-Agent signature shown as a separate "User-Agent" row in the inspector.
     var userAgent: String? {
         guard let clientSignature, !clientSignature.isEmpty else { return nil }

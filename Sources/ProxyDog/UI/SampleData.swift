@@ -529,6 +529,7 @@ enum SampleTraffic {
                 ("Cache-Control", "max-age=315, public"),
                 ("Strict-Transport-Security", "max-age=31536000"),
                 ("X-Content-Type-Options", "nosniff"),
+                ("Alt-Svc", "h3=\":443\"; ma=86400"),
             ]),
             responseBody: Data("""
             <!doctype html>

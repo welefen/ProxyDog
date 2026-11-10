@@ -202,6 +202,13 @@ private struct OverviewTab: View {
 
                 section(String(localized: "Response")) {
                     statusRow
+                    if request.advertisesHTTP3 {
+                        DetailFieldRow(
+                            label: "HTTP/3",
+                            value: String(localized: "Advertised by Alt-Svc · QUIC bypasses the proxy and cannot be captured"),
+                            color: DSColor.textSecondary
+                        )
+                    }
                     DetailFieldRow(label: String(localized: "Content type"), value: request.responseContentType ?? "—")
                     if !request.isWebSocket {
                         DetailFieldRow(
