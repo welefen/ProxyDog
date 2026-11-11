@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import ImageIO
 
 /// Parsed `multipart/form-data` body: each field/file as a named part.
 struct MultipartFormData {
@@ -10,10 +11,18 @@ struct MultipartFormData {
         let contentType: String?
         let data: Data
 
+        /// True for image MIME types, common image filenames, or bytes ImageIO can decode
+        /// (some clients send `application/octet-stream` for a JPEG upload).
         var isImage: Bool {
             if let contentType, contentType.lowercased().hasPrefix("image/") { return true }
-            guard let picture = NSImage(data: data) else { return false }
-            return picture.size.width > 0 && picture.size.height > 0
+            if let filename {
+                let ext = (filename as NSString).pathExtension.lowercased()
+                if ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tiff", "avif"].contains(ext) {
+                    return true
+                }
+            }
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return false }
+            return CGImageSourceGetCount(source) > 0
         }
     }
 
