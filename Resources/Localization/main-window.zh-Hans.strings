@@ -280,3 +280,19 @@
 "AI summary" = "AI 总结";
 "On-device model unavailable; showing rule-based findings." = "端侧模型不可用，以下为本地规则分析结果。";
 "Running on-device analysis…" = "正在运行端侧模型分析…";
+
+/* AI providers */
+"Provider" = "服务商";
+"Model" = "模型";
+"Paste your API key" = "粘贴 API Key";
+"Base URL (optional)" = "Base URL（可选）";
+"Start analysis" = "开始分析";
+"Analyzing…" = "正在分析…";
+"Clear key" = "清除 Key";
+"The API key is stored in your login keychain." = "API Key 保存在系统钥匙串中。";
+"Configure a provider, then analyze the %d requests in the current list." = "配置模型后分析当前列表中的 %d 条请求。";
+"Rule checks" = "规则检查";
+"Custom (OpenAI compatible)" = "自定义（OpenAI 兼容）";
+"The AI provider returned an unexpected response." = "AI 服务返回了无法识别的响应。";
+"The AI provider returned HTTP %d" = "AI 服务返回 HTTP %d";
+"Enter an API key and model before analyzing." = "请先填写 API Key 和模型。";

@@ -1,53 +1,43 @@
 import SwiftUI
 
-@MainActor
-final class AIAnalysisModel: ObservableObject {
-    @Published private(set) var report: AIAnalysisReport?
-    @Published private(set) var summary: String?
-    @Published private(set) var isAnalyzing = true
-    @Published private(set) var usedOnDeviceModel = false
-
-    func start(requests: [CapturedRequest]) {
-        guard report == nil else { return }
-        let report = AIAnalyzer.report(for: requests)
-        self.report = report
-        guard !requests.isEmpty else {
-            summary = report.fallbackSummary
-            isAnalyzing = false
-            return
-        }
-
-        let chinese = Locale.preferredLanguages.first?.hasPrefix("zh") == true
-        let prompt = AIAnalyzer.prompt(for: report, requests: requests, chinese: chinese)
-        Task {
-            if #available(macOS 26.0, *) {
-                if let text = await AIAnalyzer.onDeviceSummary(prompt: prompt) {
-                    summary = text
-                    usedOnDeviceModel = true
-                    isAnalyzing = false
-                    return
-                }
-            }
-            summary = report.fallbackSummary
-            isAnalyzing = false
-        }
-    }
-}
-
 struct AIAnalysisView: View {
     let requests: [CapturedRequest]
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var model = AIAnalysisModel()
+    @ObservedObject private var config = AIConfigStore.shared
+
+    @State private var report: AIAnalysisReport?
+    @State private var summary: String?
+    @State private var isAnalyzing = false
+    @State private var errorText: String?
     @State private var didCopy = false
+
+    private enum Phase {
+        case idle
+        case running
+        case done
+        case failed
+    }
+
+    @State private var phase: Phase = .idle
+
+    private var providerOptions: [PDDropdownPicker.Option] {
+        AIProvider.allCases.map { .init(value: $0.rawValue, label: $0.label) }
+    }
+
+    private var providerBinding: Binding<String> {
+        Binding(
+            get: { config.provider.rawValue },
+            set: { config.provider = AIProvider(rawValue: $0) ?? .deepSeek }
+        )
+    }
 
     private var reportText: String {
         var lines: [String] = []
-        if let summary = model.summary {
-            lines.append(summary)
-        }
-        if let report = model.report {
-            lines.append("")
+        if let summary { lines.append(summary) }
+        if let report {
+            if !lines.isEmpty { lines.append("") }
+            lines.append(String(localized: "Rule checks"))
             for finding in report.findings {
                 lines.append("\(finding.title): \(finding.detail)")
                 lines.append(contentsOf: finding.examples.map { "  \($0)" })
@@ -62,62 +52,27 @@ struct AIAnalysisView: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.x5) {
-                    if let report = model.report {
-                        if report.findings.isEmpty {
-                            Text(String(localized: "No obvious anomalies found"))
-                                .font(DS.Typography.ui(12))
-                                .foregroundStyle(DSColor.textSecondary)
-                        }
-                        ForEach(report.findings) { finding in
-                            findingCard(finding)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: DS.Space.x2) {
-                        HStack(spacing: DS.Space.x2) {
-                            Text(String(localized: "AI summary"))
-                                .font(DS.Typography.ui(11.5, .semibold))
-                                .foregroundStyle(DSColor.textSecondary)
-                            if model.isAnalyzing {
-                                ProgressView().controlSize(.small)
-                            } else if !model.usedOnDeviceModel {
-                                Text(String(localized: "On-device model unavailable; showing rule-based findings."))
-                                    .font(DS.Typography.ui(10.5))
-                                    .foregroundStyle(DSColor.textMuted)
-                            }
-                        }
-                        if let summary = model.summary {
-                            Text(summary)
-                                .font(DS.Typography.ui(12))
-                                .foregroundStyle(DSColor.textPrimary)
-                                .textSelection(.enabled)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(DS.Space.x3)
-                                .background(DSColor.raised)
-                                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                                        .strokeBorder(DSColor.border, lineWidth: 1)
-                                )
-                        } else if model.isAnalyzing {
-                            Text(String(localized: "Running on-device analysis…"))
-                                .font(DS.Typography.ui(11.5))
-                                .foregroundStyle(DSColor.textMuted)
-                        }
-                    }
+                    configurationCard
+                    results
                 }
                 .padding(DS.Space.x5)
             }
             Divider()
             footer
         }
-        .frame(width: 620, height: 620)
+        .frame(width: 660, height: 700)
         .background(DSColor.base)
-        .task {
-            model.start(requests: requests)
+        .onAppear {
+            if report == nil {
+                report = AIAnalyzer.report(for: requests)
+            }
+            if DevLaunchOptions.autoRunAIAnalysis, config.configuration.isUsable {
+                analyze()
+            }
         }
     }
+
+    // MARK: Header
 
     private var header: some View {
         HStack(spacing: DS.Space.x3) {
@@ -127,7 +82,7 @@ struct AIAnalysisView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(String(localized: "AI analysis"))
                     .font(DS.Typography.ui(13, .semibold))
-                Text(String(format: String(localized: "Analyzing %d requests"), requests.count))
+                Text(String(format: String(localized: "Configure a provider, then analyze the %d requests in the current list."), requests.count))
                     .font(DS.Typography.ui(10.5))
                     .foregroundStyle(DSColor.textMuted)
             }
@@ -137,8 +92,143 @@ struct AIAnalysisView: View {
         .padding(.vertical, DS.Space.x3)
     }
 
+    // MARK: Configuration
+
+    private var configurationCard: some View {
+        VStack(alignment: .leading, spacing: DS.Space.x3) {
+            field(label: String(localized: "Provider")) {
+                PDDropdownPicker(options: providerOptions, selection: providerBinding, width: 240, mono: false)
+            }
+
+            field(label: String(localized: "Model")) {
+                TextField(config.provider.defaultModel, text: $config.model)
+                    .textFieldStyle(.roundedBorder)
+                    .font(DS.Typography.mono(11.5))
+                    .frame(width: 320)
+            }
+
+            field(label: "API Key") {
+                SecureField(String(localized: "Paste your API key"), text: $config.apiKey)
+                    .textFieldStyle(.roundedBorder)
+                    .font(DS.Typography.mono(11.5))
+                    .frame(width: 360)
+            }
+
+            field(label: String(localized: "Base URL (optional)")) {
+                TextField(config.provider.defaultBaseURL.isEmpty ? "https://…" : config.provider.defaultBaseURL, text: $config.baseURL)
+                    .textFieldStyle(.roundedBorder)
+                    .font(DS.Typography.mono(11.5))
+                    .frame(width: 360)
+            }
+
+            HStack(spacing: DS.Space.x3) {
+                Button {
+                    analyze()
+                } label: {
+                    HStack(spacing: DS.Space.x1 + 2) {
+                        if isAnalyzing {
+                            ProgressView().controlSize(.small)
+                        }
+                        Text(isAnalyzing
+                            ? String(localized: "Analyzing…")
+                            : String(localized: "Start analysis"))
+                    }
+                    .frame(minWidth: 108)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(isAnalyzing || !config.configuration.isUsable)
+
+                if !config.apiKey.isEmpty {
+                    Button(String(localized: "Clear key")) {
+                        config.clearKey()
+                        summary = nil
+                        phase = .idle
+                    }
+                    .buttonStyle(.plain)
+                    .font(DS.Typography.ui(11))
+                    .foregroundStyle(DSColor.textMuted)
+                }
+
+                Text(String(localized: "The API key is stored in your login keychain."))
+                    .font(DS.Typography.ui(10.5))
+                    .foregroundStyle(DSColor.textMuted)
+                Spacer()
+            }
+
+            if let errorText {
+                Text(errorText)
+                    .font(DS.Typography.ui(11))
+                    .foregroundStyle(DSColor.red)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(DS.Space.x4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DSColor.raised)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                .strokeBorder(DSColor.border, lineWidth: 1)
+        )
+    }
+
+    private func field<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .center, spacing: DS.Space.x3) {
+            Text(label)
+                .font(DS.Typography.ui(11.5))
+                .foregroundStyle(DSColor.textSecondary)
+                .frame(width: 128, alignment: .leading)
+            content()
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: Results
+
+    @ViewBuilder
+    private var results: some View {
+        if let summary {
+            VStack(alignment: .leading, spacing: DS.Space.x2) {
+                Text(String(localized: "AI summary"))
+                    .font(DS.Typography.ui(11.5, .semibold))
+                    .foregroundStyle(DSColor.textSecondary)
+                Text(summary)
+                    .font(DS.Typography.ui(12))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DS.Space.x3)
+                    .background(DSColor.raised)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                            .strokeBorder(DSColor.border, lineWidth: 1)
+                    )
+            }
+        }
+
+        if let report {
+            VStack(alignment: .leading, spacing: DS.Space.x2) {
+                Text(String(localized: "Rule checks"))
+                    .font(DS.Typography.ui(11.5, .semibold))
+                    .foregroundStyle(DSColor.textSecondary)
+                if report.findings.isEmpty {
+                    Text(String(localized: "No obvious anomalies found"))
+                        .font(DS.Typography.ui(11.5))
+                        .foregroundStyle(DSColor.textMuted)
+                }
+                ForEach(report.findings) { finding in
+                    findingCard(finding)
+                }
+            }
+        }
+    }
+
     private var footer: some View {
-        HStack {
+        HStack(spacing: DS.Space.x3) {
             Button(String(localized: "Copy report")) {
                 PDPasteboard.copy(reportText)
                 didCopy = true
@@ -147,10 +237,10 @@ struct AIAnalysisView: View {
                     didCopy = false
                 }
             }
-            .disabled(model.report == nil)
+            .disabled(report == nil)
             .buttonStyle(.plain)
             .font(DS.Typography.ui(11.5, .medium))
-            .foregroundStyle(DSColor.accent)
+            .foregroundStyle(didCopy ? DSColor.green : DSColor.accent)
             Spacer()
             Button(String(localized: "Close")) {
                 dismiss()
@@ -206,6 +296,35 @@ struct AIAnalysisView: View {
         case .error: return DSColor.red
         case .warning: return DSColor.amber
         case .info: return DSColor.accent
+        }
+    }
+
+    // MARK: Analysis
+
+    private func analyze() {
+        guard let report else { return }
+        guard config.configuration.isUsable else {
+            errorText = AIClientError.missingConfiguration.localizedDescription
+            return
+        }
+        isAnalyzing = true
+        phase = .running
+        errorText = nil
+        summary = nil
+
+        let chinese = Locale.preferredLanguages.first?.hasPrefix("zh") == true
+        let prompt = AIAnalyzer.prompt(for: report, requests: requests, chinese: chinese)
+        let configuration = config.configuration
+        Task {
+            do {
+                let text = try await AIClient.summarize(configuration: configuration, prompt: prompt)
+                summary = text
+                phase = .done
+            } catch {
+                errorText = error.localizedDescription
+                phase = .failed
+            }
+            isAnalyzing = false
         }
     }
 }

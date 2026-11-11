@@ -278,3 +278,19 @@
 "AI summary" = "AI summary";
 "On-device model unavailable; showing rule-based findings." = "On-device model unavailable; showing rule-based findings.";
 "Running on-device analysis…" = "Running on-device analysis…";
+
+/* AI providers */
+"Provider" = "Provider";
+"Model" = "Model";
+"Paste your API key" = "Paste your API key";
+"Base URL (optional)" = "Base URL (optional)";
+"Start analysis" = "Start analysis";
+"Analyzing…" = "Analyzing…";
+"Clear key" = "Clear key";
+"The API key is stored in your login keychain." = "The API key is stored in your login keychain.";
+"Configure a provider, then analyze the %d requests in the current list." = "Configure a provider, then analyze the %d requests in the current list.";
+"Rule checks" = "Rule checks";
+"Custom (OpenAI compatible)" = "Custom (OpenAI compatible)";
+"The AI provider returned an unexpected response." = "The AI provider returned an unexpected response.";
+"The AI provider returned HTTP %d" = "The AI provider returned HTTP %d";
+"Enter an API key and model before analyzing." = "Enter an API key and model before analyzing.";

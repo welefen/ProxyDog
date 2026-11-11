@@ -35,6 +35,11 @@ enum DevLaunchOptions {
         value(for: "--sample-message").flatMap(Int.init)
     }
 
+    /// QA: starts the AI request as soon as the analysis sheet opens.
+    static var autoRunAIAnalysis: Bool {
+        arguments.contains("--sample-ai-run")
+    }
+
     /// QA: opens the AI analysis sheet on launch.
     static var openAIAnalysis: Bool {
         arguments.contains("--sample-ai-analysis")

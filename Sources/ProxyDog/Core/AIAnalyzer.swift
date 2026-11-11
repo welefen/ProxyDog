@@ -1,9 +1,5 @@
 import Foundation
 
-#if canImport(FoundationModels)
-import FoundationModels
-#endif
-
 struct AIAnomaly: Identifiable {
     enum Severity {
         case error
@@ -135,24 +131,5 @@ enum AIAnalyzer {
         Requests:
         \(lines.joined(separator: "\n"))
         """
-    }
-
-    @available(macOS 26.0, *)
-    static func onDeviceSummary(prompt: String) async -> String? {
-        #if canImport(FoundationModels)
-        guard SystemLanguageModel.default.isAvailable else { return nil }
-        let session = LanguageModelSession(
-            instructions: "You summarize network capture analysis concisely."
-        )
-        do {
-            let response = try await session.respond(to: prompt)
-            let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            return text.isEmpty ? nil : text
-        } catch {
-            return nil
-        }
-        #else
-        return nil
-        #endif
     }
 }
