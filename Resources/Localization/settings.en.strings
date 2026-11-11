@@ -226,3 +226,8 @@
 "Android / other certificate" = "Android / other certificate";
 "On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android: download the .cer file and install it as a trusted CA." = "On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android: download the .cer file and install it as a trusted CA.";
 "Scan with the device camera to open the iOS certificate profile and install it." = "Scan with the device camera to open the iOS certificate profile and install it.";
+
+/* LAN certificate */
+"Android / HarmonyOS certificate" = "Android / HarmonyOS certificate";
+"On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android / HarmonyOS: download the .cer file, then install it as a trusted CA (HarmonyOS: Settings → Privacy & security → More security settings → Encryption and credentials → Install a certificate → CA certificate)." = "On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android / HarmonyOS: download the .cer file, then install it as a trusted CA (HarmonyOS: Settings → Privacy & security → More security settings → Encryption and credentials → Install a certificate → CA certificate).";
+"Scan to download the certificate (Android / HarmonyOS); on iOS use the profile link above instead." = "Scan to download the certificate (Android / HarmonyOS); on iOS use the profile link above instead.";

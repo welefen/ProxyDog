@@ -221,7 +221,7 @@ struct SettingsView: View {
 
                         if let androidURLString = lanAndroidCertificateURL,
                            let androidURL = URL(string: androidURLString) {
-                            SettingsRow(title: "Android / other certificate") {
+                            SettingsRow(title: "Android / HarmonyOS certificate") {
                                 HStack(spacing: DS.Space.x2) {
                                     Text(androidURLString)
                                         .font(DS.Typography.mono(12))
@@ -242,15 +242,16 @@ struct SettingsView: View {
                         }
 
                         SettingsHintRow(
-                            hint: "On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android: download the .cer file and install it as a trusted CA."
+                            hint: "On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android / HarmonyOS: download the .cer file, then install it as a trusted CA (HarmonyOS: Settings → Privacy & security → More security settings → Encryption and credentials → Install a certificate → CA certificate)."
                         )
 
                         SettingsHairline()
 
-                        if let qrImage = SettingsQRCode.image(for: certURL) {
+                        if let qrTarget = lanAndroidCertificateURL ?? lanCertificateURL,
+                           let qrImage = SettingsQRCode.image(for: qrTarget) {
                             SettingsRow(
                                 title: "Certificate QR code",
-                                hint: "Scan with the device camera to open the iOS certificate profile and install it."
+                                hint: "Scan to download the certificate (Android / HarmonyOS); on iOS use the profile link above instead."
                             ) {
                                 Image(nsImage: qrImage)
                                     .interpolation(.none)

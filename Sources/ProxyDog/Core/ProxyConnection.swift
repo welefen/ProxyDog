@@ -494,7 +494,13 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
 
         if method == "GET", ["/ca.cer", "/ca.crt", "/proxydog-ca.cer"].contains(target) {
             finished = true
-            serveRootCertificate(context: context)
+            serveRootCertificate(context: context, binaryDER: true)
+            return
+        }
+
+        if method == "GET", ["/ca.pem", "/proxydog-ca.pem"].contains(target) {
+            finished = true
+            serveRootCertificate(context: context, binaryDER: false)
             return
         }
 
@@ -517,15 +523,31 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
     }
 
     /// Serves the root CA over plain HTTP so LAN devices can download and install it.
-    private func serveRootCertificate(context: ChannelHandlerContext) {
-        guard let data = try? Data(contentsOf: certificateAuthority.rootCertificateURL) else {
+    /// `/ca.cer` returns binary DER (what Android/HarmonyOS installers expect),
+    /// `/ca.pem` returns the PEM text for manual/desktop use.
+    private func serveRootCertificate(context: ChannelHandlerContext, binaryDER: Bool) {
+        guard let pem = try? String(contentsOf: certificateAuthority.rootCertificateURL, encoding: .utf8) else {
             respondRaw(context: context, head: "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
             return
+        }
+        let data: Data
+        let filename: String
+        if binaryDER {
+            let base64 = pem.split(separator: "\n").filter { !$0.hasPrefix("-----") }.joined()
+            guard let der = Data(base64Encoded: base64), !der.isEmpty else {
+                respondRaw(context: context, head: "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                return
+            }
+            data = der
+            filename = "ProxyDog-CA.cer"
+        } else {
+            data = Data(pem.utf8)
+            filename = "ProxyDog-CA.pem"
         }
         var output = context.channel.allocator.buffer(capacity: data.count + 256)
         output.writeString("HTTP/1.1 200 OK\r\n")
         output.writeString("Content-Type: application/x-x509-ca-cert\r\n")
-        output.writeString("Content-Disposition: attachment; filename=\"ProxyDog-CA.cer\"\r\n")
+        output.writeString("Content-Disposition: attachment; filename=\"\(filename)\"\r\n")
         output.writeString("Content-Length: \(data.count)\r\n")
         output.writeString("Connection: close\r\n\r\n")
         output.writeBytes(data)

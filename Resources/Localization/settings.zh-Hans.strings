@@ -229,3 +229,8 @@
 "Android / other certificate" = "Android / 其它设备证书";
 "On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android: download the .cer file and install it as a trusted CA." = "iOS：打开描述文件后，在「设置 → 通用 → VPN 与设备管理」中安装，再到「证书信任设置」启用完全信任。Android：下载 .cer 文件后安装为受信任的 CA 证书。";
 "Scan with the device camera to open the iOS certificate profile and install it." = "用设备相机扫码打开证书描述文件并安装。";
+
+/* LAN certificate */
+"Android / HarmonyOS certificate" = "Android / 鸿蒙证书";
+"On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android / HarmonyOS: download the .cer file, then install it as a trusted CA (HarmonyOS: Settings → Privacy & security → More security settings → Encryption and credentials → Install a certificate → CA certificate)." = "iOS：打开描述文件后到「设置 → 通用 → VPN 与设备管理」安装，并在「证书信任设置」中启用。Android / 鸿蒙：下载 .cer 文件后安装为受信任的 CA 证书（鸿蒙：设置 → 隐私和安全 → 更多安全设置 → 加密和凭据 → 安装数字证书 → CA 证书）。";
+"Scan to download the certificate (Android / HarmonyOS); on iOS use the profile link above instead." = "扫码下载证书（Android / 鸿蒙）；iOS 请使用上方的描述文件链接。";
