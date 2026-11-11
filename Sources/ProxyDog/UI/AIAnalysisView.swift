@@ -63,6 +63,7 @@ struct AIAnalysisView: View {
                         } else {
                             compactConfiguration
                         }
+                        promptCard
                         results
                     }
                     .padding(DS.Space.x5)
@@ -81,11 +82,7 @@ struct AIAnalysisView: View {
                 promptText = config.defaultPrompt
             }
             guard !requests.isEmpty else { return }
-            if config.isConfigured, !DevLaunchOptions.skipAutoRunAIAnalysis {
-                analyze()
-            } else {
-                showConfiguration = true
-            }
+            showConfiguration = !config.isConfigured
         }
     }
 
@@ -156,15 +153,6 @@ struct AIAnalysisView: View {
                     .background(fieldBackground)
             }
 
-            field(label: String(localized: "Prompt")) {
-                TextEditor(text: $promptText)
-                .font(DS.Typography.ui(11.5))
-                .scrollContentBackground(.hidden)
-                .padding(5)
-                .frame(width: 340, height: 86)
-                .background(fieldBackground)
-            }
-
             field(label: String(localized: "Base URL (optional)")) {
                 TextField(config.provider.defaultBaseURL.isEmpty ? "https://…" : config.provider.defaultBaseURL, text: $config.baseURL)
                     .textFieldStyle(.plain)
@@ -191,32 +179,6 @@ struct AIAnalysisView: View {
                     .font(DS.Typography.ui(11.5))
                     .foregroundStyle(DSColor.textMuted)
                 }
-                Button {
-                    analyze()
-                } label: {
-                    HStack(spacing: DS.Space.x1 + 2) {
-                        if isAnalyzing {
-                            ProgressView().controlSize(.mini)
-                        }
-                        Text(isAnalyzing
-                            ? String(localized: "Analyzing…")
-                            : String(localized: "Start analysis"))
-                    }
-                    .font(DS.Typography.ui(12, .medium))
-                    .foregroundStyle(isAnalyzing || !config.isConfigured ? DSColor.textMuted : DSColor.accent)
-                    .padding(.horizontal, DS.Space.x2 + 2)
-                    .frame(height: 24)
-                    .background(
-                        RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                            .fill(DSColor.raised)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                                    .strokeBorder(DSColor.border, lineWidth: 1)
-                            )
-                    )
-                }
-                .buttonStyle(.plain)
-                .disabled(isAnalyzing || !config.isConfigured)
             }
 
             if let errorText {
@@ -257,6 +219,59 @@ struct AIAnalysisView: View {
         }
     }
 
+    private var promptCard: some View {
+        VStack(alignment: .leading, spacing: DS.Space.x2) {
+            Text(String(localized: "Prompt"))
+                .font(DS.Typography.ui(11.5, .semibold))
+                .foregroundStyle(DSColor.textSecondary)
+
+            TextEditor(text: $promptText)
+                .font(DS.Typography.ui(11.5))
+                .scrollContentBackground(.hidden)
+                .padding(6)
+                .frame(height: 130)
+                .background(fieldBackground)
+
+            HStack {
+                Spacer()
+                Button {
+                    analyze()
+                } label: {
+                    HStack(spacing: DS.Space.x1 + 2) {
+                        if isAnalyzing {
+                            ProgressView().controlSize(.mini)
+                        }
+                        Text(isAnalyzing
+                            ? String(localized: "Analyzing…")
+                            : String(localized: "Start analysis"))
+                    }
+                    .font(DS.Typography.ui(12, .medium))
+                    .foregroundStyle(isAnalyzing || !config.isConfigured ? DSColor.textMuted : DSColor.accent)
+                    .padding(.horizontal, DS.Space.x2 + 2)
+                    .frame(height: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                            .fill(DSColor.raised)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                                    .strokeBorder(DSColor.border, lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isAnalyzing || !config.isConfigured)
+            }
+        }
+        .padding(DS.Space.x4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DSColor.raised)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                .strokeBorder(DSColor.border, lineWidth: 1)
+        )
+    }
+
     // MARK: Results
 
     private var compactConfiguration: some View {
@@ -271,13 +286,6 @@ struct AIAnalysisView: View {
                 .font(DS.Typography.mono(10.5))
                 .foregroundStyle(DSColor.textMuted)
             Spacer(minLength: DS.Space.x2)
-            Button(String(localized: "Re-analyze")) {
-                analyze()
-            }
-            .buttonStyle(.plain)
-            .font(DS.Typography.ui(11))
-            .foregroundStyle(DSColor.accent)
-            .disabled(isAnalyzing)
             Button(String(localized: "Modify configuration")) {
                 showConfiguration = true
             }
