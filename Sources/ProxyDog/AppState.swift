@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Root state of the app: settings, captured traffic, the proxy engine and all the
 /// user intents the UI can trigger.
@@ -787,6 +788,32 @@ final class AppState: ObservableObject {
             Analytics.shared.track("har_exported", properties: ["count": String(filteredRequests.count)])
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Opens a HAR file and merges its entries into the traffic list.
+    func importHAR(from url: URL) {
+        do {
+            let data = try Data(contentsOf: url)
+            let imported = try HARImporter.parse(data: data)
+            store.insertBatch(imported)
+            searchText = ""
+            sidebarSelection = .all
+            selectionID = imported.first?.id
+            Analytics.shared.track("har_imported", properties: ["count": String(imported.count)])
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func presentHARImportPanel() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json, UTType(filenameExtension: "har") ?? .json]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.title = String(localized: "Import HAR")
+        if panel.runModal() == .OK, let url = panel.url {
+            importHAR(from: url)
         }
     }
 

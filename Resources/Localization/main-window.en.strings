@@ -231,3 +231,9 @@
 
 /* Search filters */
 "Double-click to filter by this method" = "Double-click to filter by this method";
+
+/* HAR import */
+"Import HAR…" = "Import HAR…";
+"Import HAR" = "Import HAR";
+"The selected file is not a valid HAR file." = "The selected file is not a valid HAR file.";
+"No requests were found in the HAR file." = "No requests were found in the HAR file.";

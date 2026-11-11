@@ -19,7 +19,7 @@ Also available as a [DMG disk image](https://github.com/welefen/ProxyDog/raw/mas
 - **Search and filters**: full-text search, per-domain filtering, Chrome DevTools-style type chips (Fetch/XHR, Doc, CSS, JS, Font, Img, Media, Manifest, Socket, Wasm, Other), pause/resume, clear, delete single rows and pinning.
 - **Rewrite rules**: no-code static rules evaluated as traffic flows: redirect, replace request, replace response, modify request, modify response (URL regex/substring plus optional HTTP method). Applies to both HTTP/1.1 and HTTP/2 traffic.
 - **Breakpoints**: pause matching requests before they are forwarded or responses before they are written, edit the body in a modal editor, then resume or drop. One-shot, so other traffic keeps flowing.
-- **Export**: HAR 1.2 export and “copy as cURL”.
+- **Export / import**: HAR 1.2 export and import (open HAR files from Chrome, Charles, Proxyman and inspect them like live traffic), plus “copy as cURL”.
 - **HTTP proxy**: one switch to set/clear the macOS system HTTP/HTTPS proxy (requires admin authorization).
 - **Upstream proxies (proxy chaining)**: chain outbound traffic through an existing HTTP or SOCKS5 proxy such as a local VPN client; decryption and VPN egress work at the same time. HTTP and SOCKS5 upstreams are stored and switched independently, one per entry point.
 - **LAN device access**: when “Allow LAN devices” is on the proxy listens on `0.0.0.0` so other devices on the same network can use this Mac as their HTTP proxy. Settings shows the proxy address, a QR code and the certificate download URL (`http://<LAN IP>:8888/ca.cer`); captured requests are labelled “LAN device (IP)” and can be filtered per device.

@@ -90,6 +90,11 @@ struct ProxyDogApp: App {
                 state.presentHARExportPanel()
             }
             .keyboardShortcut("e", modifiers: [.command, .shift])
+
+            Button("Import HAR…") {
+                state.presentHARImportPanel()
+            }
+            .keyboardShortcut("i", modifiers: [.command, .shift])
         }
     }
 }

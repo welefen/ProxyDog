@@ -233,3 +233,9 @@
 
 /* Search filters */
 "Double-click to filter by this method" = "双击按方法筛选";
+
+/* HAR import */
+"Import HAR…" = "导入 HAR…";
+"Import HAR" = "导入 HAR";
+"The selected file is not a valid HAR file." = "HAR 文件格式无效。";
+"No requests were found in the HAR file." = "HAR 文件中没有请求记录。";

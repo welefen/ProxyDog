@@ -35,6 +35,11 @@ enum DevLaunchOptions {
         value(for: "--sample-message").flatMap(Int.init)
     }
 
+    /// QA: imports a HAR file at launch (e.g. `--sample-har-import /tmp/sample.har`).
+    static var sampleHARImport: String? {
+        value(for: "--sample-har-import")
+    }
+
     /// QA: pre-fills the search field (e.g. `--sample-search "method:GET"`).
     static var sampleSearch: String? {
         value(for: "--sample-search")

@@ -53,6 +53,12 @@ final class CaptureStore: ObservableObject {
         requests = Array(batch.prefix(capacity))
     }
 
+    /// Prepends imported exchanges (HAR) while keeping existing captures and pins.
+    func insertBatch(_ batch: [CapturedRequest]) {
+        guard !batch.isEmpty else { return }
+        requests = Array((batch + requests).prefix(capacity))
+    }
+
     func clear() {
         requests.removeAll()
     }

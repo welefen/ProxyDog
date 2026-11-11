@@ -72,6 +72,9 @@ struct ContentView: View {
             if let search = DevLaunchOptions.sampleSearch {
                 state.searchText = search
             }
+            if let path = DevLaunchOptions.sampleHARImport {
+                state.importHAR(from: URL(fileURLWithPath: path))
+            }
             SampleTraffic.openSettingsIfRequested(state: state, openSettings: openSettings)
             if ProcessInfo.processInfo.arguments.contains("--sample-about") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
