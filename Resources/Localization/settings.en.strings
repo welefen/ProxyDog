@@ -220,3 +220,9 @@
 /* LAN access */
 "Certificate QR code" = "Certificate QR code";
 "Scan with the device camera to download and install the root certificate." = "Scan with the device camera to download and install the root certificate.";
+
+/* LAN certificate */
+"iOS certificate profile" = "iOS certificate profile";
+"Android / other certificate" = "Android / other certificate";
+"On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android: download the .cer file and install it as a trusted CA." = "On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android: download the .cer file and install it as a trusted CA.";
+"Scan with the device camera to open the iOS certificate profile and install it." = "Scan with the device camera to open the iOS certificate profile and install it.";

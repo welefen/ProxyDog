@@ -112,9 +112,9 @@ To let other devices on the same Wi-Fi (a phone, tablet or another computer) use
 
 1. Settings → Connection → LAN access, turn on “Allow LAN devices” (the proxy listens on `0.0.0.0`; turning it off restores loopback-only).
 2. On the device set the HTTP proxy to the displayed address, e.g. `192.168.31.37:8888`; Android proxy apps can scan the QR code.
-3. The same card shows the certificate URL `http://<LAN IP>:8888/ca.cer` — open it in the device browser to download the root certificate:
-   - iOS: download the profile, install it in Settings → General → VPN & Device Management, then enable full trust in About → Certificate Trust Settings
-   - Android / others: install it as a trusted CA certificate
+3. The same card has the certificate entries (or scan the certificate QR code):
+   - iOS: open the iOS certificate profile `http://<LAN IP>:8888/ca.mobileconfig`; iOS prompts to download the profile, install it in Settings → General → VPN & Device Management, then enable full trust in About → Certificate Trust Settings
+   - Android / others: download `http://<LAN IP>:8888/ca.cer` and install it as a trusted CA certificate
 4. Device traffic appears in the request list: the client column shows a network icon, the sidebar groups it as “LAN device (IP)”, and clicking that group filters to the device.
 
 Note: while enabled, any device on the same network can use this proxy — only enable it on trusted networks. HTTPS decryption still requires the device to trust the root certificate, and apps that pin certificates cannot be decrypted.

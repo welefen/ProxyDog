@@ -223,3 +223,9 @@
 /* LAN access */
 "Certificate QR code" = "证书二维码";
 "Scan with the device camera to download and install the root certificate." = "用设备相机扫码即可下载并安装根证书。";
+
+/* LAN certificate */
+"iOS certificate profile" = "iOS 证书描述文件";
+"Android / other certificate" = "Android / 其它设备证书";
+"On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android: download the .cer file and install it as a trusted CA." = "iOS：打开描述文件后，在「设置 → 通用 → VPN 与设备管理」中安装，再到「证书信任设置」启用完全信任。Android：下载 .cer 文件后安装为受信任的 CA 证书。";
+"Scan with the device camera to open the iOS certificate profile and install it." = "用设备相机扫码打开证书描述文件并安装。";

@@ -200,7 +200,7 @@ struct SettingsView: View {
                     SettingsHairline()
 
                     if let certURL = lanCertificateURL, let url = URL(string: certURL) {
-                        SettingsRow(title: "Certificate URL") {
+                        SettingsRow(title: "iOS certificate profile") {
                             HStack(spacing: DS.Space.x2) {
                                 Text(certURL)
                                     .font(DS.Typography.mono(12))
@@ -219,8 +219,30 @@ struct SettingsView: View {
 
                         SettingsHairline()
 
+                        if let androidURLString = lanAndroidCertificateURL,
+                           let androidURL = URL(string: androidURLString) {
+                            SettingsRow(title: "Android / other certificate") {
+                                HStack(spacing: DS.Space.x2) {
+                                    Text(androidURLString)
+                                        .font(DS.Typography.mono(12))
+                                        .foregroundStyle(DSColor.textPrimary)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                        .textSelection(.enabled)
+                                        .help(androidURLString)
+                                    SettingsIconButton(
+                                        systemName: "safari",
+                                        help: String(localized: "Open certificate URL"),
+                                        action: { NSWorkspace.shared.open(androidURL) }
+                                    )
+                                }
+                            }
+
+                            SettingsHairline()
+                        }
+
                         SettingsHintRow(
-                            hint: "On iOS: download the profile, then Settings → General → VPN & Device Management → install it and enable it in Certificate Trust Settings. On Android: install it as a trusted CA."
+                            hint: "On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android: download the .cer file and install it as a trusted CA."
                         )
 
                         SettingsHairline()
@@ -228,7 +250,7 @@ struct SettingsView: View {
                         if let qrImage = SettingsQRCode.image(for: certURL) {
                             SettingsRow(
                                 title: "Certificate QR code",
-                                hint: "Scan with the device camera to download and install the root certificate."
+                                hint: "Scan with the device camera to open the iOS certificate profile and install it."
                             ) {
                                 Image(nsImage: qrImage)
                                     .interpolation(.none)
@@ -255,6 +277,11 @@ struct SettingsView: View {
     }
 
     private var lanCertificateURL: String? {
+        guard settings.allowLANDevices, let host = state.lanAddress else { return nil }
+        return "http://\(host):\(settings.port)/ca.mobileconfig"
+    }
+
+    private var lanAndroidCertificateURL: String? {
         guard settings.allowLANDevices, let host = state.lanAddress else { return nil }
         return "http://\(host):\(settings.port)/ca.cer"
     }

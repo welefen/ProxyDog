@@ -486,6 +486,12 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             remainder.writeBuffer(&buffer)
         }
 
+        if method == "GET", ["/ca.mobileconfig", "/proxydog-ca.mobileconfig"].contains(target) {
+            finished = true
+            serveRootProfile(context: context)
+            return
+        }
+
         if method == "GET", ["/ca.cer", "/ca.crt", "/proxydog-ca.cer"].contains(target) {
             finished = true
             serveRootCertificate(context: context)
@@ -520,6 +526,78 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
         output.writeString("HTTP/1.1 200 OK\r\n")
         output.writeString("Content-Type: application/x-x509-ca-cert\r\n")
         output.writeString("Content-Disposition: attachment; filename=\"ProxyDog-CA.cer\"\r\n")
+        output.writeString("Content-Length: \(data.count)\r\n")
+        output.writeString("Connection: close\r\n\r\n")
+        output.writeBytes(data)
+        context.channel.writeAndFlush(output).whenComplete { _ in
+            context.close(promise: nil)
+        }
+    }
+
+    /// Serves an unsigned `.mobileconfig` profile containing the root CA so iOS devices
+    /// get the standard "Profile Downloaded → install" flow instead of a raw file.
+    private func serveRootProfile(context: ChannelHandlerContext) {
+        guard let pem = try? String(contentsOf: certificateAuthority.rootCertificateURL, encoding: .utf8) else {
+            respondRaw(context: context, head: "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            return
+        }
+        let base64 = pem
+            .split(separator: "\n")
+            .filter { !$0.hasPrefix("-----") }
+            .joined()
+        guard let der = Data(base64Encoded: base64), !der.isEmpty else {
+            respondRaw(context: context, head: "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            return
+        }
+        let derBase64 = der.base64EncodedString(options: [.lineLength64Characters])
+        let profile = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>PayloadContent</key>
+            <array>
+                <dict>
+                    <key>PayloadCertificateFileName</key>
+                    <string>ProxyDog-CA.cer</string>
+                    <key>PayloadContent</key>
+                    <data>
+        \(derBase64)
+                    </data>
+                    <key>PayloadDescription</key>
+                    <string>Adds the ProxyDog root certificate for HTTPS debugging.</string>
+                    <key>PayloadDisplayName</key>
+                    <string>ProxyDog Root CA</string>
+                    <key>PayloadIdentifier</key>
+                    <string>com.proxydog.ca.root</string>
+                    <key>PayloadType</key>
+                    <string>com.apple.security.root</string>
+                    <key>PayloadUUID</key>
+                    <string>8F1D2C64-7B5A-4E71-9F3C-2A6B8D4E1F09</string>
+                    <key>PayloadVersion</key>
+                    <integer>1</integer>
+                </dict>
+            </array>
+            <key>PayloadDisplayName</key>
+            <string>ProxyDog CA</string>
+            <key>PayloadIdentifier</key>
+            <string>com.proxydog.ca.profile</string>
+            <key>PayloadOrganization</key>
+            <string>ProxyDog</string>
+            <key>PayloadType</key>
+            <string>Configuration</string>
+            <key>PayloadUUID</key>
+            <string>5B7E9A13-2C48-4D6F-8A1B-3E5C7D9F0A21</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+        </dict>
+        </plist>
+        """
+        let data = Data(profile.utf8)
+        var output = context.channel.allocator.buffer(capacity: data.count + 256)
+        output.writeString("HTTP/1.1 200 OK\r\n")
+        output.writeString("Content-Type: application/x-apple-aspen-config\r\n")
+        output.writeString("Content-Disposition: attachment; filename=\"ProxyDog-CA.mobileconfig\"\r\n")
         output.writeString("Content-Length: \(data.count)\r\n")
         output.writeString("Connection: close\r\n\r\n")
         output.writeBytes(data)
