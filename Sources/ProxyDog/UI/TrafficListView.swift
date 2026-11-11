@@ -117,14 +117,6 @@ struct TrafficListView: View {
                         .font(DS.Typography.mono(11, .semibold))
                         .foregroundStyle(DSColor.accent)
                         .frame(width: 26, height: 22)
-                        .background(
-                            RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                                .fill(DSColor.accent.opacity(0.10))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                                .strokeBorder(DSColor.accent.opacity(0.30), lineWidth: 1)
-                        )
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
