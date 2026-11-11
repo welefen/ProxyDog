@@ -256,3 +256,7 @@
 
 /* AI key link */
 "Get API key" = "Get API key";
+
+/* Proxy env injection */
+"Inject proxy environment" = "Inject proxy environment";
+"Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up." = "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up.";

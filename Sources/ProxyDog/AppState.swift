@@ -549,7 +549,11 @@ final class AppState: ObservableObject {
                 try SystemProxy.enable(port: settings.port)
                 settings.systemProxyEnabled = true
                 isSystemProxyEnabled = true
-                SystemProxyEnvironment.enable(port: settings.port)
+                if settings.injectProxyEnvironment {
+                    SystemProxyEnvironment.enable(port: settings.port)
+                } else {
+                    SystemProxyEnvironment.disable()
+                }
                 autoEnableConfiguredUpstreams()
                 Analytics.shared.track("system_proxy_enabled")
             } else {
@@ -591,6 +595,17 @@ final class AppState: ObservableObject {
         applyUpstreamProxy(enabled: true, host: host, port: port, kind: kind)
     }
 
+    /// Applies or removes the launchd environment proxy without touching the system proxy.
+    func applyProxyEnvironmentInjection(_ enabled: Bool) {
+        if enabled {
+            if isSystemProxyEnabled {
+                SystemProxyEnvironment.enable(port: settings.port)
+            }
+        } else {
+            SystemProxyEnvironment.disable()
+        }
+    }
+
     /// Favicons are fetched by the app itself; route them the same way the proxy reaches
     /// the internet (upstream proxy, then system proxy, then direct) so icons for sites
     /// that need the VPN are reachable without looping through ProxyDog.
@@ -603,7 +618,7 @@ final class AppState: ObservableObject {
 
     func refreshSystemProxyState() {
         isSystemProxyEnabled = SystemProxy.isEnabled(port: settings.port)
-        if isSystemProxyEnabled {
+        if isSystemProxyEnabled, settings.injectProxyEnvironment {
             SystemProxyEnvironment.enable(port: settings.port)
         } else if UserDefaults.standard.bool(forKey: "proxy.envProxyActive") {
             SystemProxyEnvironment.disable()

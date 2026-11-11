@@ -346,6 +346,26 @@ struct SettingsView: View {
                     .accessibilityLabel("Set as System Proxy")
                 }
                 SettingsHairline()
+
+                SettingsRow(
+                    title: "Inject proxy environment",
+                    hint: "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.injectProxyEnvironment },
+                        set: { newValue in
+                            settings.injectProxyEnvironment = newValue
+                            state.applyProxyEnvironmentInjection(newValue)
+                        }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DSColor.accent)
+                    .accessibilityLabel("Inject proxy environment")
+                }
+
+                SettingsHairline()
                 SettingsRow(
                     title: "Proxy port",
                     hint: "Changing the port restarts the proxy when it is running.",
@@ -474,6 +494,26 @@ struct SettingsView: View {
                     .tint(DSColor.accent)
                     .accessibilityLabel("SOCKS5 proxy")
                 }
+                SettingsHairline()
+
+                SettingsRow(
+                    title: "Inject proxy environment",
+                    hint: "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.injectProxyEnvironment },
+                        set: { newValue in
+                            settings.injectProxyEnvironment = newValue
+                            state.applyProxyEnvironmentInjection(newValue)
+                        }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DSColor.accent)
+                    .accessibilityLabel("Inject proxy environment")
+                }
+
                 SettingsHairline()
                 SettingsRow(
                     title: "Proxy port",
