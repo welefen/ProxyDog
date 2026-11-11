@@ -51,6 +51,9 @@ struct DetailFieldRow: View {
 struct HeadersSectionView: View {
     let title: String
     let headers: [HeaderField]
+    /// Headers copied by "copy all"; defaults to the displayed rows. Cookie headers live in
+    /// their own section but still belong in a full header copy.
+    var copyHeaders: [HeaderField]? = nil
 
     @State private var isHovering = false
     @State private var didCopyAll = false
@@ -97,7 +100,7 @@ extension HeadersSectionView {
             if !headers.isEmpty {
                 Button {
                     PDPasteboard.copy(
-                        headers.map { "\($0.name): \($0.value)" }.joined(separator: "\n")
+                        (copyHeaders ?? headers).map { "\($0.name): \($0.value)" }.joined(separator: "\n")
                     )
                     didCopyAll = true
                     Task {

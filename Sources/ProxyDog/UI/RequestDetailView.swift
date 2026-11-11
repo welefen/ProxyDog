@@ -471,7 +471,8 @@ private struct HeadersTab: View {
             VStack(alignment: .leading, spacing: DS.Space.x6) {
                 HeadersSectionView(
                     title: String(localized: "Request headers"),
-                    headers: request.requestHeaders.filter { $0.name.lowercased() != "cookie" }
+                    headers: request.requestHeaders.filter { $0.name.lowercased() != "cookie" },
+                    copyHeaders: request.requestHeaders
                 )
                 CookieSectionView(
                     kind: .request,
@@ -483,7 +484,8 @@ private struct HeadersTab: View {
                 )
                 HeadersSectionView(
                     title: String(localized: "Response headers"),
-                    headers: request.responseHeaders.filter { $0.name.lowercased() != "set-cookie" }
+                    headers: request.responseHeaders.filter { $0.name.lowercased() != "set-cookie" },
+                    copyHeaders: request.responseHeaders
                 )
                 CookieSectionView(
                     kind: .response,
