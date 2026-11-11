@@ -68,6 +68,12 @@ enum AIProvider: String, CaseIterable, Codable, Identifiable {
     var requiresBaseURL: Bool { self == .custom }
 }
 
+/// One image attached to an analysis request (base64-encoded per provider).
+struct AIInputImage {
+    let data: Data
+    let mimeType: String
+}
+
 struct AIConfiguration {
     var provider: AIProvider
     var apiKey: String

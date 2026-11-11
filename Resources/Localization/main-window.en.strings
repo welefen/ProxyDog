@@ -316,3 +316,9 @@
 
 /* AI default prompt */
 "Focus on:\n1) failed requests (4xx/5xx, connection errors) and likely causes;\n2) whether uploaded content contains screenshots or other private images;\n3) whether user app lists, device identifiers or other privacy data were reported;\n4) any other notable anomalies." = "Focus on:\n1) failed requests (4xx/5xx, connection errors) and likely causes;\n2) whether uploaded content contains screenshots or other private images;\n3) whether user app lists, device identifiers or other privacy data were reported;\n4) any other notable anomalies.";
+
+/* AI analysis options */
+"Requests to analyze" = "Requests to analyze";
+"Analyze uploaded images" = "Analyze uploaded images";
+"Include form values" = "Include form values";
+"Uploaded images and form values are sent to the selected provider for this analysis." = "Uploaded images and form values are sent to the selected provider for this analysis.";

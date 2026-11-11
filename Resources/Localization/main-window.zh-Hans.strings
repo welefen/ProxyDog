@@ -318,3 +318,9 @@
 
 /* AI default prompt */
 "Focus on:\n1) failed requests (4xx/5xx, connection errors) and likely causes;\n2) whether uploaded content contains screenshots or other private images;\n3) whether user app lists, device identifiers or other privacy data were reported;\n4) any other notable anomalies." = "重点分析：\n1) 有哪些失败请求（4xx/5xx、连接失败）及可能原因；\n2) 上传内容中是否包含截图或其它隐私图片；\n3) 是否上报了用户 App 列表、设备标识等隐私数据；\n4) 其它值得注意的异常。";
+
+/* AI analysis options */
+"Requests to analyze" = "分析请求数";
+"Analyze uploaded images" = "分析上传图片";
+"Include form values" = "包含表单值";
+"Uploaded images and form values are sent to the selected provider for this analysis." = "本次分析会把上传的图片和表单值发送给所选服务商。";

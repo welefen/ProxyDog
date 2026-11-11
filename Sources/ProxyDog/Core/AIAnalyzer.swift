@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 struct AIAnomaly: Identifiable {
@@ -112,18 +113,41 @@ enum AIAnalyzer {
         requests.prefix(3).map { "\($0.method) \($0.urlString) → \($0.statusText)" }
     }
 
+    struct Options {
+        var requestLimit = 80
+        var includeImages = false
+        var includeFormValues = false
+    }
+
     static func prompt(
         for report: AIAnalysisReport,
         requests: [CapturedRequest],
         chinese: Bool,
-        focus: String
+        focus: String,
+        options: Options,
+        attachedImageCount: Int
     ) -> String {
         var lines: [String] = []
-        for request in requests.prefix(80) {
+        let limited = options.requestLimit > 0 ? Array(requests.prefix(options.requestLimit)) : requests
+        for request in limited {
             let duration = request.duration.map { String(format: "%.0fms", $0 * 1000) } ?? "-"
             lines.append("\(request.method) \(request.urlString) -> \(request.statusText) \(duration) \(PDFormat.bytes(request.responseBytes))")
         }
         let findings = report.findings.map { "- \($0.title): \($0.detail)" }.joined(separator: "\n")
+        if options.includeFormValues {
+            let forms = formValues(from: limited)
+            if !forms.isEmpty {
+                lines.append("")
+                lines.append("Form values (truncated):")
+                lines.append(contentsOf: forms)
+            }
+        }
+        if attachedImageCount > 0 {
+            let note = chinese
+                ? "已附带 \(attachedImageCount) 张抓包上传的图片，请检查其中是否包含截图、证件、人脸或其它隐私信息。"
+                : "\(attachedImageCount) uploaded image(s) from the capture are attached; check them for screenshots, IDs, faces or other private information."
+            lines.insert(note, at: 0)
+        }
         let instruction = chinese
             ? "你是网络抓包分析助手。请用简体中文分析下面的抓包请求与本地统计，指出可能的异常（失败原因、性能问题、可优化点），给出 3-5 条简短要点，不要重复原始请求列表，不要编造未出现的数据。"
             : "You are a network trace assistant. Analyze the captured requests and local stats below. Point out likely anomalies (failure causes, performance issues, optimizations) in 3-5 short bullet points. Do not repeat the raw list or invent data."
@@ -139,5 +163,69 @@ enum AIAnalyzer {
         Requests:
         \(lines.joined(separator: "\n"))
         """
+    }
+
+    /// Text values from multipart or urlencoded form bodies (truncated for privacy/cost).
+    static func formValues(from requests: [CapturedRequest]) -> [String] {
+        var results: [String] = []
+        for request in requests where results.count < 40 {
+            guard let body = request.requestBody, !body.isEmpty else { continue }
+            let mime = request.requestContentType?.lowercased() ?? ""
+            var pairs: [String] = []
+            if mime.contains("multipart/form-data"),
+               let multipart = MultipartFormData.parse(data: body, contentType: request.requestContentType) {
+                for part in multipart.parts where part.filename == nil {
+                    guard let value = String(data: part.data, encoding: .utf8) else { continue }
+                    pairs.append("\(part.name)=\(String(value.prefix(120)))")
+                }
+            } else if mime.contains("x-www-form-urlencoded"),
+                      let text = String(data: body, encoding: .utf8) {
+                pairs = text.split(separator: "&").prefix(20).map { pair in
+                    String(pair.prefix(160))
+                }
+            }
+            guard !pairs.isEmpty else { continue }
+            results.append("\(request.method) \(request.host)\(request.displayPath): " + pairs.joined(separator: ", "))
+        }
+        return results
+    }
+
+    /// Extracts uploaded images (multipart parts or raw image bodies), downscaling large ones.
+    static func images(from requests: [CapturedRequest], maxCount: Int = 3) -> [AIInputImage] {
+        var images: [AIInputImage] = []
+        for request in requests where images.count < maxCount {
+            guard let body = request.requestBody, !body.isEmpty else { continue }
+            let mime = request.requestContentType?.lowercased() ?? ""
+            if mime.contains("multipart/form-data"),
+               let multipart = MultipartFormData.parse(data: body, contentType: request.requestContentType) {
+                for part in multipart.parts where images.count < maxCount {
+                    guard part.isImage else { continue }
+                    if let image = preparedImage(part.data) { images.append(image) }
+                }
+            } else if mime.hasPrefix("image/"), let image = preparedImage(body) {
+                images.append(image)
+            }
+        }
+        return images
+    }
+
+    private static func preparedImage(_ data: Data) -> AIInputImage? {
+        guard data.count >= 64, let image = NSImage(data: data) else { return nil }
+        var size = image.size
+        guard size.width > 0, size.height > 0 else { return nil }
+        let maxDimension: CGFloat = 1280
+        let scale = min(1, maxDimension / max(size.width, size.height))
+        size = NSSize(width: size.width * scale, height: size.height * scale)
+        let target = NSImage(size: size)
+        target.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        image.draw(in: NSRect(origin: .zero, size: size))
+        target.unlockFocus()
+        guard let tiff = target.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let jpeg = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.75]) else {
+            return nil
+        }
+        return AIInputImage(data: jpeg, mimeType: "image/jpeg")
     }
 }

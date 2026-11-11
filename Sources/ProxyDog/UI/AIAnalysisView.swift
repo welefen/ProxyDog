@@ -14,6 +14,9 @@ struct AIAnalysisView: View {
     @State private var showConfiguration = false
     /// Editable per-run prompt; resets to the default every time the sheet opens.
     @State private var promptText = ""
+    @State private var requestLimit = 80
+    @State private var includeImages = false
+    @State private var includeFormValues = false
 
     private enum Phase {
         case idle
@@ -225,6 +228,46 @@ struct AIAnalysisView: View {
                 .font(DS.Typography.ui(11.5, .semibold))
                 .foregroundStyle(DSColor.textSecondary)
 
+            HStack(spacing: DS.Space.x4) {
+                HStack(spacing: DS.Space.x2) {
+                    Text(String(localized: "Requests to analyze"))
+                        .font(DS.Typography.ui(11.5))
+                        .foregroundStyle(DSColor.textSecondary)
+                    PDDropdownPicker(
+                        options: [("50", "50"), ("80", "80"), ("200", "200"), ("500", "500"), ("0", String(localized: "All"))]
+                            .map { .init(value: $0.0, label: $0.1) },
+                        selection: Binding(
+                            get: { String(requestLimit) },
+                            set: { requestLimit = Int($0) ?? 80 }
+                        ),
+                        width: 96,
+                        mono: false
+                    )
+                }
+
+                Toggle(isOn: $includeImages) {
+                    Text(String(localized: "Analyze uploaded images"))
+                        .font(DS.Typography.ui(11.5))
+                }
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+
+                Toggle(isOn: $includeFormValues) {
+                    Text(String(localized: "Include form values"))
+                        .font(DS.Typography.ui(11.5))
+                }
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+
+                Spacer(minLength: 0)
+            }
+
+            if includeImages || includeFormValues {
+                Text(String(localized: "Uploaded images and form values are sent to the selected provider for this analysis."))
+                    .font(DS.Typography.ui(10.5))
+                    .foregroundStyle(DSColor.amber)
+            }
+
             TextEditor(text: $promptText)
                 .font(DS.Typography.ui(11.5))
                 .scrollContentBackground(.hidden)
@@ -424,15 +467,24 @@ struct AIAnalysisView: View {
 
         let chinese = Locale.preferredLanguages.first?.hasPrefix("zh") == true
         let focus = promptText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let options = AIAnalyzer.Options(
+            requestLimit: requestLimit,
+            includeImages: includeImages,
+            includeFormValues: includeFormValues
+        )
+        let scopedRequests = requestLimit > 0 ? Array(requests.prefix(requestLimit)) : requests
+        let images = includeImages ? AIAnalyzer.images(from: scopedRequests) : []
         let prompt = AIAnalyzer.prompt(
             for: report,
             requests: requests,
             chinese: chinese,
-            focus: focus.isEmpty ? config.defaultPrompt : focus
+            focus: focus.isEmpty ? config.defaultPrompt : focus,
+            options: options,
+            attachedImageCount: images.count
         )
         Task {
             do {
-                let text = try await AIClient.summarize(configuration: configuration, prompt: prompt)
+                let text = try await AIClient.summarize(configuration: configuration, prompt: prompt, images: images)
                 summary = text
                 phase = .done
                 showConfiguration = false

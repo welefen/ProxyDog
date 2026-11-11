@@ -2,19 +2,27 @@ import Foundation
 
 /// Calls mainstream LLM APIs directly from the app (no backend).
 enum AIClient {
-    static func summarize(configuration: AIConfiguration, prompt: String) async throws -> String {
+    static func summarize(
+        configuration: AIConfiguration,
+        prompt: String,
+        images: [AIInputImage] = []
+    ) async throws -> String {
         guard configuration.isUsable else { throw AIClientError.missingConfiguration }
         switch configuration.provider {
         case .openAI, .deepSeek, .doubao, .kimi, .qwen, .zhipu, .siliconFlow, .openRouter, .custom:
-            return try await openAICompatible(configuration: configuration, prompt: prompt)
+            return try await openAICompatible(configuration: configuration, prompt: prompt, images: images)
         case .anthropic:
-            return try await anthropic(configuration: configuration, prompt: prompt)
+            return try await anthropic(configuration: configuration, prompt: prompt, images: images)
         case .gemini:
-            return try await gemini(configuration: configuration, prompt: prompt)
+            return try await gemini(configuration: configuration, prompt: prompt, images: images)
         }
     }
 
-    private static func openAICompatible(configuration: AIConfiguration, prompt: String) async throws -> String {
+    private static func openAICompatible(
+        configuration: AIConfiguration,
+        prompt: String,
+        images: [AIInputImage]
+    ) async throws -> String {
         let base = configuration.resolvedBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URL(string: base + "/chat/completions") else { throw AIClientError.missingConfiguration }
         var request = URLRequest(url: url)
@@ -22,9 +30,22 @@ enum AIClient {
         request.timeoutInterval = 45
         request.setValue("Bearer \(configuration.apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let content: Any
+        if images.isEmpty {
+            content = prompt
+        } else {
+            var parts: [[String: Any]] = [["type": "text", "text": prompt]]
+            for image in images {
+                parts.append([
+                    "type": "image_url",
+                    "image_url": ["url": "data:\(image.mimeType);base64,\(image.data.base64EncodedString())"],
+                ])
+            }
+            content = parts
+        }
         let body: [String: Any] = [
             "model": configuration.resolvedModel,
-            "messages": [["role": "user", "content": prompt]],
+            "messages": [["role": "user", "content": content]],
             "temperature": 0.2,
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -37,7 +58,11 @@ enum AIClient {
         return content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func anthropic(configuration: AIConfiguration, prompt: String) async throws -> String {
+    private static func anthropic(
+        configuration: AIConfiguration,
+        prompt: String,
+        images: [AIInputImage]
+    ) async throws -> String {
         let base = configuration.resolvedBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URL(string: base + "/messages") else { throw AIClientError.missingConfiguration }
         var request = URLRequest(url: url)
@@ -46,10 +71,21 @@ enum AIClient {
         request.setValue(configuration.apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var blocks: [[String: Any]] = [["type": "text", "text": prompt]]
+        for image in images {
+            blocks.append([
+                "type": "image",
+                "source": [
+                    "type": "base64",
+                    "media_type": image.mimeType,
+                    "data": image.data.base64EncodedString(),
+                ],
+            ])
+        }
         let body: [String: Any] = [
             "model": configuration.resolvedModel,
             "max_tokens": 1024,
-            "messages": [["role": "user", "content": prompt]],
+            "messages": [["role": "user", "content": blocks]],
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let json = try await send(request)
@@ -60,7 +96,11 @@ enum AIClient {
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func gemini(configuration: AIConfiguration, prompt: String) async throws -> String {
+    private static func gemini(
+        configuration: AIConfiguration,
+        prompt: String,
+        images: [AIInputImage]
+    ) async throws -> String {
         let base = configuration.resolvedBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let model = configuration.resolvedModel
         guard var components = URLComponents(string: base + "/models/\(model):generateContent") else {
@@ -72,8 +112,17 @@ enum AIClient {
         request.httpMethod = "POST"
         request.timeoutInterval = 45
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var parts: [[String: Any]] = [["text": prompt]]
+        for image in images {
+            parts.append([
+                "inlineData": [
+                    "mimeType": image.mimeType,
+                    "data": image.data.base64EncodedString(),
+                ],
+            ])
+        }
         let body: [String: Any] = [
-            "contents": [["parts": [["text": prompt]]]],
+            "contents": [["parts": parts]],
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let json = try await send(request)
