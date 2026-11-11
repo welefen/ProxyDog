@@ -571,18 +571,27 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             serveRootProfile(context: context)
             return
         }
-        // HarmonyOS 4.x is Android-based and its browser/downloader can hand the DER
-        // certificate to the system installer directly; HarmonyOS NEXT needs Settings.
-        let isHarmony = ua.contains("harmony") || ua.contains("openharmony")
-        if isHarmony, !ua.contains("android") {
-            serveHarmonyLandingPage(context: context)
+        // HarmonyOS (both 4.x and NEXT) never installs a downloaded certificate by
+        // tapping it; show the Settings path plus download buttons instead.
+        if ua.contains("harmony") || ua.contains("openharmony") {
+            serveHarmonyLandingPage(context: context, requestHead: requestHead)
             return
         }
-        if ua.contains("android") || isHarmony {
+        if ua.contains("android") {
             serveRootCertificate(context: context, binaryDER: true)
             return
         }
         serveCertificateLandingPage(context: context)
+    }
+
+    private static func headerValue(_ name: String, from requestHead: String) -> String? {
+        for line in requestHead.split(separator: "\r\n") {
+            let parts = line.split(separator: ":", maxSplits: 1)
+            guard parts.count == 2,
+                  parts[0].trimmingCharacters(in: .whitespaces).lowercased() == name else { continue }
+            return parts[1].trimmingCharacters(in: .whitespaces)
+        }
+        return nil
     }
 
     private static func userAgent(from requestHead: String) -> String {
@@ -598,28 +607,29 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
     /// HarmonyOS does not install a CA when the downloaded file is tapped in the file
     /// manager; the user has to go through Settings. Show those steps explicitly and
     /// offer the DER / CRT / PEM variants.
-    private func serveHarmonyLandingPage(context: ChannelHandlerContext) {
+    private func serveHarmonyLandingPage(context: ChannelHandlerContext, requestHead: String) {
+        let proxyAddress = Self.headerValue("host", from: requestHead) ?? "<Mac IP>:8888"
         let html = """
         <!DOCTYPE html><html><head><meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>ProxyDog 根证书安装</title>
-        <style>body{font:16px -apple-system,Helvetica,sans-serif;margin:28px 20px;color:#222;line-height:1.55}a.btn{display:block;text-align:center;background:#0a66ff;color:#fff;text-decoration:none;padding:12px;border-radius:10px;margin:12px 0}ol{padding-left:22px}code{background:#f2f2f7;padding:2px 5px;border-radius:4px}.muted{color:#666;font-size:13px}</style>
+        <style>body{font:16px -apple-system,Helvetica,sans-serif;margin:28px 20px;color:#222;line-height:1.6}a.btn{display:block;text-align:center;background:#0a66ff;color:#fff;text-decoration:none;padding:12px;border-radius:10px;margin:12px 0}ol{padding-left:22px}code{background:#f2f2f7;padding:2px 5px;border-radius:4px}.muted{color:#666;font-size:13px}</style>
         </head><body>
-        <h2>ProxyDog 根证书</h2>
-        <p><b>重要：</b>下载后直接在「文件管理」里点开证书不会安装，请按下面的系统设置步骤操作。</p>
+        <h2>ProxyDog 根证书安装</h2>
+        <p><b>重要：</b>在「文件管理」里直接点开证书不会安装，请按下面的步骤到系统设置中安装。</p>
         <ol>
-        <li>点击下面的按钮下载证书（任选一种格式，推荐 DER）</li>
-        <li>打开 <b>设置 → 隐私和安全 → 更多安全设置 → 加密和凭据 → 安装数字证书</b></li>
-        <li>选择 <b>CA 证书</b>，从「下载」中选择 <code>ProxyDog-CA.cer</code></li>
+        <li>点击下面的按钮下载证书（推荐 <code>.cer</code>）</li>
+        <li>打开 <b>设置 → 安全 → 更多安全设置 → 加密和凭据 → 从存储设备安装 → CA 证书</b>，选择「下载」里的 <code>ProxyDog-CA.cer</code></li>
         <li>按提示确认（可能需要锁屏密码）</li>
-        <li>之后在 Wi-Fi 设置里把 HTTP 代理设为这台 Mac 的地址和端口</li>
+        <li>安装后，在 Wi-Fi 设置里把 HTTP 代理设为 <code>%(proxy)s</code></li>
         </ol>
+        <p class="muted">部分版本的路径为：设置 → 隐私和安全 → 更多安全设置 → 加密和凭据 → 安装数字证书 → CA 证书。</p>
         <a class="btn" href="/ca.cer">下载证书 (.cer / DER)</a>
         <a class="btn" href="/ca.crt">下载证书 (.crt / DER)</a>
         <a class="btn" href="/ca.pem">下载证书 (.pem)</a>
-        <p class="muted">Root certificate for ProxyDog. After downloading, install it from Settings → Privacy & security → More security settings → Encryption and credentials → Install a certificate → CA certificate. Tapping the file in Files does not install it.</p>
+        <p class="muted">Root certificate for ProxyDog. Install it from Settings → Security → More security settings → Encryption and credentials → Install from storage → CA certificate; tapping the file in Files does not install it. Then set the Wi-Fi HTTP proxy to %(proxy)s.</p>
         </body></html>
-        """
+        """.replacingOccurrences(of: "%(proxy)s", with: proxyAddress)
         let data = Data(html.utf8)
         var output = context.channel.allocator.buffer(capacity: data.count + 256)
         output.writeString("HTTP/1.1 200 OK\r\n")
