@@ -7,6 +7,7 @@ import SwiftUI
 /// keyboard affordances (Cmd+F, arrows, Delete).
 struct TrafficListView: View {
     @Environment(\.openSettings) private var openSettings
+    @State private var showsAIAnalysis = false
     @EnvironmentObject private var state: AppState
 
     @FocusState private var searchFocused: Bool
@@ -39,10 +40,18 @@ struct TrafficListView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DSColor.base)
+        .sheet(isPresented: $showsAIAnalysis) {
+            AIAnalysisView(requests: requests)
+        }
         .toolbar { toolbarContent }
         .onAppear {
             installSearchShortcut()
             listFocused = true
+            if DevLaunchOptions.openAIAnalysis {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showsAIAnalysis = true
+                }
+            }
         }
         .onDisappear { removeSearchShortcut() }
     }
@@ -99,6 +108,10 @@ struct TrafficListView: View {
                 PDIconButton(symbol: "wand.and.stars", help: String(localized: "Rewrite rules and breakpoints")) {
                     state.requestSettings(destination: .rules)
                     openSettings()
+                }
+
+                PDIconButton(symbol: "brain.head.profile", help: String(localized: "Analyze requests with AI")) {
+                    showsAIAnalysis = true
                 }
 
                 PDIconButton(

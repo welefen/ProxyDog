@@ -259,3 +259,24 @@
 
 /* Status bar */
 "Double-click to show failed requests" = "双击筛选错误请求";
+
+/* AI analysis */
+"Analyze requests with AI" = "用 AI 分析当前请求";
+"AI analysis" = "AI 分析";
+"Analyzing %d requests" = "正在分析 %d 条请求";
+"Copy report" = "复制报告";
+"%d failed requests" = "%d 个失败请求";
+"%d slow requests (>1 s)" = "%d 个慢请求（>1 秒）";
+"%d large responses (>512 KB)" = "%d 个较大的响应（>512 KB）";
+"%d plaintext HTTP requests" = "%d 个明文 HTTP 请求";
+"%d frequently repeated endpoints" = "%d 个被高频重复请求的接口";
+"Connection failed" = "连接失败";
+"The slowest responses are listed below." = "最慢的响应如下。";
+"Large bodies slow down capture and inspection." = "较大的正文会拖慢抓包和查看速度。";
+"These requests are not encrypted; data is visible on the wire." = "这些请求未加密，数据在链路上可见。";
+"Possible polling loops or duplicated client calls." = "可能存在轮询或重复调用。";
+"Analyzed %d requests across %d hosts, %d failed." = "共分析 %d 条请求，涉及 %d 个域名，%d 条失败。";
+"No obvious anomalies found" = "未发现明显异常";
+"AI summary" = "AI 总结";
+"On-device model unavailable; showing rule-based findings." = "端侧模型不可用，以下为本地规则分析结果。";
+"Running on-device analysis…" = "正在运行端侧模型分析…";

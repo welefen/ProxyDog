@@ -35,6 +35,11 @@ enum DevLaunchOptions {
         value(for: "--sample-message").flatMap(Int.init)
     }
 
+    /// QA: opens the AI analysis sheet on launch.
+    static var openAIAnalysis: Bool {
+        arguments.contains("--sample-ai-analysis")
+    }
+
     /// QA: selects the first live capture a few seconds after launch.
     static var selectFirstCapture: Bool {
         arguments.contains("--select-first-capture")

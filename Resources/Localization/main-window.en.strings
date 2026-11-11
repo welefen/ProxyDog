@@ -257,3 +257,24 @@
 
 /* Status bar */
 "Double-click to show failed requests" = "Double-click to show failed requests";
+
+/* AI analysis */
+"Analyze requests with AI" = "Analyze requests with AI";
+"AI analysis" = "AI analysis";
+"Analyzing %d requests" = "Analyzing %d requests";
+"Copy report" = "Copy report";
+"%d failed requests" = "%d failed requests";
+"%d slow requests (>1 s)" = "%d slow requests (>1 s)";
+"%d large responses (>512 KB)" = "%d large responses (>512 KB)";
+"%d plaintext HTTP requests" = "%d plaintext HTTP requests";
+"%d frequently repeated endpoints" = "%d frequently repeated endpoints";
+"Connection failed" = "Connection failed";
+"The slowest responses are listed below." = "The slowest responses are listed below.";
+"Large bodies slow down capture and inspection." = "Large bodies slow down capture and inspection.";
+"These requests are not encrypted; data is visible on the wire." = "These requests are not encrypted; data is visible on the wire.";
+"Possible polling loops or duplicated client calls." = "Possible polling loops or duplicated client calls.";
+"Analyzed %d requests across %d hosts, %d failed." = "Analyzed %d requests across %d hosts, %d failed.";
+"No obvious anomalies found" = "No obvious anomalies found";
+"AI summary" = "AI summary";
+"On-device model unavailable; showing rule-based findings." = "On-device model unavailable; showing rule-based findings.";
+"Running on-device analysis…" = "Running on-device analysis…";

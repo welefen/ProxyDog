@@ -19,6 +19,7 @@
 - **检索与筛选**：全文搜索、按域名过滤、Chrome DevTools 风格的类型筛选（Fetch/XHR、Doc、CSS、JS、Font、Img、Media、Manifest、Socket、Wasm、Other）、暂停/恢复抓包、清空、单条删除、收藏。
 - **重写规则（Rewrite）**：不写代码的静态规则，在设置里配置后立即生效；支持重定向、替换请求、替换响应、修改请求、修改响应 5 种动作（URL 正则/子串 + 可选 HTTP 方法匹配），HTTP/1.1 与 HTTP/2 流量都适用。
 - **断点（Breakpoint）**：命中 URL 的请求在转发前/响应返回前暂停，弹出编辑器可临时修改请求或响应正文，改完「放行」或「丢弃」；单次生效，不影响其他请求。
+- **AI 分析**：工具条上的 AI 按钮会分析当前列表，发现失败请求、慢请求、大响应、明文 HTTP、重复调用等异常；设备支持 Apple Intelligence 时用端侧模型生成总结，否则使用本地规则分析。
 - **导出 / 导入**：HAR 1.2 文件导出与导入（可打开 Chrome、Charles、Proxyman 等工具导出的 HAR 并像实时抓包一样查看）、复制为 cURL。
 - **HTTP 代理**：一键设置/关闭 macOS 系统 HTTP/HTTPS 代理（需要管理员授权）。
 - **上游代理（代理链）**：出站流量可以再交给已有的 HTTP CONNECT 或 SOCKS5 代理（例如本机正在运行的 VPN 客户端），抓包解密与 VPN 出网同时生效。
