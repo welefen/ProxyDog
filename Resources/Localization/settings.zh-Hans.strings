@@ -215,3 +215,7 @@
 
 /* Restart feedback */
 "Restarted" = "已重启";
+
+/* Fill feedback */
+"Filled" = "已填入";
+"No system proxy" = "未找到系统代理";

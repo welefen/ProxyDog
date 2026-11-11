@@ -212,3 +212,7 @@
 
 /* Restart feedback */
 "Restarted" = "Restarted";
+
+/* Fill feedback */
+"Filled" = "Filled";
+"No system proxy" = "No system proxy";

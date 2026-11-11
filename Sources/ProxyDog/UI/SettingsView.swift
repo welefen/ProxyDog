@@ -16,6 +16,8 @@ struct SettingsView: View {
 
     @State private var httpRestarted = false
     @State private var socksRestarted = false
+    @State private var httpFillFeedback: FillFeedback?
+    @State private var socksFillFeedback: FillFeedback?
     @State private var portText: String = ""
     @State private var portError: String?
     @FocusState private var portFocused: Bool
@@ -48,6 +50,11 @@ struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .connection
 
     /// Left-hand navigation categories of the settings window.
+    private enum FillFeedback {
+        case filled
+        case notFound
+    }
+
     private enum SettingsTab: String, CaseIterable, Identifiable {
         case connection
         case rules
@@ -421,11 +428,9 @@ struct SettingsView: View {
                                 if !focused { commitUpstreamAddress(.httpConnect) }
                             }
                             .disabled(!settings.upstreamHTTPEnabled)
-                        SettingsIconButton(
-                            systemName: "arrow.down.to.line",
-                            help: String(localized: "Fill from system proxy"),
-                            action: fillUpstreamFromSystem
-                        )
+                        fillControl(feedback: httpFillFeedback, help: String(localized: "Fill from system proxy")) {
+                            flashFill(fillUpstreamFromSystem(), isSocks: false)
+                        }
                         .disabled(!settings.upstreamHTTPEnabled)
                     }
                 }
@@ -548,11 +553,9 @@ struct SettingsView: View {
                                 if !focused { commitUpstreamAddress(.socks5) }
                             }
                             .disabled(!settings.upstreamSOCKSEnabled)
-                        SettingsIconButton(
-                            systemName: "arrow.down.to.line",
-                            help: String(localized: "Fill from system SOCKS5 proxy"),
-                            action: fillSocksUpstreamFromSystem
-                        )
+                        fillControl(feedback: socksFillFeedback, help: String(localized: "Fill from system SOCKS5 proxy")) {
+                            flashFill(fillSocksUpstreamFromSystem(), isSocks: true)
+                        }
                         .disabled(!settings.upstreamSOCKSEnabled)
                     }
                 }
@@ -644,6 +647,33 @@ struct SettingsView: View {
                 }
             }
         }
+        }
+    }
+
+    /// System-proxy fill icon with a short success / not-found label.
+    @ViewBuilder
+    private func fillControl(feedback: FillFeedback?, help: String, action: @escaping () -> Void) -> some View {
+        HStack(spacing: DS.Space.x1) {
+            if let feedback {
+                Text(feedback == .filled ? "Filled" : "No system proxy")
+                    .font(DS.Typography.ui(11, .medium))
+                    .foregroundStyle(feedback == .filled ? DSColor.accent : DSColor.amber)
+                    .transition(.opacity)
+            }
+            SettingsIconButton(systemName: "arrow.down.to.line", help: help, action: action)
+        }
+    }
+
+    private func flashFill(_ success: Bool, isSocks: Bool) {
+        withAnimation(.easeOut(duration: 0.15)) {
+            if isSocks { socksFillFeedback = success ? .filled : .notFound } else {
+                httpFillFeedback = success ? .filled : .notFound
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+            withAnimation(.easeIn(duration: 0.2)) {
+                if isSocks { socksFillFeedback = nil } else { httpFillFeedback = nil }
+            }
         }
     }
 
@@ -908,14 +938,15 @@ struct SettingsView: View {
         syncUpstreamFields()
     }
 
-    private func fillUpstreamFromSystem() {
+    @discardableResult
+    private func fillUpstreamFromSystem() -> Bool {
         upstreamHTTPHostFocused = false
         upstreamHTTPPortFocused = false
-        guard state.detectUpstreamProxyFromSystem() else { return }
+        guard state.detectUpstreamProxyFromSystem() else { return false }
         refreshDetectedUpstream()
         syncUpstreamFields()
 
-        guard settings.upstreamHTTPEnabled else { return }
+        guard settings.upstreamHTTPEnabled else { return true }
         let host = settings.upstreamHost(for: .httpConnect)
         let port = settings.upstreamPort(for: .httpConnect)
         if let error = state.applyUpstreamProxy(enabled: settings.upstreamHTTPEnabled, host: host, port: port, kind: .httpConnect) {
@@ -928,16 +959,19 @@ struct SettingsView: View {
             upstreamErrorKind = nil
             syncUpstreamFields()
         }
+        return true
     }
 
-    private func fillSocksUpstreamFromSystem() {
+    @discardableResult
+    private func fillSocksUpstreamFromSystem() -> Bool {
         upstreamSOCKSHostFocused = false
         upstreamSOCKSPortFocused = false
-        guard state.detectSocksUpstreamProxyFromSystem() else { return }
+        guard state.detectSocksUpstreamProxyFromSystem() else { return false }
         refreshDetectedUpstream()
         syncUpstreamFields(for: .socks5)
         upstreamError = nil
         upstreamErrorKind = nil
+        return true
     }
 
     private func syncUpstreamFields(for kind: UpstreamProxyKind? = nil) {
