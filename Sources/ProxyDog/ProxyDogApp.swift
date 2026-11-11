@@ -48,6 +48,12 @@ struct ProxyDogApp: App {
                     }
                 }
                 .keyboardShortcut("u", modifiers: [.command, .shift])
+
+                Button("Feedback") {
+                    if let url = URL(string: "https://github.com/welefen/ProxyDog/") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
             }
         }
 

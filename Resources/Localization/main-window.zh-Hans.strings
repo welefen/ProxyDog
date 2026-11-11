@@ -239,3 +239,6 @@
 "Import HAR" = "导入 HAR";
 "The selected file is not a valid HAR file." = "HAR 文件格式无效。";
 "No requests were found in the HAR file." = "HAR 文件中没有请求记录。";
+
+/* App menu */
+"Feedback" = "反馈";
