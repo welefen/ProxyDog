@@ -466,6 +466,26 @@ private struct OverviewTab: View {
 private struct HeadersTab: View {
     let request: CapturedRequest
 
+    private var requestCookies: [RequestCookie] {
+        CookieParser.requestCookies(from: request.requestHeaders)
+    }
+
+    private var responseCookies: [ResponseCookie] {
+        CookieParser.responseCookies(from: request.responseHeaders)
+    }
+
+    private var requestCookieBytes: Int {
+        request.requestHeaders
+            .filter { $0.name.lowercased() == "cookie" }
+            .reduce(0) { $0 + $1.value.utf8.count }
+    }
+
+    private var responseCookieBytes: Int {
+        request.responseHeaders
+            .filter { $0.name.lowercased() == "set-cookie" }
+            .reduce(0) { $0 + $1.value.utf8.count }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.x6) {
@@ -474,27 +494,27 @@ private struct HeadersTab: View {
                     headers: request.requestHeaders.filter { $0.name.lowercased() != "cookie" },
                     copyHeaders: request.requestHeaders
                 )
-                CookieSectionView(
-                    kind: .request,
-                    requestCookies: CookieParser.requestCookies(from: request.requestHeaders),
-                    responseCookies: [],
-                    totalBytes: request.requestHeaders
-                        .filter { $0.name.lowercased() == "cookie" }
-                        .reduce(0) { $0 + $1.value.utf8.count }
-                )
+                if !requestCookies.isEmpty {
+                    CookieSectionView(
+                        kind: .request,
+                        requestCookies: requestCookies,
+                        responseCookies: [],
+                        totalBytes: requestCookieBytes
+                    )
+                }
                 HeadersSectionView(
                     title: String(localized: "Response headers"),
                     headers: request.responseHeaders.filter { $0.name.lowercased() != "set-cookie" },
                     copyHeaders: request.responseHeaders
                 )
-                CookieSectionView(
-                    kind: .response,
-                    requestCookies: [],
-                    responseCookies: CookieParser.responseCookies(from: request.responseHeaders),
-                    totalBytes: request.responseHeaders
-                        .filter { $0.name.lowercased() == "set-cookie" }
-                        .reduce(0) { $0 + $1.value.utf8.count }
-                )
+                if !responseCookies.isEmpty {
+                    CookieSectionView(
+                        kind: .response,
+                        requestCookies: [],
+                        responseCookies: responseCookies,
+                        totalBytes: responseCookieBytes
+                    )
+                }
             }
             .padding(DS.Space.x4)
             .frame(maxWidth: .infinity, alignment: .leading)

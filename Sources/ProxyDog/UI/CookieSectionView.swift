@@ -64,13 +64,7 @@ struct CookieSectionView: View {
             }
             .onHover { isHovering = $0 }
 
-            if count == 0 {
-                Text("No cookies")
-                    .font(DS.Typography.ui(11.5))
-                    .foregroundStyle(DSColor.textMuted)
-                    .padding(.horizontal, DS.Space.x2)
-                    .frame(height: 24)
-            } else if kind == .request {
+            if kind == .request {
                 table {
                     row(header: true, cells: [("Name", 160), ("Value", nil)])
                     ForEach(requestCookies) { cookie in
