@@ -50,7 +50,7 @@ struct ProxyDogApp: App {
                 .keyboardShortcut("u", modifiers: [.command, .shift])
 
                 Button("Feedback") {
-                    if let url = URL(string: "https://github.com/welefen/ProxyDog/") {
+                    if let url = URL(string: "https://github.com/welefen/ProxyDog/issues") {
                         NSWorkspace.shared.open(url)
                     }
                 }
