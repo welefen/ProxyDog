@@ -307,3 +307,7 @@
 
 /* AI key storage */
 "The API key is stored locally in your preferences." = "API Key 保存在本机偏好设置中。";
+
+/* AI empty state */
+"No requests to analyze" = "没有可分析的请求";
+"Capture some traffic first, then run the AI analysis." = "请先抓取一些流量，再运行 AI 分析。";

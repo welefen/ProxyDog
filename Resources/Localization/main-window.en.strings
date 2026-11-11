@@ -305,3 +305,7 @@
 
 /* AI key storage */
 "The API key is stored locally in your preferences." = "The API key is stored locally in your preferences.";
+
+/* AI empty state */
+"No requests to analyze" = "No requests to analyze";
+"Capture some traffic first, then run the AI analysis." = "Capture some traffic first, then run the AI analysis.";

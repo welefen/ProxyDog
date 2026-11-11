@@ -51,16 +51,20 @@ struct AIAnalysisView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.x5) {
-                    if showConfiguration || !config.isConfigured {
-                        configurationCard
-                    } else {
-                        compactConfiguration
+            if requests.isEmpty {
+                emptyState
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DS.Space.x5) {
+                        if showConfiguration || !config.isConfigured {
+                            configurationCard
+                        } else {
+                            compactConfiguration
+                        }
+                        results
                     }
-                    results
+                    .padding(DS.Space.x5)
                 }
-                .padding(DS.Space.x5)
             }
             Divider()
             footer
@@ -71,6 +75,7 @@ struct AIAnalysisView: View {
             if report == nil {
                 report = AIAnalyzer.report(for: requests)
             }
+            guard !requests.isEmpty else { return }
             if config.isConfigured, !DevLaunchOptions.skipAutoRunAIAnalysis {
                 analyze()
             } else {
@@ -89,7 +94,9 @@ struct AIAnalysisView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(String(localized: "AI analysis"))
                     .font(DS.Typography.ui(13, .semibold))
-                Text(String(format: String(localized: "Configure a provider, then analyze the %d requests in the current list."), requests.count))
+                Text(requests.isEmpty
+                    ? String(localized: "No requests to analyze")
+                    : String(format: String(localized: "Configure a provider, then analyze the %d requests in the current list."), requests.count))
                     .font(DS.Typography.ui(10.5))
                     .foregroundStyle(DSColor.textMuted)
             }
@@ -97,6 +104,21 @@ struct AIAnalysisView: View {
         }
         .padding(.horizontal, DS.Space.x5)
         .padding(.vertical, DS.Space.x3)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: DS.Space.x3) {
+            Image(systemName: "tray")
+                .font(.system(size: 26, weight: .light))
+                .foregroundStyle(DSColor.textMuted)
+            Text(String(localized: "No requests to analyze"))
+                .font(DS.Typography.ui(12.5, .medium))
+                .foregroundStyle(DSColor.textSecondary)
+            Text(String(localized: "Capture some traffic first, then run the AI analysis."))
+                .font(DS.Typography.ui(11.5))
+                .foregroundStyle(DSColor.textMuted)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: Configuration
@@ -309,7 +331,7 @@ struct AIAnalysisView: View {
                     didCopy = false
                 }
             }
-            .disabled(report == nil)
+            .disabled(summary == nil)
             .buttonStyle(.plain)
             .font(DS.Typography.ui(11.5, .medium))
             .foregroundStyle(didCopy ? DSColor.green : DSColor.accent)
@@ -374,7 +396,7 @@ struct AIAnalysisView: View {
     // MARK: Analysis
 
     private func analyze() {
-        guard let report else { return }
+        guard !requests.isEmpty, let report else { return }
         let configuration = config.configuration
         guard configuration.isUsable else {
             errorText = AIClientError.missingConfiguration.localizedDescription
