@@ -101,6 +101,9 @@ enum RequestCategory: String, CaseIterable, Identifiable, Hashable, Sendable {
         if mime.contains("html") || fileExtension.hasSuffix(".html") || fileExtension.hasSuffix(".htm") {
             return .document
         }
+        if mime.contains("yaml") || mime.contains("yml") {
+            return .fetchXHR
+        }
         if mime.contains("json") || mime.contains("xml") || mime.contains("x-www-form-urlencoded")
             || mime.hasPrefix("text/") || mime.contains("graphql") || mime.contains("protobuf") {
             return .fetchXHR

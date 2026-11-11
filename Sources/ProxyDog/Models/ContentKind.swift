@@ -22,6 +22,7 @@ enum ContentKind: String, Sendable, CaseIterable {
             if mime.contains("html") { return .html }
             if mime.contains("xml") { return .xml }
             if mime.contains("css") { return .css }
+            if mime.contains("yaml") || mime.contains("yml") { return .text }
             if mime.hasPrefix("image/") { return .image }
             if mime.hasPrefix("font/") || mime.contains("woff") || mime.contains("ttf") { return .font }
             if mime.hasPrefix("audio/") { return .audio }
@@ -39,6 +40,7 @@ enum ContentKind: String, Sendable, CaseIterable {
             case "html", "htm": return .html
             case "xml", "plist": return .xml
             case "css": return .css
+            case "yaml", "yml": return .text
             case "png", "jpg", "jpeg", "gif", "webp", "svg", "heic", "ico": return .image
             case "woff", "woff2", "ttf", "otf": return .font
             case "mp3", "wav", "m4a", "aac": return .audio

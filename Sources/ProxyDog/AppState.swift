@@ -187,6 +187,7 @@ final class AppState: ObservableObject {
         if settings.systemProxyEnabled {
             setSystemProxy(enabled: true)
         } else {
+            settings.injectProxyEnvironment = false
             SystemProxyEnvironment.disable(port: settings.port)
         }
         // LAN access is gated by the system proxy; stale persistence must not re-expose it.
@@ -549,6 +550,7 @@ final class AppState: ObservableObject {
                 try SystemProxy.enable(port: settings.port)
                 settings.systemProxyEnabled = true
                 isSystemProxyEnabled = true
+                settings.injectProxyEnvironment = true
                 if settings.injectProxyEnvironment {
                     SystemProxyEnvironment.enable(port: settings.port)
                 } else {
@@ -560,6 +562,7 @@ final class AppState: ObservableObject {
                 try SystemProxy.disable()
                 settings.systemProxyEnabled = false
                 isSystemProxyEnabled = false
+                settings.injectProxyEnvironment = false
                 SystemProxyEnvironment.disable(port: settings.port)
                 Analytics.shared.track("system_proxy_disabled")
             }
@@ -621,6 +624,7 @@ final class AppState: ObservableObject {
         if isSystemProxyEnabled, settings.injectProxyEnvironment {
             SystemProxyEnvironment.enable(port: settings.port)
         } else {
+            if !isSystemProxyEnabled { settings.injectProxyEnvironment = false }
             SystemProxyEnvironment.disable(port: settings.port)
         }
     }

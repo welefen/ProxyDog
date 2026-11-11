@@ -349,7 +349,10 @@ struct SettingsView: View {
 
                 SettingsRow(
                     title: "Inject proxy environment",
-                    hint: "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up."
+                    hint: "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up.",
+                    hintText: state.isSystemProxyEnabled
+                        ? nil
+                        : String(localized: "Turn on HTTP proxy first.")
                 ) {
                     Toggle("", isOn: Binding(
                         get: { settings.injectProxyEnvironment },
@@ -362,6 +365,7 @@ struct SettingsView: View {
                     .toggleStyle(.switch)
                     .controlSize(.small)
                     .tint(DSColor.accent)
+                    .disabled(!state.isSystemProxyEnabled)
                     .accessibilityLabel("Inject proxy environment")
                 }
 
@@ -498,7 +502,10 @@ struct SettingsView: View {
 
                 SettingsRow(
                     title: "Inject proxy environment",
-                    hint: "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up."
+                    hint: "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up.",
+                    hintText: state.isSystemProxyEnabled
+                        ? nil
+                        : String(localized: "Turn on HTTP proxy first.")
                 ) {
                     Toggle("", isOn: Binding(
                         get: { settings.injectProxyEnvironment },
@@ -511,6 +518,7 @@ struct SettingsView: View {
                     .toggleStyle(.switch)
                     .controlSize(.small)
                     .tint(DSColor.accent)
+                    .disabled(!state.isSystemProxyEnabled)
                     .accessibilityLabel("Inject proxy environment")
                 }
 
