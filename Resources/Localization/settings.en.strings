@@ -189,3 +189,7 @@
 "ProxyDog v%@ is the latest version." = "ProxyDog v%@ is the latest version.";
 "Update check failed" = "Update check failed";
 "OK" = "OK";
+
+/* Update alerts */
+"Update in progress" = "Update in progress";
+"ProxyDog is already checking for or downloading an update." = "ProxyDog is already checking for or downloading an update.";

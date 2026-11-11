@@ -21,6 +21,13 @@ struct ProxyDogApp: App {
                         updater.installDownloadedUpdate()
                         return
                     }
+                    if updater.phase.isBusy {
+                        Self.presentUpdateAlert(
+                            title: String(localized: "Update in progress"),
+                            message: String(localized: "ProxyDog is already checking for or downloading an update.")
+                        )
+                        return
+                    }
                     NotificationCenter.default.post(name: .openUpdatesSettings, object: nil)
                     Task {
                         await updater.check(manual: true)
@@ -41,7 +48,6 @@ struct ProxyDogApp: App {
                     }
                 }
                 .keyboardShortcut("u", modifiers: [.command, .shift])
-                .disabled(updater.phase.isBusy)
             }
         }
 

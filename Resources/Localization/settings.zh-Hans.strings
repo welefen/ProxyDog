@@ -192,3 +192,7 @@
 "ProxyDog v%@ is the latest version." = "当前 ProxyDog v%@ 已是最新版本。";
 "Update check failed" = "检查更新失败";
 "OK" = "好";
+
+/* Update alerts */
+"Update in progress" = "更新进行中";
+"ProxyDog is already checking for or downloading an update." = "ProxyDog 正在检查或下载更新，请稍候。";
