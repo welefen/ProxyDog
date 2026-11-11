@@ -500,28 +500,6 @@ struct SettingsView: View {
                 }
                 SettingsHairline()
 
-                SettingsRow(
-                    title: "Inject proxy environment",
-                    hint: "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up.",
-                    hintText: state.isSystemProxyEnabled
-                        ? nil
-                        : String(localized: "Turn on HTTP proxy first.")
-                ) {
-                    Toggle("", isOn: Binding(
-                        get: { settings.injectProxyEnvironment },
-                        set: { newValue in
-                            settings.injectProxyEnvironment = newValue
-                            state.applyProxyEnvironmentInjection(newValue)
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .tint(DSColor.accent)
-                    .disabled(!state.isSystemProxyEnabled)
-                    .accessibilityLabel("Inject proxy environment")
-                }
-
                 SettingsHairline()
                 SettingsRow(
                     title: "Proxy port",
