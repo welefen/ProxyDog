@@ -476,7 +476,10 @@ private struct HeadersTab: View {
                 CookieSectionView(
                     kind: .request,
                     requestCookies: CookieParser.requestCookies(from: request.requestHeaders),
-                    responseCookies: []
+                    responseCookies: [],
+                    totalBytes: request.requestHeaders
+                        .filter { $0.name.lowercased() == "cookie" }
+                        .reduce(0) { $0 + $1.value.utf8.count }
                 )
                 HeadersSectionView(
                     title: String(localized: "Response headers"),
@@ -485,7 +488,10 @@ private struct HeadersTab: View {
                 CookieSectionView(
                     kind: .response,
                     requestCookies: [],
-                    responseCookies: CookieParser.responseCookies(from: request.responseHeaders)
+                    responseCookies: CookieParser.responseCookies(from: request.responseHeaders),
+                    totalBytes: request.responseHeaders
+                        .filter { $0.name.lowercased() == "set-cookie" }
+                        .reduce(0) { $0 + $1.value.utf8.count }
                 )
             }
             .padding(DS.Space.x4)

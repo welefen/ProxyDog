@@ -10,6 +10,7 @@ struct CookieSectionView: View {
     let kind: Kind
     let requestCookies: [RequestCookie]
     let responseCookies: [ResponseCookie]
+    var totalBytes: Int = 0
 
     private var title: String {
         kind == .request
@@ -31,6 +32,12 @@ struct CookieSectionView: View {
                     .font(DS.Typography.mono(10.5))
                     .foregroundStyle(DSColor.textMuted)
                     .monospacedDigit()
+                if count > 0 {
+                    Text(PDFormat.bytes(totalBytes))
+                        .font(DS.Typography.mono(10.5))
+                        .foregroundStyle(DSColor.textMuted)
+                        .monospacedDigit()
+                }
                 Spacer(minLength: 0)
             }
 
