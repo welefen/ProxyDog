@@ -53,6 +53,8 @@ final class ProxyServer: @unchecked Sendable {
 
     var port: Int
     var sslProxyingEnabled: Bool
+    /// Address the HTTP proxy listens on; `0.0.0.0` when LAN devices are allowed.
+    var bindHost: String = "127.0.0.1"
 
     /// When set, outbound connections made for HTTP-proxy clients are tunnelled through
     /// this proxy (e.g. a local VPN client) instead of connecting to the target directly.
@@ -174,7 +176,7 @@ final class ProxyServer: @unchecked Sendable {
             }
 
         do {
-            let channel = try bootstrap.bind(host: "127.0.0.1", port: bindPort).wait()
+            let channel = try bootstrap.bind(host: bindHost, port: bindPort).wait()
 
             guard isCurrent(generation: requestGeneration) else {
                 // A newer start/stop request superseded us while binding.

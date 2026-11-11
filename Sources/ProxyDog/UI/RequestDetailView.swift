@@ -240,10 +240,15 @@ private struct OverviewTab: View {
                             color: DSColor.textSecondary
                         )
                     }
-                    if let client = request.clientAppName {
-                        DetailFieldRow(label: String(localized: "Client"), value: client)
+                    if request.isFromLANDevice || request.clientAppName != nil {
+                        DetailFieldRow(
+                            label: String(localized: "Client"),
+                            value: request.clientDisplayName
+                        )
                     }
-                    if let pid = request.clientPID {
+                    if request.isFromLANDevice {
+                        processUnavailableRow
+                    } else if let pid = request.clientPID {
                         processRow(pid: pid)
                     }
                     if let userAgent = request.userAgent {
@@ -340,6 +345,22 @@ private struct OverviewTab: View {
         } else {
             processRowContent(pid: pid)
         }
+    }
+
+    /// LAN devices have no local process; keep the row but make it explicit.
+    private var processUnavailableRow: some View {
+        HStack(alignment: .center, spacing: DS.Space.x3) {
+            Text(String(localized: "Process"))
+                .font(DS.Typography.ui(11.5))
+                .foregroundStyle(DSColor.textSecondary)
+                .frame(width: 104, alignment: .leading)
+            Text("—")
+                .font(DS.Typography.mono(11.5))
+                .foregroundStyle(DSColor.textSecondary)
+                .monospacedDigit()
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: 20)
     }
 
     private func processRowContent(pid: Int32) -> some View {

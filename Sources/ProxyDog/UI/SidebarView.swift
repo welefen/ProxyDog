@@ -175,10 +175,17 @@ struct SidebarView: View {
                 sectionHeader(String(localized: "Clients"))
                     .padding(.top, DS.Space.x3)
                 ForEach(summaries) { summary in
+                    let isLANDevice = summary.remoteAddress != nil
+                    let title = isLANDevice
+                        ? String(
+                            format: String(localized: "LAN device (%@)"),
+                            summary.remoteAddress ?? ""
+                        )
+                        : summary.name
                     SidebarRow(
-                        symbol: "app",
-                        title: summary.name,
-                        appIconPath: summary.iconPath,
+                        symbol: isLANDevice ? "network" : "app",
+                        title: title,
+                        appIconPath: isLANDevice ? nil : summary.iconPath,
                         count: summary.count,
                         hasFailure: summary.hasFailure,
                         isSelected: state.sidebarSelection == .client(summary.name)

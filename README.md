@@ -22,6 +22,7 @@ Also available as a [DMG disk image](https://github.com/welefen/ProxyDog/raw/mas
 - **Export**: HAR 1.2 export and “copy as cURL”.
 - **HTTP proxy**: one switch to set/clear the macOS system HTTP/HTTPS proxy (requires admin authorization).
 - **Upstream proxies (proxy chaining)**: chain outbound traffic through an existing HTTP or SOCKS5 proxy such as a local VPN client; decryption and VPN egress work at the same time. HTTP and SOCKS5 upstreams are stored and switched independently, one per entry point.
+- **LAN device access**: when “Allow LAN devices” is on the proxy listens on `0.0.0.0` so other devices on the same network can use this Mac as their HTTP proxy. Settings shows the proxy address, a QR code and the certificate download URL (`http://<LAN IP>:8888/ca.cer`); captured requests are labelled “LAN device (IP)” and can be filtered per device.
 - **SOCKS5 listener**: an extra listener on `127.0.0.1:8889` (configurable) lets SOCKS5-only apps such as Telegram be captured and decrypted.
 - **Appearance and language**: light-first design with a complete dark mode following the system by default; built-in 简体中文 and English (follows the system language, switchable in Settings with an automatic restart).
 - **Auto-update**: checks the manifest (`updates/latest.json`) on GitHub in the background after launch, downloads the ZIP, verifies its SHA-256 plus bundle identifier/version, then installs in place with one “Install and restart” click. “Check for Updates…” in the app menu triggers a manual check; development builds under `build/` opt out automatically.
@@ -104,6 +105,19 @@ curl -x http://127.0.0.1:8889 https://example.com/
 ```
 
 Limitations: upstream proxies must support HTTP CONNECT or anonymous SOCKS5 (authenticated proxies and SOCKS5 UDP ASSOCIATE are not supported); an upstream cannot point at ProxyDog itself.
+
+## LAN devices
+
+To let other devices on the same Wi-Fi (a phone, tablet or another computer) use ProxyDog:
+
+1. Settings → Connection → LAN access, turn on “Allow LAN devices” (the proxy listens on `0.0.0.0`; turning it off restores loopback-only).
+2. On the device set the HTTP proxy to the displayed address, e.g. `192.168.31.37:8888`; Android proxy apps can scan the QR code.
+3. The same card shows the certificate URL `http://<LAN IP>:8888/ca.cer` — open it in the device browser to download the root certificate:
+   - iOS: download the profile, install it in Settings → General → VPN & Device Management, then enable full trust in About → Certificate Trust Settings
+   - Android / others: install it as a trusted CA certificate
+4. Device traffic appears in the request list: the client column shows a network icon, the sidebar groups it as “LAN device (IP)”, and clicking that group filters to the device.
+
+Note: while enabled, any device on the same network can use this proxy — only enable it on trusted networks. HTTPS decryption still requires the device to trust the root certificate, and apps that pin certificates cannot be decrypted.
 
 ## Connecting SOCKS5-only apps
 

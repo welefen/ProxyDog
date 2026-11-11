@@ -236,6 +236,7 @@ final class HTTP2StreamProxyHandler: ChannelInboundHandler, RemovableChannelHand
         )
         state.httpVersion = "HTTP/2"
         state.clientProcess = config.clientIdentity.current
+        state.clientRemoteAddress = config.clientIdentity.remoteAddress
         exchange = state
 
         let url = RewriteEngine.urlString(scheme: "https", host: target.host, port: target.port, path: state.path)
@@ -709,6 +710,7 @@ final class HTTP2StreamProxyHandler: ChannelInboundHandler, RemovableChannelHand
             clientSignature: ProxyWire.clientSignature(from: head.headers)
         )
         capture.applyClientProcess(config.clientIdentity.current)
+        capture.clientRemoteAddress = config.clientIdentity.remoteAddress
         config.sink.captureDidUpdate(capture)
         responseStarted = true
         sendSimpleResponse(status: .notImplemented, message: reason)

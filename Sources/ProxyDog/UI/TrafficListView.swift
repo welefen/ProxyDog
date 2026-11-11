@@ -404,7 +404,14 @@ private struct TrafficRowView: View {
 
     @ViewBuilder
     private var appIconCell: some View {
-        if let appName = request.clientAppName, !appName.isEmpty {
+        if request.isFromLANDevice {
+            Image(systemName: "network")
+                .font(.system(size: 11.5, weight: .regular))
+                .foregroundStyle(DSColor.textMuted)
+                .frame(width: 16, height: 16)
+                .frame(width: DS.Metric.appIconColumnWidth, alignment: .center)
+                .fastTooltip(request.clientDisplayName)
+        } else if let appName = request.clientAppName, !appName.isEmpty {
             ClientAppIcon(path: request.clientAppPath)
                 .fastTooltip(appName)
         } else {

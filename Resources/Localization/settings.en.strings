@@ -193,3 +193,16 @@
 /* Update alerts */
 "Update in progress" = "Update in progress";
 "ProxyDog is already checking for or downloading an update." = "ProxyDog is already checking for or downloading an update.";
+
+/* Settings · LAN access */
+"LAN access" = "LAN access";
+"Allow LAN devices" = "Allow LAN devices";
+"Other devices on the same network can use this Mac as their HTTP proxy." = "Other devices on the same network can use this Mac as their HTTP proxy.";
+"Certificate URL" = "Certificate URL";
+"Open certificate URL" = "Open certificate URL";
+"On iOS: download the profile, then Settings → General → VPN & Device Management → install it and enable it in Certificate Trust Settings. On Android: install it as a trusted CA." = "On iOS: download the profile, then Settings → General → VPN & Device Management → install it and enable it in Certificate Trust Settings. On Android: install it as a trusted CA.";
+"QR code" = "QR code";
+"Scan with a proxy app on the device to fill in the proxy address." = "Scan with a proxy app on the device to fill in the proxy address.";
+"LAN address" = "LAN address";
+"No LAN address found. Connect this Mac to a Wi-Fi or Ethernet network first." = "No LAN address found. Connect this Mac to a Wi-Fi or Ethernet network first.";
+"This Mac's system proxy" = "This Mac's system proxy";

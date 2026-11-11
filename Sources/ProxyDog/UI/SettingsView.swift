@@ -1,4 +1,6 @@
 import AppKit
+import CoreImage
+import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 /// The Settings scene: one calm, sectioned preferences pane with a fixed version
@@ -36,6 +38,8 @@ struct SettingsView: View {
     @State private var socksPortText: String = ""
     @State private var socksError: String?
     @FocusState private var socksPortFocused: Bool
+
+    @State private var lanCopied = false
 
     @ObservedObject private var updater = UpdateManager.shared
     @State private var language: AppLanguage = AppLanguage.stored
@@ -142,6 +146,118 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - LAN access
+
+    private var lanAccessSection: some View {
+        SettingsSection(title: "LAN access") {
+            SettingsRow(
+                title: "Allow LAN devices",
+                hint: "Other devices on the same network can use this Mac as their HTTP proxy."
+            ) {
+                Toggle("", isOn: Binding(
+                    get: { settings.allowLANDevices },
+                    set: { state.applyLANAccess($0) }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .tint(DSColor.accent)
+                .accessibilityLabel("Allow LAN devices")
+            }
+
+            if settings.allowLANDevices {
+                SettingsHairline()
+
+                if let proxyAddress = state.lanProxyAddress {
+                    SettingsRow(title: "Proxy address") {
+                        HStack(spacing: DS.Space.x2) {
+                            Text(proxyAddress)
+                                .font(DS.Typography.mono(12))
+                                .foregroundStyle(DSColor.textPrimary)
+                                .textSelection(.enabled)
+                            SettingsIconButton(
+                                systemName: lanCopied ? "checkmark" : "doc.on.doc",
+                                help: String(localized: "Copy proxy address"),
+                                tint: lanCopied ? DSColor.green : DSColor.textSecondary,
+                                action: copyLANProxyAddress
+                            )
+                        }
+                    }
+
+                    SettingsHairline()
+
+                    if let certURL = lanCertificateURL, let url = URL(string: certURL) {
+                        SettingsRow(title: "Certificate URL") {
+                            HStack(spacing: DS.Space.x2) {
+                                Text(certURL)
+                                    .font(DS.Typography.mono(12))
+                                    .foregroundStyle(DSColor.textPrimary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                    .textSelection(.enabled)
+                                    .help(certURL)
+                                SettingsIconButton(
+                                    systemName: "safari",
+                                    help: String(localized: "Open certificate URL"),
+                                    action: { NSWorkspace.shared.open(url) }
+                                )
+                            }
+                        }
+
+                        SettingsHairline()
+
+                        SettingsHintRow(
+                            hint: "On iOS: download the profile, then Settings → General → VPN & Device Management → install it and enable it in Certificate Trust Settings. On Android: install it as a trusted CA."
+                        )
+
+                        SettingsHairline()
+                    }
+
+                    if let qrImage = SettingsQRCode.image(for: proxyAddress) {
+                        SettingsRow(
+                            title: "QR code",
+                            hint: "Scan with a proxy app on the device to fill in the proxy address."
+                        ) {
+                            Image(nsImage: qrImage)
+                                .interpolation(.none)
+                                .resizable()
+                                .frame(width: 120, height: 120)
+                                .padding(DS.Space.x2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                                        .fill(Color(nsColor: .white))
+                                )
+                        }
+                    }
+                } else {
+                    SettingsRow(
+                        title: "LAN address",
+                        hint: "No LAN address found. Connect this Mac to a Wi-Fi or Ethernet network first."
+                    ) {
+                        EmptyView()
+                    }
+                }
+            }
+        }
+    }
+
+    private var lanCertificateURL: String? {
+        guard settings.allowLANDevices, let host = state.lanAddress else { return nil }
+        return "http://\(host):\(settings.port)/ca.cer"
+    }
+
+    private func copyLANProxyAddress() {
+        guard let address = state.lanProxyAddress else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(address, forType: .string)
+        lanCopied = true
+        Task {
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            lanCopied = false
+        }
+    }
+
     // MARK: - Connection
 
     // MARK: - Tabs
@@ -189,9 +305,10 @@ struct SettingsView: View {
 
     private var connectionSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.x6) {
+            lanAccessSection
             SettingsSection(title: "HTTP / HTTPS") {
                 SettingsRow(
-                    title: "HTTP proxy",
+                    title: "This Mac's system proxy",
                     hint: state.isProxyRunning
                         ? "Routes this Mac's HTTP and HTTPS traffic through ProxyDog."
                         : "Start the proxy to change this."
@@ -935,6 +1052,22 @@ private struct SettingsRow<Control: View>: View {
     }
 }
 
+private struct SettingsHintRow: View {
+    let hint: LocalizedStringKey
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            Text(hint)
+                .font(DS.Typography.ui(11))
+                .foregroundStyle(DSColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, DS.Space.x4)
+        .padding(.vertical, DS.Space.x2 + 2)
+    }
+}
+
 private struct SettingsHairline: View {
     var body: some View {
         Rectangle()
@@ -961,5 +1094,25 @@ private struct SettingsIconButton: View {
         .buttonStyle(.plain)
         .fastTooltip(help)
         .accessibilityLabel(help)
+    }
+}
+
+// MARK: - QR code
+
+/// Renders a proxy address as a scannable QR code (CoreImage; 2x for crisp Retina output).
+private enum SettingsQRCode {
+    static func image(for string: String) -> NSImage? {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(string.utf8)
+        filter.correctionLevel = "M"
+        guard let output = filter.outputImage, output.extent.width > 0 else { return nil }
+
+        let target: CGFloat = 240
+        let scale = target / output.extent.width
+        let scaled = output.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        let representation = NSCIImageRep(ciImage: scaled)
+        let image = NSImage(size: representation.size)
+        image.addRepresentation(representation)
+        return image
     }
 }

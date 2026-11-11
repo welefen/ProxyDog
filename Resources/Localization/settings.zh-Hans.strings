@@ -196,3 +196,16 @@
 /* Update alerts */
 "Update in progress" = "更新进行中";
 "ProxyDog is already checking for or downloading an update." = "ProxyDog 正在检查或下载更新，请稍候。";
+
+/* Settings · LAN access */
+"LAN access" = "局域网访问";
+"Allow LAN devices" = "允许局域网设备连接";
+"Other devices on the same network can use this Mac as their HTTP proxy." = "同一局域网内的其它设备可以把这台 Mac 当作 HTTP 代理使用。";
+"Certificate URL" = "证书地址";
+"Open certificate URL" = "在浏览器中打开";
+"On iOS: download the profile, then Settings → General → VPN & Device Management → install it and enable it in Certificate Trust Settings. On Android: install it as a trusted CA." = "iOS：下载描述文件后，前往「设置 → 通用 → VPN 与设备管理」安装，并在「证书信任设置」中启用。Android：将其安装为受信任的 CA 证书。";
+"QR code" = "二维码";
+"Scan with a proxy app on the device to fill in the proxy address." = "用设备上的代理 App 扫描即可填入代理地址。";
+"LAN address" = "局域网地址";
+"No LAN address found. Connect this Mac to a Wi-Fi or Ethernet network first." = "未找到局域网地址，请先将这台 Mac 接入 Wi-Fi 或以太网。";
+"This Mac's system proxy" = "本机系统代理";

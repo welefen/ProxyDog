@@ -220,3 +220,7 @@
 
 /* About */
 "Author:" = "Author:";
+
+/* LAN devices */
+"LAN device (%@)" = "LAN device (%@)";
+"Unknown" = "Unknown";

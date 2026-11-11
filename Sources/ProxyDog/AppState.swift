@@ -205,6 +205,7 @@ final class AppState: ObservableObject {
         guard !proxy.status.isRunning else { return }
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
+        proxy.bindHost = settings.allowLANDevices ? "0.0.0.0" : "127.0.0.1"
         proxy.socksUpstreamFallbackToHTTP = false
         proxy.upstreamProxy = upstreamProxyFromSettings()
         proxy.socksUpstreamProxy = socksUpstreamProxyFromSettings()
@@ -239,6 +240,7 @@ final class AppState: ObservableObject {
         }
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
+        proxy.bindHost = settings.allowLANDevices ? "0.0.0.0" : "127.0.0.1"
         proxy.socksUpstreamFallbackToHTTP = false
         proxy.upstreamProxy = upstreamProxyFromSettings()
         proxy.socksUpstreamProxy = socksUpstreamProxyFromSettings()
@@ -256,6 +258,27 @@ final class AppState: ObservableObject {
         let wasRunning = proxy.status.isRunning || proxyStatus.isRunning
         settings.port = port
         if wasRunning {
+            restartProxy()
+        }
+    }
+
+    // MARK: - LAN devices
+
+    /// LAN IPv4 of this Mac, when available.
+    var lanAddress: String? { NetworkAddress.lanIPv4() }
+
+    /// "ip:port" that other devices should use as their HTTP proxy.
+    var lanProxyAddress: String? {
+        guard settings.allowLANDevices, let host = lanAddress else { return nil }
+        return "\(host):\(settings.port)"
+    }
+
+    /// Exposes or hides the HTTP proxy on the local network.
+    func applyLANAccess(_ enabled: Bool) {
+        guard settings.allowLANDevices != enabled else { return }
+        settings.allowLANDevices = enabled
+        proxy.bindHost = enabled ? "0.0.0.0" : "127.0.0.1"
+        if proxy.status.isRunning || proxyStatus.isRunning {
             restartProxy()
         }
     }
@@ -621,7 +644,7 @@ final class AppState: ObservableObject {
         case .pinned:
             items = items.filter(\.isPinned)
         case .client(let name):
-            items = items.filter { $0.clientAppName == name }
+            items = items.filter { $0.clientGroupKey == name }
         case .domain(let domain):
             items = items.filter { $0.host == domain }
         }
@@ -647,19 +670,31 @@ final class AppState: ObservableObject {
     /// Captured traffic grouped by the app that originated it, busiest first. Requests whose
     /// process could not be attributed are not listed here.
     var clientSummaries: [ClientSummary] {
-        var counts: [String: (count: Int, failed: Bool, iconPath: String?)] = [:]
+        var counts: [String: (count: Int, failed: Bool, iconPath: String?, remote: String?)] = [:]
         for request in store.requests {
-            guard let name = request.clientAppName?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !name.isEmpty else { continue }
-            let current = counts[name] ?? (0, false, nil)
-            counts[name] = (
+            if request.clientRemoteAddress == nil {
+                guard let name = request.clientAppName?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !name.isEmpty else { continue }
+            }
+            let key = request.clientGroupKey
+            let current = counts[key] ?? (0, false, nil, request.clientRemoteAddress)
+            counts[key] = (
                 current.count + 1,
                 current.failed || request.isFailure,
-                current.iconPath ?? request.clientAppPath
+                current.iconPath ?? request.clientAppPath,
+                current.remote
             )
         }
         return counts
-            .map { ClientSummary(name: $0.key, count: $0.value.count, hasFailure: $0.value.failed, iconPath: $0.value.iconPath) }
+            .map {
+                ClientSummary(
+                    name: $0.key,
+                    count: $0.value.count,
+                    hasFailure: $0.value.failed,
+                    iconPath: $0.value.iconPath,
+                    remoteAddress: $0.value.remote
+                )
+            }
             .sorted { lhs, rhs in
                 if lhs.count == rhs.count { return lhs.name < rhs.name }
                 return lhs.count > rhs.count

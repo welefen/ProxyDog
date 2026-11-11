@@ -63,6 +63,8 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
     var clientAppName: String?
     /// Executable path of the local app, when known.
     var clientAppPath: String?
+    /// IPv4 of a LAN device when the connection did not come from this Mac.
+    var clientRemoteAddress: String?
 
     /// Captured WebSocket messages, in arrival order (empty for non-WebSocket exchanges).
     var webSocketMessages: [WebSocketMessage]
@@ -97,6 +99,7 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         clientPID: Int32? = nil,
         clientAppName: String? = nil,
         clientAppPath: String? = nil,
+        clientRemoteAddress: String? = nil,
         webSocketMessages: [WebSocketMessage] = [],
         isWebSocket: Bool = false
     ) {
@@ -126,6 +129,7 @@ struct CapturedRequest: Identifiable, Hashable, Sendable {
         self.clientPID = clientPID
         self.clientAppName = clientAppName
         self.clientAppPath = clientAppPath
+        self.clientRemoteAddress = clientRemoteAddress
         self.webSocketMessages = webSocketMessages
         self.isWebSocket = isWebSocket
     }
@@ -195,6 +199,23 @@ extension CapturedRequest {
 
     var isFailure: Bool {
         state == .failed || (statusCode.map { $0 >= 400 } ?? false)
+    }
+
+    /// True when the request came from another device on the LAN.
+    var isFromLANDevice: Bool { clientRemoteAddress != nil }
+
+    /// Display name for the client column / inspector: the local app or the LAN device.
+    var clientDisplayName: String {
+        if let ip = clientRemoteAddress {
+            return String(format: String(localized: "LAN device (%@)"), ip)
+        }
+        if let name = clientAppName, !name.isEmpty { return name }
+        return String(localized: "Unknown")
+    }
+
+    /// Stable grouping key for the sidebar client section.
+    var clientGroupKey: String {
+        clientRemoteAddress ?? clientAppName ?? String(localized: "Unknown")
     }
 
     /// True when this exchange was opened by ProxyDog itself (e.g. its analytics or update

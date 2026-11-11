@@ -49,6 +49,7 @@ final class AppSettings: ObservableObject {
         static let legacyUpstreamPort = "proxy.upstreamPort"
         static let socksEnabled = "proxy.socksEnabled"
         static let socksPort = "proxy.socksPort"
+        static let allowLANDevices = "proxy.allowLANDevices"
         static let ignoreOwnTraffic = "capture.ignoreOwnTraffic"
     }
 
@@ -156,6 +157,11 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// Exposes the HTTP proxy on the LAN so other devices can use this Mac as a proxy.
+    @Published var allowLANDevices: Bool {
+        didSet { defaults.set(allowLANDevices, forKey: Key.allowLANDevices) }
+    }
+
     /// Extra SOCKS5 listener so apps that only speak SOCKS5 can be inspected.
     @Published var socksProxyEnabled: Bool {
         didSet { defaults.set(socksProxyEnabled, forKey: Key.socksEnabled) }
@@ -197,6 +203,7 @@ final class AppSettings: ObservableObject {
         self.socksProxyEnabled = defaults.object(forKey: Key.socksEnabled) as? Bool ?? false
         let storedSocksPort = defaults.integer(forKey: Key.socksPort)
         self.socksProxyPort = storedSocksPort > 0 ? storedSocksPort : AppDefaults.socksPort
+        self.allowLANDevices = defaults.bool(forKey: Key.allowLANDevices)
         self.ignoreOwnTraffic = defaults.object(forKey: Key.ignoreOwnTraffic) as? Bool ?? true
     }
 }

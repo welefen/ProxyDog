@@ -54,10 +54,24 @@ extension CapturedRequest {
 final class ClientIdentity: @unchecked Sendable {
     private let lock = NSLock()
     private var process: ClientProcess?
+    private var remoteHost: String?
     private var resolved = false
     private var observers: [(eventLoop: EventLoop, callback: @Sendable (ClientProcess?) -> Void)] = []
 
     init() {}
+
+    /// LAN device that opened the connection, nil for local clients.
+    var remoteAddress: String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return remoteHost
+    }
+
+    func setRemoteAddress(_ address: String?) {
+        lock.lock()
+        remoteHost = address
+        lock.unlock()
+    }
 
     /// The process, when the probe already finished (nil while pending or when failed).
     var current: ClientProcess? {

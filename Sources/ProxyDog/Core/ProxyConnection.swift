@@ -202,6 +202,8 @@ final class ExchangeState {
 
     /// Local app that opened the client connection, once attribution resolved.
     var clientProcess: ClientProcess?
+    /// LAN device address when the client is not this Mac.
+    var clientRemoteAddress: String?
     /// Static rewrite rule applied to this exchange, when any.
     var rewriteRuleName: String?
     var rewriteAction: String?
@@ -324,7 +326,8 @@ final class ExchangeState {
             clientSignature: clientSignature,
             clientPID: clientProcess?.pid,
             clientAppName: clientProcess?.attributedAppName,
-            clientAppPath: clientProcess?.executablePath
+            clientAppPath: clientProcess?.executablePath,
+            clientRemoteAddress: clientRemoteAddress
         )
         if state == .completed || state == .failed {
             captured.finishedAt = Date()
@@ -387,8 +390,27 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
     }
 
     func channelActive(context: ChannelHandlerContext) {
+        if let remote = context.channel.remoteAddress,
+           let host = Self.hostString(remote),
+           !Self.isLoopback(host) {
+            clientIdentity.setRemoteAddress(host)
+        }
         attributeClientProcess(context: context)
         context.fireChannelActive()
+    }
+
+    private static func hostString(_ address: SocketAddress) -> String? {
+        switch address {
+        case .v4(let ip): return ip.host
+        case .v6(let ip):
+            let host = ip.host
+            return host.hasPrefix("::ffff:") ? String(host.dropFirst(7)) : host
+        default: return nil
+        }
+    }
+
+    private static func isLoopback(_ host: String) -> Bool {
+        host == "127.0.0.1" || host == "::1" || host.hasPrefix("127.")
     }
 
     /// Resolves the local app from the client's ephemeral port (one libproc scan per
@@ -464,6 +486,12 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             remainder.writeBuffer(&buffer)
         }
 
+        if method == "GET", ["/ca.cer", "/ca.crt", "/proxydog-ca.cer"].contains(target) {
+            finished = true
+            serveRootCertificate(context: context)
+            return
+        }
+
         if method == "CONNECT" {
             guard let (host, port) = ProxyWire.splitAuthority(target, defaultPort: 443) else {
                 finished = true
@@ -479,6 +507,24 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             initialBytes.writeBuffer(&remainder)
             finished = true
             _ = installHTTPPipeline(context: context, initialBytes: initialBytes)
+        }
+    }
+
+    /// Serves the root CA over plain HTTP so LAN devices can download and install it.
+    private func serveRootCertificate(context: ChannelHandlerContext) {
+        guard let data = try? Data(contentsOf: certificateAuthority.rootCertificateURL) else {
+            respondRaw(context: context, head: "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            return
+        }
+        var output = context.channel.allocator.buffer(capacity: data.count + 256)
+        output.writeString("HTTP/1.1 200 OK\r\n")
+        output.writeString("Content-Type: application/x-x509-ca-cert\r\n")
+        output.writeString("Content-Disposition: attachment; filename=\"ProxyDog-CA.cer\"\r\n")
+        output.writeString("Content-Length: \(data.count)\r\n")
+        output.writeString("Connection: close\r\n\r\n")
+        output.writeBytes(data)
+        context.channel.writeAndFlush(output).whenComplete { _ in
+            context.close(promise: nil)
         }
     }
 
@@ -710,6 +756,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
     /// the libproc probe finishes later.
     private func emitCapture(_ request: CapturedRequest) {
         var attributed = request
+        attributed.clientRemoteAddress = clientIdentity.remoteAddress
         attributed.applyClientProcess(clientIdentity.current)
         sink.captureDidUpdate(attributed)
 
@@ -1136,6 +1183,7 @@ final class ClientHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, @
         )
         exchange = state
         state.clientProcess = clientIdentity.current
+        state.clientRemoteAddress = clientIdentity.remoteAddress
 
         // Rules match the original, client-visible URL. WebSocket upgrade requests are left
         // alone so we never break a protocol upgrade in flight.

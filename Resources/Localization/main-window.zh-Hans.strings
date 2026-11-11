@@ -222,3 +222,7 @@
 
 /* About */
 "Author:" = "作者：";
+
+/* LAN devices */
+"LAN device (%@)" = "局域网设备 (%@)";
+"Unknown" = "未知";

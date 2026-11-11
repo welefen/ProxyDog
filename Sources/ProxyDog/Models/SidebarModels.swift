@@ -15,6 +15,8 @@ struct ClientSummary: Identifiable, Hashable {
     var count: Int
     var hasFailure: Bool
     var iconPath: String?
+    /// LAN device address when the summary represents another device.
+    var remoteAddress: String? = nil
 
     var id: String { name }
 }
