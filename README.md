@@ -4,9 +4,9 @@
 
 A native, lightweight HTTP/HTTPS debugging proxy for macOS that works out of the box: see which app each request came from, decrypt HTTPS with one click and read the decoded body, inspect WebSocket messages, rewrite traffic, pause requests with breakpoints, route through SOCKS5 or an existing VPN proxy, and analyze the current traffic with mainstream LLM providers (failed requests, uploaded screenshots and other privacy leaks) — all in one window.
 
-[![Download ProxyDog for macOS](https://img.shields.io/badge/Download-ProxyDog%201.0.1%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.1.zip)
+[![Download ProxyDog for macOS](https://img.shields.io/badge/Download-ProxyDog%201.0.2%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.2.zip)
 
-Also available as a [DMG disk image](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.1.dmg).
+Also available as a [DMG disk image](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.2.dmg).
 
 ## Features
 
@@ -329,6 +329,14 @@ defaults write com.proxydog.app app.onboardingCompleted -bool true
 - Turning off the system proxy simply disables it; the previous proxy configuration is not restored.
 
 ## Version
+
+v1.0.2
+
+- Proxy environment injection: with the system proxy on, apps launched afterwards receive HTTP_PROXY / HTTPS_PROXY / ALL_PROXY and NODE_EXTRA_CA_CERTS, plus a login LaunchAgent; on by default and cleaned up on quit.
+- The app no longer changes the system proxy automatically at launch, avoiding unnecessary authorization prompts.
+- YAML responses render as text; cookie tables scroll horizontally; the request/response body split is draggable.
+- AI analysis polish: dedicated prompt card, request-count input, uploaded-image and form-value options, more providers and API-key shortcuts.
+- Documentation and screenshots refreshed.
 
 v1.0.1
 

@@ -4,9 +4,9 @@
 
 一款原生、轻量的 macOS HTTP/HTTPS 抓包调试工具，打开即用：自动识别每个请求来自哪个 App，一键解密 HTTPS 并还原压缩正文，WebSocket 消息、重写规则、断点调试、SOCKS5 入口和 VPN 代理链都内置在同一个窗口里，并支持接入主流大模型的 AI 分析（检查错误请求、上传内容中的截图等隐私数据）。
 
-[![下载 ProxyDog for macOS](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-ProxyDog%201.0.1%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.1.zip)
+[![下载 ProxyDog for macOS](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-ProxyDog%201.0.2%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.2.zip)
 
-也可以下载 [DMG 磁盘映像](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.1.dmg)。
+也可以下载 [DMG 磁盘映像](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.2.dmg)。
 
 ## 功能
 
@@ -327,6 +327,14 @@ defaults write com.proxydog.app app.onboardingCompleted -bool true
 - 关闭系统代理时直接关闭代理开关，不会恢复开启前的原有代理配置。
 
 ## 版本
+
+v1.0.2
+
+- 代理环境变量注入：开启系统代理时可向之后启动的应用注入 HTTP_PROXY / HTTPS_PROXY / ALL_PROXY 与 NODE_EXTRA_CA_CERTS，并写入登录 LaunchAgent；默认开启，退出时清理。
+- 启动时不再自动修改系统代理，避免不必要的授权弹窗。
+- YAML 响应按文本显示；Cookie 表格支持横向滚动；请求/响应正文分隔可拖动。
+- AI 分析体验完善：提示词单独展示、请求数量输入、上传图片与表单值选项、更多模型服务商与 API Key 获取入口。
+- 文档与截图更新。
 
 v1.0.1
 
