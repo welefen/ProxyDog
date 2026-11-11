@@ -324,3 +324,6 @@
 "Analyze uploaded images" = "分析上传图片";
 "Include form values" = "包含表单值";
 "Uploaded images and form values are sent to the selected provider for this analysis." = "本次分析会把上传的图片和表单值发送给所选服务商。";
+
+/* AI request count */
+"Total %d requests" = "共 %d 条";

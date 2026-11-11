@@ -14,7 +14,7 @@ struct AIAnalysisView: View {
     @State private var showConfiguration = false
     /// Editable per-run prompt; resets to the default every time the sheet opens.
     @State private var promptText = ""
-    @State private var requestLimit = 80
+    @State private var requestLimitText = "200"
     @State private var includeImages = false
     @State private var includeFormValues = false
 
@@ -233,16 +233,22 @@ struct AIAnalysisView: View {
                     Text(String(localized: "Requests to analyze"))
                         .font(DS.Typography.ui(11.5))
                         .foregroundStyle(DSColor.textSecondary)
-                    PDDropdownPicker(
-                        options: [("50", "50"), ("80", "80"), ("200", "200"), ("500", "500"), ("0", String(localized: "All"))]
-                            .map { .init(value: $0.0, label: $0.1) },
-                        selection: Binding(
-                            get: { String(requestLimit) },
-                            set: { requestLimit = Int($0) ?? 80 }
-                        ),
-                        width: 96,
-                        mono: false
-                    )
+                    TextField("200", text: $requestLimitText)
+                        .textFieldStyle(.plain)
+                        .font(DS.Typography.mono(12))
+                        .foregroundStyle(DSColor.textPrimary)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 48)
+                        .padding(.horizontal, DS.Space.x2)
+                        .padding(.vertical, 5)
+                        .background(fieldBackground)
+                        .onChange(of: requestLimitText) { _, newValue in
+                            let filtered = String(newValue.filter(\.isNumber).prefix(4))
+                            if filtered != newValue { requestLimitText = filtered }
+                        }
+                    Text(String(format: String(localized: "Total %d requests"), requests.count))
+                        .font(DS.Typography.ui(10.5))
+                        .foregroundStyle(DSColor.textMuted)
                 }
 
                 Toggle(isOn: $includeImages) {
@@ -467,12 +473,14 @@ struct AIAnalysisView: View {
 
         let chinese = Locale.preferredLanguages.first?.hasPrefix("zh") == true
         let focus = promptText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parsedLimit = Int(requestLimitText.trimmingCharacters(in: .whitespaces)) ?? 200
+        let requestLimit = parsedLimit > 0 ? min(parsedLimit, requests.count) : requests.count
         let options = AIAnalyzer.Options(
             requestLimit: requestLimit,
             includeImages: includeImages,
             includeFormValues: includeFormValues
         )
-        let scopedRequests = requestLimit > 0 ? Array(requests.prefix(requestLimit)) : requests
+        let scopedRequests = Array(requests.prefix(requestLimit))
         let images = includeImages ? AIAnalyzer.images(from: scopedRequests) : []
         let prompt = AIAnalyzer.prompt(
             for: report,

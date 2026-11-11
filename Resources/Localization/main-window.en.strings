@@ -322,3 +322,6 @@
 "Analyze uploaded images" = "Analyze uploaded images";
 "Include form values" = "Include form values";
 "Uploaded images and form values are sent to the selected provider for this analysis." = "Uploaded images and form values are sent to the selected provider for this analysis.";
+
+/* AI request count */
+"Total %d requests" = "Total %d requests";
