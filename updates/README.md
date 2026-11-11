@@ -23,3 +23,6 @@ version, stages `ProxyDog.app`, then swaps it after the app quits and relaunches
 
 The repository must be public (or provide `PROXYDOG_UPDATE_TOKEN`) so the app can fetch
 the manifest and archive over HTTPS.
+
+A DMG (`ProxyDog-<version>.dmg`) is published alongside the ZIP for manual installs;
+the in-app updater always uses the ZIP.

@@ -6,6 +6,8 @@
 
 [![下载 ProxyDog for macOS](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-ProxyDog%201.0.0%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.0.zip)
 
+也可以下载 [DMG 磁盘映像](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.0.dmg)。
+
 ## 功能
 
 - **HTTP / HTTPS 抓包**：本地 HTTP 代理监听 `127.0.0.1:8888`，通过本地根证书对 HTTPS 做 TLS 解密（MITM），明文与加密流量统一展示；HTTP/2 通过 ALPN 协商并在抓包中标记（`协议` 行显示 HTTP/2）。
