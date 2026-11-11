@@ -184,12 +184,12 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
         refreshCertificateStatus()
-        if settings.systemProxyEnabled {
-            setSystemProxy(enabled: true)
-        } else {
-            settings.injectProxyEnvironment = false
-            SystemProxyEnvironment.disable(port: settings.port)
-        }
+        // Never touch the system proxy automatically on launch: enabling or disabling it
+        // runs an administrator prompt the user did not ask for.
+        settings.systemProxyEnabled = false
+        isSystemProxyEnabled = false
+        settings.injectProxyEnvironment = false
+        SystemProxyEnvironment.disable(port: settings.port)
         // LAN access is gated by the system proxy; stale persistence must not re-expose it.
         if settings.allowLANDevices, !settings.systemProxyEnabled {
             settings.allowLANDevices = false
@@ -205,6 +205,7 @@ final class AppState: ObservableObject {
         }
         // Quitting ProxyDog must not leave apps pointing at an env proxy that no longer
         // exists. launchctl can be slow, so finish this from a detached helper.
+        settings.systemProxyEnabled = false
         settings.injectProxyEnvironment = false
         SystemProxyEnvironment.scheduleDisableAfterExit()
     }
