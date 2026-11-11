@@ -30,13 +30,14 @@ enum CookieParser {
                 cookies.append(RequestCookie(name: name, value: pieces.count == 2 ? pieces[1] : ""))
             }
         }
-        return cookies
+        return cookies.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     static func responseCookies(from headers: [HeaderField]) -> [ResponseCookie] {
         headers
             .filter { $0.name.lowercased() == "set-cookie" }
             .compactMap { cookie(from: $0.value) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     private static func cookie(from value: String) -> ResponseCookie? {
