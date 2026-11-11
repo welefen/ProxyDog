@@ -248,3 +248,8 @@
 "Show raw body" = "显示原始正文";
 "Save file" = "保存文件";
 "Binary content (%@)" = "二进制内容（%@）";
+
+/* Cookies */
+"Request Cookie" = "请求 Cookie";
+"Response Cookie" = "响应 Cookie";
+"No cookies" = "没有 Cookie";

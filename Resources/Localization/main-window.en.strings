@@ -246,3 +246,8 @@
 "Show raw body" = "Show raw body";
 "Save file" = "Save file";
 "Binary content (%@)" = "Binary content (%@)";
+
+/* Cookies */
+"Request Cookie" = "Request Cookie";
+"Response Cookie" = "Response Cookie";
+"No cookies" = "No cookies";
