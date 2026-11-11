@@ -69,7 +69,7 @@ struct AIAnalysisView: View {
             Divider()
             footer
         }
-        .frame(width: 660, height: 700)
+        .frame(width: 660, height: requests.isEmpty ? 360 : 700)
         .background(DSColor.base)
         .onAppear {
             if report == nil {
