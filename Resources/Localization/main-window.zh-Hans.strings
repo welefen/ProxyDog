@@ -314,5 +314,7 @@
 
 /* AI prompt */
 "Prompt" = "提示词";
-"Focus on: 1) failed requests (4xx/5xx, connection errors) and likely causes; 2) whether uploaded content contains screenshots or other private images; 3) whether user app lists, device identifiers or other privacy data were reported; 4) any other notable anomalies." = "重点分析：1）有哪些失败请求（4xx/5xx、连接失败）及可能原因；2）上传内容中是否包含截图或其它隐私图片；3）是否上报了用户 App 列表、设备标识等隐私数据；4）其它值得注意的异常。";
 "Default focus: errors, screenshots or private images in uploads, app lists and other privacy data. Edit to customize." = "默认重点关注错误、上传内容中的截图/隐私图片、App 列表等隐私数据，可自行修改。";
+
+/* AI default prompt */
+"Focus on:\n1) failed requests (4xx/5xx, connection errors) and likely causes;\n2) whether uploaded content contains screenshots or other private images;\n3) whether user app lists, device identifiers or other privacy data were reported;\n4) any other notable anomalies." = "重点分析：\n1) 有哪些失败请求（4xx/5xx、连接失败）及可能原因；\n2) 上传内容中是否包含截图或其它隐私图片；\n3) 是否上报了用户 App 列表、设备标识等隐私数据；\n4) 其它值得注意的异常。";

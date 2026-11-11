@@ -67,7 +67,7 @@ final class AIConfigStore: ObservableObject {
     }
 
     var defaultPrompt: String {
-        String(localized: "Focus on: 1) failed requests (4xx/5xx, connection errors) and likely causes; 2) whether uploaded content contains screenshots or other private images; 3) whether user app lists, device identifiers or other privacy data were reported; 4) any other notable anomalies.")
+        String(localized: "Focus on:\n1) failed requests (4xx/5xx, connection errors) and likely causes;\n2) whether uploaded content contains screenshots or other private images;\n3) whether user app lists, device identifiers or other privacy data were reported;\n4) any other notable anomalies.")
     }
 
     var displayModel: String {
