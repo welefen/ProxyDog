@@ -246,3 +246,6 @@
 
 /* AI key */
 "API key is saved (leave blank to keep it)" = "API key is saved (leave blank to keep it)";
+
+/* AI key storage */
+"Stored locally in your preferences; sent only to the selected provider." = "Stored locally in your preferences; sent only to the selected provider.";

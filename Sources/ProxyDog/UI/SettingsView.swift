@@ -634,10 +634,10 @@ struct SettingsView: View {
 
                 SettingsRow(
                     title: "API key",
-                    hint: "Stored in the login keychain; sent only to the selected provider."
+                    hint: "Stored locally in your preferences; sent only to the selected provider."
                 ) {
                     HStack(spacing: DS.Space.x2) {
-                        SecureField(aiConfig.storedKeyPlaceholder, text: $aiConfig.apiKey)
+                        SecureField(String(localized: "Paste your API key"), text: $aiConfig.apiKey)
                             .textFieldStyle(.plain)
                             .font(DS.Typography.mono(12))
                             .foregroundStyle(DSColor.textPrimary)
@@ -646,7 +646,7 @@ struct SettingsView: View {
                             .padding(.horizontal, DS.Space.x2)
                             .padding(.vertical, 5)
                             .background(fieldBackground(isFocused: aiKeyFocused))
-                        if aiConfig.hasStoredKey || !aiConfig.apiKey.isEmpty {
+                        if !aiConfig.apiKey.isEmpty {
                             SettingsIconButton(
                                 systemName: "xmark.circle",
                                 help: String(localized: "Clear API key"),

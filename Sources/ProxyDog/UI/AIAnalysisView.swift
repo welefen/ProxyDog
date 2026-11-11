@@ -119,7 +119,7 @@ struct AIAnalysisView: View {
             }
 
             field(label: "API Key") {
-                SecureField(config.storedKeyPlaceholder, text: $config.apiKey)
+                SecureField(String(localized: "Paste your API key"), text: $config.apiKey)
                     .textFieldStyle(.plain)
                     .font(DS.Typography.mono(12))
                     .foregroundStyle(DSColor.textPrimary)
@@ -141,11 +141,11 @@ struct AIAnalysisView: View {
             }
 
             HStack(spacing: DS.Space.x3) {
-                Text(String(localized: "The API key is stored in your login keychain."))
+                Text(String(localized: "The API key is stored locally in your preferences."))
                     .font(DS.Typography.ui(10.5))
                     .foregroundStyle(DSColor.textMuted)
                 Spacer(minLength: DS.Space.x2)
-                if config.hasStoredKey || !config.apiKey.isEmpty {
+                if !config.apiKey.isEmpty {
                     Button(String(localized: "Clear key")) {
                         config.clearKey()
                         summary = nil
@@ -375,7 +375,7 @@ struct AIAnalysisView: View {
 
     private func analyze() {
         guard let report else { return }
-        let configuration = config.makeConfiguration()
+        let configuration = config.configuration
         guard configuration.isUsable else {
             errorText = AIClientError.missingConfiguration.localizedDescription
             return

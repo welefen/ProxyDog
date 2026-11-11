@@ -302,3 +302,6 @@
 
 /* AI key */
 "API key is saved (leave blank to keep it)" = "API key is saved (leave blank to keep it)";
+
+/* AI key storage */
+"The API key is stored locally in your preferences." = "The API key is stored locally in your preferences.";

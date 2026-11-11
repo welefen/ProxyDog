@@ -304,3 +304,6 @@
 
 /* AI key */
 "API key is saved (leave blank to keep it)" = "API Key 已保存（留空保持不变）";
+
+/* AI key storage */
+"The API key is stored locally in your preferences." = "API Key 保存在本机偏好设置中。";
