@@ -212,3 +212,6 @@
 
 /* LAN access */
 "Turn on This Mac's system proxy first." = "请先开启本机系统代理";
+
+/* Restart feedback */
+"Restarted" = "已重启";

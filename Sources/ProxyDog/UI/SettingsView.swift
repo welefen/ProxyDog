@@ -14,6 +14,8 @@ struct SettingsView: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var settings: AppSettings
 
+    @State private var httpRestarted = false
+    @State private var socksRestarted = false
     @State private var portText: String = ""
     @State private var portError: String?
     @FocusState private var portFocused: Bool
@@ -354,11 +356,10 @@ struct SettingsView: View {
                             .onChange(of: portFocused) { _, focused in
                                 if !focused { commitPort() }
                             }
-                        SettingsIconButton(
-                            systemName: "arrow.clockwise",
-                            help: String(localized: "Restart proxy"),
-                            action: { state.restartProxy() }
-                        )
+                        restartControl(isRestarted: httpRestarted) {
+                            state.restartProxy()
+                            flashRestarted(isSocks: false)
+                        }
                         .disabled(!state.isSystemProxyEnabled)
                     }
                 }
@@ -483,11 +484,10 @@ struct SettingsView: View {
                             if !focused { commitSocksPort() }
                         }
                         .disabled(!socksAddressAvailable)
-                    SettingsIconButton(
-                        systemName: "arrow.clockwise",
-                        help: String(localized: "Restart proxy"),
-                        action: { state.restartProxy() }
-                    )
+                    restartControl(isRestarted: socksRestarted) {
+                        state.restartProxy()
+                        flashRestarted(isSocks: true)
+                    }
                     .disabled(!settings.socksProxyEnabled)
                 }
                 SettingsHairline()
@@ -644,6 +644,35 @@ struct SettingsView: View {
                 }
             }
         }
+        }
+    }
+
+    /// Restart icon that briefly turns into a checkmark plus a "Restarted" label.
+    @ViewBuilder
+    private func restartControl(isRestarted: Bool, action: @escaping () -> Void) -> some View {
+        HStack(spacing: DS.Space.x1) {
+            if isRestarted {
+                Text("Restarted")
+                    .font(DS.Typography.ui(11, .medium))
+                    .foregroundStyle(DSColor.accent)
+                    .transition(.opacity)
+            }
+            SettingsIconButton(
+                systemName: isRestarted ? "checkmark.circle.fill" : "arrow.clockwise",
+                help: String(localized: "Restart proxy"),
+                action: action
+            )
+        }
+    }
+
+    private func flashRestarted(isSocks: Bool) {
+        withAnimation(.easeOut(duration: 0.15)) {
+            if isSocks { socksRestarted = true } else { httpRestarted = true }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            withAnimation(.easeIn(duration: 0.2)) {
+                if isSocks { socksRestarted = false } else { httpRestarted = false }
+            }
         }
     }
 

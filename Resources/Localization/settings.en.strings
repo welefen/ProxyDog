@@ -209,3 +209,6 @@
 
 /* LAN access */
 "Turn on This Mac's system proxy first." = "Turn on This Mac's system proxy first.";
+
+/* Restart feedback */
+"Restarted" = "Restarted";
