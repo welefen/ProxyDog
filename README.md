@@ -27,7 +27,6 @@ Also available as a [DMG disk image](https://github.com/welefen/ProxyDog/raw/mas
 - **SOCKS5 listener**: an extra listener on `127.0.0.1:8889` (configurable) lets SOCKS5-only apps such as Telegram be captured and decrypted.
 - **Appearance and language**: light-first design with a complete dark mode following the system by default; built-in 简体中文 and English (follows the system language, switchable in Settings with an automatic restart).
 - **Auto-update**: checks the manifest (`updates/latest.json`) on GitHub in the background after launch, downloads the ZIP, verifies its SHA-256 plus bundle identifier/version, then installs in place with one “Install and restart” click. “Check for Updates…” in the app menu triggers a manual check; development builds under `build/` opt out automatically.
-- **Analytics**: Aptabase, with the app key injected at build time (`Support/AppConfig.plist`, gitignored), so end users never see a key field. No request content is collected.
 
 ## Screenshots
 
