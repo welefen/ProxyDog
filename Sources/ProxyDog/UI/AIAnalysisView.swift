@@ -252,14 +252,14 @@ struct AIAnalysisView: View {
                 }
 
                 Toggle(isOn: $includeImages) {
-                    Text(String(localized: "Analyze uploaded images"))
+                    Text(String(localized: "Analyze images uploaded in requests"))
                         .font(DS.Typography.ui(11.5))
                 }
                 .toggleStyle(.switch)
                 .controlSize(.mini)
 
                 Toggle(isOn: $includeFormValues) {
-                    Text(String(localized: "Include form values"))
+                    Text(String(localized: "Analyze form values in requests"))
                         .font(DS.Typography.ui(11.5))
                 }
                 .toggleStyle(.switch)

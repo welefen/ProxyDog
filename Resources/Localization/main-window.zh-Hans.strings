@@ -327,3 +327,7 @@
 
 /* AI request count */
 "Total %d requests" = "共 %d 条";
+
+/* AI option labels */
+"Analyze images uploaded in requests" = "分析请求中上传的图片";
+"Analyze form values in requests" = "分析请求中表单值";
