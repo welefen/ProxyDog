@@ -240,3 +240,9 @@
 
 /* App menu */
 "Feedback" = "Feedback";
+
+/* Multipart */
+"Parse form data" = "Parse form data";
+"Show raw body" = "Show raw body";
+"Save file" = "Save file";
+"Binary content (%@)" = "Binary content (%@)";

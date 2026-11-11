@@ -205,6 +205,9 @@ private struct BodySectionView: View {
     /// When the captured body is larger than `displayLimit` the viewer starts trimmed;
     /// the notice offers "Show all" to render the whole payload on demand.
     @State private var showsFullBody = false
+    /// Multipart bodies default to the parsed field/file list; the header button flips
+    /// back to the raw bytes.
+    @State private var showsRawMultipart = false
     @State private var expandAllVersion = 0
     @State private var collapseAllVersion = 0
     @State private var isFullyExpanded = false
@@ -266,6 +269,7 @@ private struct BodySectionView: View {
         .onChange(of: request.id) { _, _ in
             showsFullBody = false
             isFullyExpanded = false
+            showsRawMultipart = false
         }
     }
 
@@ -330,6 +334,17 @@ private struct BodySectionView: View {
                         : String(localized: "Expand all")
                 ) {
                     toggleJSONExpansion()
+                }
+            }
+
+            if hasBody, MultipartFormData.isMultipart(contentType: contentType) {
+                PDIconButton(
+                    symbol: showsRawMultipart ? "square.grid.2x2" : "doc.plaintext",
+                    help: showsRawMultipart
+                        ? String(localized: "Parse form data")
+                        : String(localized: "Show raw body")
+                ) {
+                    showsRawMultipart.toggle()
                 }
             }
 
@@ -484,7 +499,10 @@ private struct BodySectionView: View {
 
     @ViewBuilder
     private func viewer(for data: Data) -> some View {
-        if isUndecodableCompressed {
+        if !showsRawMultipart,
+           let multipart = MultipartFormData.parse(data: data, contentType: contentType) {
+            MultipartFormView(parts: multipart.parts)
+        } else if isUndecodableCompressed {
             HexDumpView(data: data)
         } else {
             switch contentKind {

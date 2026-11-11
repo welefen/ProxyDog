@@ -75,6 +75,11 @@ struct ContentView: View {
             if let path = DevLaunchOptions.sampleHARImport {
                 state.importHAR(from: URL(fileURLWithPath: path))
             }
+            if DevLaunchOptions.selectFirstCapture {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                    state.selectionID = state.store.requests.first?.id
+                }
+            }
             SampleTraffic.openSettingsIfRequested(state: state, openSettings: openSettings)
             if ProcessInfo.processInfo.arguments.contains("--sample-about") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {

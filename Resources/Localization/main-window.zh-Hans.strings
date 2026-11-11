@@ -242,3 +242,9 @@
 
 /* App menu */
 "Feedback" = "反馈";
+
+/* Multipart */
+"Parse form data" = "解析表单数据";
+"Show raw body" = "显示原始正文";
+"Save file" = "保存文件";
+"Binary content (%@)" = "二进制内容（%@）";

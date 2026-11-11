@@ -35,6 +35,11 @@ enum DevLaunchOptions {
         value(for: "--sample-message").flatMap(Int.init)
     }
 
+    /// QA: selects the first live capture a few seconds after launch.
+    static var selectFirstCapture: Bool {
+        arguments.contains("--select-first-capture")
+    }
+
     /// QA: imports a HAR file at launch (e.g. `--sample-har-import /tmp/sample.har`).
     static var sampleHARImport: String? {
         value(for: "--sample-har-import")
