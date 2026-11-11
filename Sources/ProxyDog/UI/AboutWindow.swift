@@ -14,10 +14,10 @@ enum AboutWindow {
             return
         }
         let hosting = NSHostingView(rootView: AboutView())
-        hosting.frame = NSRect(x: 0, y: 0, width: 560, height: 380)
+        hosting.frame = NSRect(x: 0, y: 0, width: 420, height: 320)
 
         let panel = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 380),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -37,27 +37,27 @@ enum AboutWindow {
 private struct AboutView: View {
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 24)
-            AppBrandIcon(size: 92)
+            Spacer(minLength: 18)
+            AppBrandIcon(size: 76)
             Text(AppInfo.name)
                 .font(DS.Typography.ui(21, .semibold))
                 .foregroundStyle(DSColor.textPrimary)
-                .padding(.top, 18)
+                .padding(.top, 14)
             Text(String(format: String(localized: "Version %@ (%@)"), AppInfo.version, AppInfo.build))
                 .font(DS.Typography.ui(12))
                 .foregroundStyle(DSColor.textSecondary)
-                .padding(.top, 6)
+                .padding(.top, 5)
             Link("@welefen", destination: URL(string: "https://github.com/welefen")!)
                 .font(DS.Typography.ui(12, .medium))
-                .padding(.top, 8)
+                .padding(.top, 6)
                 .accessibilityLabel("Author welefen on GitHub")
             Spacer(minLength: 0)
             Text(verbatim: "Copyright © 2026 ProxyDog")
                 .font(DS.Typography.ui(11))
                 .foregroundStyle(DSColor.textMuted)
-                .padding(.bottom, 22)
+                .padding(.bottom, 18)
         }
-        .frame(width: 560, height: 380)
+        .frame(width: 420, height: 320)
         .background(DSColor.chrome)
     }
 }
