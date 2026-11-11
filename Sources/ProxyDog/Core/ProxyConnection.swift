@@ -571,11 +571,14 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             serveRootProfile(context: context)
             return
         }
-        if ua.contains("harmony") || ua.contains("openharmony") {
+        // HarmonyOS 4.x is Android-based and its browser/downloader can hand the DER
+        // certificate to the system installer directly; HarmonyOS NEXT needs Settings.
+        let isHarmony = ua.contains("harmony") || ua.contains("openharmony")
+        if isHarmony, !ua.contains("android") {
             serveHarmonyLandingPage(context: context)
             return
         }
-        if ua.contains("android") {
+        if ua.contains("android") || isHarmony {
             serveRootCertificate(context: context, binaryDER: true)
             return
         }
