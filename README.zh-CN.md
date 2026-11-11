@@ -234,6 +234,8 @@ git add updates scripts && git commit -m "release: ProxyDog <version>" && git pu
 
 `package.sh` 只打包（`dist/` 下生成 DMG + ZIP 与 SHA256SUMS），`publish_update.sh` 在打包基础上更新 `updates/` 里的清单。仓库需要是公开的，客户端才能直接下载更新包。
 
+> 日常开发提交**不要**运行 `publish_update.sh`，也不要更新 `updates/` 里的 zip/dmg 与清单；只有正式发布版本时才重新生成这些产物并打 tag。
+
 ## 数据埋点
 
 埋点使用 Aptabase。App Key 只在**开发构建时**配置一次：`Support/AppConfig.plist` 中的 `AptabaseAppKey` 由 `scripts/build_app.sh` 注入到 App 包的 `Info.plist`，最终用户的设置页和首次启动页里都没有 Key 输入项。该文件不提交到仓库，留空则埋点完全关闭。

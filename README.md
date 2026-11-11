@@ -232,6 +232,8 @@ git add updates scripts && git commit -m "release: ProxyDog <version>" && git pu
 
 `package.sh` only packages (DMG + ZIP + SHA256SUMS in `dist/`); `publish_update.sh` additionally refreshes the `updates/` feed. The repository must be public so clients can download releases.
 
+> Regular commits must **not** run `publish_update.sh` and must not touch the zip/dmg/manifest under `updates/`; only refresh those artifacts when actually cutting a release (and tag it).
+
 ## Analytics
 
 Analytics uses Aptabase. The app key is configured once **at development/build time**: `AptabaseAppKey` in `Support/AppConfig.plist` is injected into the app bundle's `Info.plist` by `scripts/build_app.sh`, so there is no key field in the settings or onboarding UI. The file is not committed; without it analytics is fully disabled.
