@@ -692,6 +692,8 @@ final class AppState: ObservableObject {
 
         if typeFilter == .error {
             items = items.filter { $0.isFailure }
+        } else if typeFilter == .file {
+            items = items.filter { RequestCategory.hasFileUpload($0) }
         } else if typeFilter.isFiltering {
             items = items.filter { RequestCategory.categorize($0) == typeFilter }
         }

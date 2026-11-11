@@ -18,6 +18,8 @@ enum RequestCategory: String, CaseIterable, Identifiable, Hashable, Sendable {
     case socket
     case wasm
     case other
+    /// Requests whose payload contains an uploaded file (e.g. image uploads).
+    case file
     /// Not a content type: shows failed exchanges only.
     case error
 
@@ -39,12 +41,30 @@ enum RequestCategory: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .socket: return "Socket"
         case .wasm: return "Wasm"
         case .other: return "Other"
+        case .file: return "File"
         case .error: return "Error"
         }
     }
 
     /// The `All` chip means "no type filter".
     var isFiltering: Bool { self != .all }
+
+    /// True when the request body carries a file upload (multipart file part or a raw
+    /// image/video/binary body).
+    static func hasFileUpload(_ request: CapturedRequest) -> Bool {
+        guard let body = request.requestBody, !body.isEmpty,
+              let mime = request.requestContentType?.lowercased() else { return false }
+        if mime.hasPrefix("image/") || mime.hasPrefix("video/") || mime.hasPrefix("audio/")
+            || mime.contains("octet-stream") || mime.contains("application/pdf")
+            || mime.contains("application/zip") {
+            return true
+        }
+        if mime.contains("multipart/form-data"),
+           let form = MultipartFormData.parse(data: body, contentType: request.requestContentType) {
+            return form.parts.contains { $0.filename != nil || $0.isImage }
+        }
+        return false
+    }
 
     /// Maps a captured exchange onto the closest Chrome-style category.
     static func categorize(_ request: CapturedRequest) -> RequestCategory {
