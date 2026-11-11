@@ -29,13 +29,16 @@ struct TrafficEmptyStateView: View {
                     .padding(.top, DS.Space.x3)
             }
 
-            steps
-                .padding(.top, DS.Space.x6)
+            if !state.isSystemProxyEnabled {
+                steps
+                    .padding(.top, DS.Space.x6)
+            }
 
             proxyRow
                 .padding(.top, DS.Space.x4)
 
-            Button {
+            if !state.isSystemProxyEnabled {
+                Button {
                 state.requestSettings(destination: .connection)
                 openSettings()
             } label: {
@@ -53,9 +56,10 @@ struct TrafficEmptyStateView: View {
                             )
                     )
             }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, DS.Space.x3)
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, DS.Space.x3)
+            }
         }
         .frame(maxWidth: 300)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
