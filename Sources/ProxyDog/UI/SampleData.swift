@@ -45,6 +45,13 @@ enum DevLaunchOptions {
         arguments.contains("--sample-ai-run")
     }
 
+    /// QA: exercises the launchd proxy environment injection and cleanup.
+    static var forceSystemProxyEnvironment: Bool? {
+        if arguments.contains("--sample-enable-proxy-env") { return true }
+        if arguments.contains("--sample-disable-proxy-env") { return false }
+        return nil
+    }
+
     /// QA: opens the AI analysis sheet on launch.
     static var openAIAnalysis: Bool {
         arguments.contains("--sample-ai-analysis")

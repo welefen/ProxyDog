@@ -72,6 +72,13 @@ struct ContentView: View {
             if let search = DevLaunchOptions.sampleSearch {
                 state.searchText = search
             }
+            if let enableEnv = DevLaunchOptions.forceSystemProxyEnvironment {
+                if enableEnv {
+                    SystemProxyEnvironment.enable(port: state.settings.port)
+                } else {
+                    SystemProxyEnvironment.disable()
+                }
+            }
             if let path = DevLaunchOptions.sampleHARImport {
                 state.importHAR(from: URL(fileURLWithPath: path))
             }

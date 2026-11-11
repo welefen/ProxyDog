@@ -186,6 +186,8 @@ final class AppState: ObservableObject {
         refreshCertificateStatus()
         if settings.systemProxyEnabled {
             setSystemProxy(enabled: true)
+        } else if UserDefaults.standard.bool(forKey: "proxy.envProxyActive") {
+            SystemProxyEnvironment.disable()
         }
         // LAN access is gated by the system proxy; stale persistence must not re-expose it.
         if settings.allowLANDevices, !settings.systemProxyEnabled {
@@ -547,12 +549,14 @@ final class AppState: ObservableObject {
                 try SystemProxy.enable(port: settings.port)
                 settings.systemProxyEnabled = true
                 isSystemProxyEnabled = true
+                SystemProxyEnvironment.enable(port: settings.port)
                 autoEnableConfiguredUpstreams()
                 Analytics.shared.track("system_proxy_enabled")
             } else {
                 try SystemProxy.disable()
                 settings.systemProxyEnabled = false
                 isSystemProxyEnabled = false
+                SystemProxyEnvironment.disable()
                 Analytics.shared.track("system_proxy_disabled")
             }
         } catch {
@@ -599,6 +603,11 @@ final class AppState: ObservableObject {
 
     func refreshSystemProxyState() {
         isSystemProxyEnabled = SystemProxy.isEnabled(port: settings.port)
+        if isSystemProxyEnabled {
+            SystemProxyEnvironment.enable(port: settings.port)
+        } else if UserDefaults.standard.bool(forKey: "proxy.envProxyActive") {
+            SystemProxyEnvironment.disable()
+        }
     }
 
     // MARK: - Certificate
