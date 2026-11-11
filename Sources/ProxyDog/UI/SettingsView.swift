@@ -676,22 +676,6 @@ struct SettingsView: View {
                     .background(fieldBackground(isFocused: aiBaseURLFocused))
                 }
 
-                SettingsHairline()
-
-                SettingsRow(
-                    title: "Prompt",
-                    hint: "Default focus: errors, screenshots or private images in uploads, app lists and other privacy data. Edit to customize."
-                ) {
-                    TextEditor(text: Binding(
-                        get: { aiConfig.effectivePrompt },
-                        set: { aiConfig.prompt = $0 }
-                    ))
-                    .font(DS.Typography.ui(11))
-                    .scrollContentBackground(.hidden)
-                    .padding(5)
-                    .frame(width: 320, height: 74)
-                    .background(fieldBackground(isFocused: false))
-                }
 
                 if !aiConfig.isConfigured {
                     SettingsHintRow(

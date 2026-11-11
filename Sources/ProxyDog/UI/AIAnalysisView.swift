@@ -12,6 +12,8 @@ struct AIAnalysisView: View {
     @State private var errorText: String?
     @State private var didCopy = false
     @State private var showConfiguration = false
+    /// Editable per-run prompt; resets to the default every time the sheet opens.
+    @State private var promptText = ""
 
     private enum Phase {
         case idle
@@ -74,6 +76,9 @@ struct AIAnalysisView: View {
         .onAppear {
             if report == nil {
                 report = AIAnalyzer.report(for: requests)
+            }
+            if promptText.isEmpty {
+                promptText = config.defaultPrompt
             }
             guard !requests.isEmpty else { return }
             if config.isConfigured, !DevLaunchOptions.skipAutoRunAIAnalysis {
@@ -152,10 +157,7 @@ struct AIAnalysisView: View {
             }
 
             field(label: String(localized: "Prompt")) {
-                TextEditor(text: Binding(
-                    get: { config.effectivePrompt },
-                    set: { config.prompt = $0 }
-                ))
+                TextEditor(text: $promptText)
                 .font(DS.Typography.ui(11.5))
                 .scrollContentBackground(.hidden)
                 .padding(5)
@@ -420,7 +422,13 @@ struct AIAnalysisView: View {
         summary = nil
 
         let chinese = Locale.preferredLanguages.first?.hasPrefix("zh") == true
-        let prompt = AIAnalyzer.prompt(for: report, requests: requests, chinese: chinese, focus: config.effectivePrompt)
+        let focus = promptText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prompt = AIAnalyzer.prompt(
+            for: report,
+            requests: requests,
+            chinese: chinese,
+            focus: focus.isEmpty ? config.defaultPrompt : focus
+        )
         Task {
             do {
                 let text = try await AIClient.summarize(configuration: configuration, prompt: prompt)
