@@ -668,7 +668,9 @@ final class AppState: ObservableObject {
             items = items.filter { $0.host == domain }
         }
 
-        if typeFilter.isFiltering {
+        if typeFilter == .error {
+            items = items.filter { $0.isFailure }
+        } else if typeFilter.isFiltering {
             items = items.filter { RequestCategory.categorize($0) == typeFilter }
         }
 

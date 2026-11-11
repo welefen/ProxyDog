@@ -18,6 +18,8 @@ enum RequestCategory: String, CaseIterable, Identifiable, Hashable, Sendable {
     case socket
     case wasm
     case other
+    /// Not a content type: shows failed exchanges only.
+    case error
 
     var id: String { rawValue }
 
@@ -37,6 +39,7 @@ enum RequestCategory: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .socket: return "Socket"
         case .wasm: return "Wasm"
         case .other: return "Other"
+        case .error: return "Error"
         }
     }
 
