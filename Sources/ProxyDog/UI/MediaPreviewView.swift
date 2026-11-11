@@ -10,6 +10,7 @@ struct MediaBodyView: View {
     let data: Data
     let contentType: String?
     let isVideo: Bool
+    var sourceURL: URL? = nil
 
     @State private var player: AVPlayer?
     @State private var tempURL: URL?
@@ -39,7 +40,19 @@ struct MediaBodyView: View {
                 caption(for: player)
             } else if isUnplayable {
                 VStack(spacing: 0) {
-                    noticeRow(String(localized: "This media format cannot be previewed; showing raw bytes"))
+                    if wasTruncated {
+                        noticeRow(
+                            String(localized: "Video exceeds the 2 MB capture limit; showing raw bytes"),
+                            actionTitle: sourceURL == nil ? nil : String(localized: "Open URL"),
+                            action: sourceURL.map { url in { NSWorkspace.shared.open(url) } }
+                        )
+                    } else {
+                        noticeRow(
+                            String(localized: "This media format cannot be previewed; showing raw bytes"),
+                            actionTitle: sourceURL == nil ? nil : String(localized: "Open URL"),
+                            action: sourceURL.map { url in { NSWorkspace.shared.open(url) } }
+                        )
+                    }
                     HexDumpView(data: data)
                 }
             } else {
@@ -52,7 +65,7 @@ struct MediaBodyView: View {
             }
         }
         .task(id: data.count) {
-            prepare()
+            await prepare()
         }
         .onDisappear {
             player?.pause()
@@ -82,7 +95,7 @@ struct MediaBodyView: View {
         .overlay(alignment: .top) { PDHairline() }
     }
 
-    private func prepare() {
+    private func prepare() async {
         guard player == nil, !isUnplayable else { return }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("ProxyDogMedia", isDirectory: true)
@@ -100,7 +113,16 @@ struct MediaBodyView: View {
         tempURL = url
 
         let asset = AVURLAsset(url: url)
-        guard asset.isPlayable else {
+        do {
+            let playable = try await asset.load(.isPlayable)
+            let mediaType: AVMediaType = isVideo ? .video : .audio
+            let tracks = try await asset.loadTracks(withMediaType: mediaType)
+            guard playable, !tracks.isEmpty else {
+                isUnplayable = true
+                try? FileManager.default.removeItem(at: url)
+                return
+            }
+        } catch {
             isUnplayable = true
             try? FileManager.default.removeItem(at: url)
             return
@@ -124,12 +146,23 @@ struct MediaBodyView: View {
     }
 
     private func noticeRow(_ text: String) -> some View {
+        noticeRow(text, actionTitle: nil, action: nil)
+    }
+
+    private func noticeRow(_ text: String, actionTitle: String?, action: (() -> Void)?) -> some View {
         HStack(spacing: DS.Space.x1 + 2) {
             Image(systemName: "info.circle")
                 .font(.system(size: 10, weight: .medium))
             Text(text)
                 .font(DS.Typography.ui(10.5))
             Spacer(minLength: 0)
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.plain)
+                    .font(DS.Typography.ui(10.5, .medium))
+                    .foregroundStyle(DSColor.accent)
+                    .contentShape(Rectangle())
+            }
         }
         .foregroundStyle(DSColor.textMuted)
         .padding(.horizontal, DS.Space.x3)

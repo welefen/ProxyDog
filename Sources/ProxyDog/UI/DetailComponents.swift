@@ -499,9 +499,9 @@ private struct BodySectionView: View {
             case .javascript, .html, .xml, .css, .text, .form:
                 MonoTextBodyView(text: displayText(from: data))
             case .video:
-                MediaBodyView(data: data, contentType: contentType, isVideo: true)
+                MediaBodyView(data: data, contentType: contentType, isVideo: true, sourceURL: URL(string: request.urlString))
             case .audio:
-                MediaBodyView(data: data, contentType: contentType, isVideo: false)
+                MediaBodyView(data: data, contentType: contentType, isVideo: false, sourceURL: URL(string: request.urlString))
             case .font, .binary:
                 HexDumpView(data: data)
             }

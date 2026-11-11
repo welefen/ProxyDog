@@ -226,3 +226,7 @@
 /* LAN devices */
 "LAN device (%@)" = "局域网设备 (%@)";
 "Unknown" = "未知";
+
+/* Media preview */
+"Open URL" = "打开原始地址";
+"Video exceeds the 2 MB capture limit; showing raw bytes" = "视频超过 2 MB 抓取上限，无法解析播放，以下为原始字节";

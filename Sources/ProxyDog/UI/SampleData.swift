@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import SwiftUI
 
 // MARK: - Development launch options
@@ -1212,14 +1213,82 @@ enum SampleTraffic {
         return candidates.first { FileManager.default.fileExists(atPath: $0) } ?? candidates[0]
     }
 
-    /// Deterministic binary payload that stands in for a video frame.
+    /// Playable sample trailer generated once with AVAssetWriter. QA runs can point
+    /// `PROXYDOG_SAMPLE_MEDIA_FILE` at a real file to override it.
     private static var mediaBody: Data {
-        var bytes = [UInt8]()
-        bytes.reserveCapacity(2048)
-        for index in 0..<2048 {
-            bytes.append(UInt8((index &* 17 &+ 3) % 256))
+        if let path = ProcessInfo.processInfo.environment["PROXYDOG_SAMPLE_MEDIA_FILE"],
+           let data = try? Data(contentsOf: URL(fileURLWithPath: path)), !data.isEmpty {
+            return data
         }
-        return Data(bytes)
+        if let generated = generatedSampleVideo() { return generated }
+        return Data([0x00, 0x00, 0x00, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d])
+    }
+
+    private static var cachedSampleVideo: Data?
+
+    /// Builds a tiny valid H.264 clip (no third-party asset) so the sample traffic shows the
+    /// inline video player instead of the raw-bytes fallback.
+    private static func generatedSampleVideo() -> Data? {
+        if let cachedSampleVideo { return cachedSampleVideo }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("ProxyDogSampleTrailer.mp4")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            generateSampleVideo(to: url)
+        }
+        guard let data = try? Data(contentsOf: url), data.count > 1024 else { return nil }
+        cachedSampleVideo = data
+        return data
+    }
+
+    private static func generateSampleVideo(to url: URL) {
+        guard let writer = try? AVAssetWriter(outputURL: url, fileType: .mp4) else { return }
+        let settings: [String: Any] = [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: 320,
+            AVVideoHeightKey: 180,
+        ]
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
+        input.expectsMediaDataInRealTime = false
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+            assetWriterInput: input,
+            sourcePixelBufferAttributes: [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                kCVPixelBufferWidthKey as String: 320,
+                kCVPixelBufferHeightKey as String: 180,
+            ]
+        )
+        writer.add(input)
+        guard writer.startWriting() else { return }
+        writer.startSession(atSourceTime: .zero)
+        let fps: Int32 = 24
+        let frames = 36
+        for index in 0..<frames {
+            while !input.isReadyForMoreMediaData { Thread.sleep(forTimeInterval: 0.003) }
+            var buffer: CVPixelBuffer?
+            CVPixelBufferCreate(kCFAllocatorDefault, 320, 180, kCVPixelFormatType_32BGRA, nil, &buffer)
+            guard let buffer else { continue }
+            CVPixelBufferLockBaseAddress(buffer, [])
+            if let base = CVPixelBufferGetBaseAddress(buffer) {
+                let bytes = base.assumingMemoryBound(to: UInt8.self)
+                let stride = CVPixelBufferGetBytesPerRow(buffer)
+                let progress = Double(index) / Double(frames)
+                for y in 0..<180 {
+                    for x in 0..<320 {
+                        let pixel = bytes + y * stride + x * 4
+                        pixel[0] = UInt8(70 + 120 * progress)
+                        pixel[1] = UInt8(120 + 70 * sin(Double(x) / 40 + progress * 6))
+                        pixel[2] = UInt8(200 - 100 * Double(y) / 180)
+                        pixel[3] = 255
+                    }
+                }
+            }
+            CVPixelBufferUnlockBaseAddress(buffer, [])
+            adaptor.append(buffer, withPresentationTime: CMTime(value: CMTimeValue(index), timescale: fps))
+        }
+        input.markAsFinished()
+        let semaphore = DispatchSemaphore(value: 0)
+        writer.finishWriting { semaphore.signal() }
+        semaphore.wait()
+        if writer.status != .completed { try? FileManager.default.removeItem(at: url) }
     }
 
     /// Deterministic binary payload that stands in for a wasm module.

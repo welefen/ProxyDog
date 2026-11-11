@@ -224,3 +224,7 @@
 /* LAN devices */
 "LAN device (%@)" = "LAN device (%@)";
 "Unknown" = "Unknown";
+
+/* Media preview */
+"Open URL" = "Open URL";
+"Video exceeds the 2 MB capture limit; showing raw bytes" = "Video exceeds the 2 MB capture limit; showing raw bytes";
