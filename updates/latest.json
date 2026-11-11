@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "downloadURL": "https://raw.githubusercontent.com/welefen/ProxyDog/master/updates/ProxyDog-1.0.0.zip",
-  "sha256": "f4ba1c9f3f16ed015bd1db500c42fbe82989d7a73e1bb8ef84f6f363a8750a2f",
-  "releaseNotes": "ProxyDog 1.0.0"
+  "version": "1.0.1",
+  "downloadURL": "https://raw.githubusercontent.com/welefen/ProxyDog/master/updates/ProxyDog-1.0.1.zip",
+  "sha256": "40afa3c09cd6646f23c12bd8885cae0dffedc4b2518a3e5c1ace2ca70d3e8669",
+  "releaseNotes": "ProxyDog 1.0.1"
 }

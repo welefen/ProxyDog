@@ -4,9 +4,9 @@
 
 一款原生、轻量的 macOS HTTP/HTTPS 抓包调试工具，体验接近 Proxyman/Charles，但打开即用：自动识别每个请求来自哪个 App，一键解密 HTTPS 并还原压缩正文，WebSocket 消息、重写规则、断点调试、SOCKS5 入口和 VPN 代理链都内置在同一个窗口里，无需驱动、无需完整 Xcode。
 
-[![下载 ProxyDog for macOS](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-ProxyDog%201.0.0%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.0.zip)
+[![下载 ProxyDog for macOS](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-ProxyDog%201.0.1%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.1.zip)
 
-也可以下载 [DMG 磁盘映像](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.0.dmg)。
+也可以下载 [DMG 磁盘映像](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.1.dmg)。
 
 ## 功能
 
@@ -328,5 +328,11 @@ defaults write com.proxydog.app app.onboardingCompleted -bool true
 - 关闭系统代理时直接关闭代理开关，不会恢复开启前的原有代理配置。
 
 ## 版本
+
+v1.0.1
+
+- 新的 AI 分析：可配置大模型服务商（OpenAI / DeepSeek / 豆包 / Kimi / 通义千问 / 智谱 / SiliconFlow / OpenRouter / Anthropic / Gemini / 自定义）、分析提示词、请求数量、上传图片与表单值。
+- HAR 导入、Cookie 独立表格、File 类型筛选、错误筛选、multipart 文件预览。
+- 正文请求/响应区域可拖动调整，系统代理与上游代理联动。
 
 v1.0.0

@@ -4,9 +4,9 @@
 
 A native, lightweight HTTP/HTTPS debugging proxy for macOS with a Proxyman/Charles-style workflow that works out of the box: see which app each request came from, decrypt HTTPS with one click and read the decoded body, inspect WebSocket messages, rewrite traffic, pause requests with breakpoints, and route through SOCKS5 or an existing VPN proxy — all in one window.
 
-[![Download ProxyDog for macOS](https://img.shields.io/badge/Download-ProxyDog%201.0.0%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.0.zip)
+[![Download ProxyDog for macOS](https://img.shields.io/badge/Download-ProxyDog%201.0.1%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.1.zip)
 
-Also available as a [DMG disk image](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.0.dmg).
+Also available as a [DMG disk image](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.1.dmg).
 
 ## Features
 
@@ -326,5 +326,11 @@ defaults write com.proxydog.app app.onboardingCompleted -bool true
 - Turning off the system proxy simply disables it; the previous proxy configuration is not restored.
 
 ## Version
+
+v1.0.1
+
+- New AI analysis: configurable model providers (OpenAI / DeepSeek / Doubao / Kimi / Qwen / Zhipu / SiliconFlow / OpenRouter / Anthropic / Gemini / custom), editable prompt, request count, uploaded images and form values.
+- HAR import, dedicated cookie tables, File and Error filters, multipart file previews.
+- Draggable request/response body split, upstream proxy tied to the system proxy.
 
 v1.0.0
