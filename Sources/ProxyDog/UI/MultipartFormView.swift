@@ -76,10 +76,22 @@ struct MultipartFormView: View {
                 .background(DSColor.raised)
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.xs, style: .continuous))
         } else if let text = readableText(part.data) {
-            MonoTextBodyView(text: text)
-                .frame(height: 120)
-                .background(DSColor.raised)
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.xs, style: .continuous))
+            if text.count <= 20_000 {
+                Text(text)
+                    .font(DS.Typography.mono(11.5))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DS.Space.x2)
+                    .background(DSColor.raised)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.xs, style: .continuous))
+            } else {
+                MonoTextBodyView(text: text)
+                    .frame(height: 220)
+                    .background(DSColor.raised)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.xs, style: .continuous))
+            }
         } else {
             Text(String(format: String(localized: "Binary content (%@)"), PDFormat.bytes(part.data.count)))
                 .font(DS.Typography.ui(11))
