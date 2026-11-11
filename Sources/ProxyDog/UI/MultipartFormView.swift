@@ -38,12 +38,6 @@ struct MultipartFormView: View {
                     .font(DS.Typography.mono(10.5))
                     .foregroundStyle(DSColor.textMuted)
                     .monospacedDigit()
-                PDIconButton(
-                    symbol: "square.and.arrow.down",
-                    help: String(localized: "Save file")
-                ) {
-                    save(part)
-                }
             }
 
             if let contentType = part.contentType, !contentType.isEmpty {
@@ -94,13 +88,5 @@ struct MultipartFormView: View {
         let control = text.unicodeScalars.filter { $0.value < 0x20 && $0 != "\n" && $0 != "\r" && $0 != "\t" }.count
         guard control * 20 < max(1, text.unicodeScalars.count) else { return nil }
         return text
-    }
-
-    private func save(_ part: MultipartFormData.Part) {
-        let panel = NSSavePanel()
-        panel.canCreateDirectories = true
-        panel.nameFieldStringValue = part.filename?.isEmpty == false ? part.filename! : part.name
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        try? part.data.write(to: url)
     }
 }
