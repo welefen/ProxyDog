@@ -35,6 +35,11 @@ enum DevLaunchOptions {
         value(for: "--sample-message").flatMap(Int.init)
     }
 
+    /// QA: pre-fills the search field (e.g. `--sample-search "method:GET"`).
+    static var sampleSearch: String? {
+        value(for: "--sample-search")
+    }
+
     /// Preselects a request type filter (RequestCategory raw value) for screenshots.
     static var initialTypeFilter: RequestCategory? {
         value(for: "--sample-filter").flatMap(RequestCategory.init(rawValue:))

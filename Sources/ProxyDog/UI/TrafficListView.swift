@@ -206,10 +206,13 @@ struct TrafficListView: View {
                     ForEach(requests) { request in
                         TrafficRowView(
                             request: request,
-                            isSelected: request.id == state.selectionID
-                        ) {
-                            select(request.id)
-                        }
+                            isSelected: request.id == state.selectionID,
+                            onSelect: { select(request.id) },
+                            onFilterMethod: { method in
+                                state.searchText = "method:\(method)"
+                                searchFocused = true
+                            }
+                        )
                         .contextMenu {
                             Button(request.isPinned ? String(localized: "Unpin") : String(localized: "Pin")) {
                                 state.togglePin(request.id)
@@ -334,6 +337,7 @@ private struct TrafficRowView: View {
     let request: CapturedRequest
     let isSelected: Bool
     let onSelect: () -> Void
+    let onFilterMethod: (String) -> Void
 
     @State private var isHovering = false
 
@@ -357,6 +361,11 @@ private struct TrafficRowView: View {
 
                 MethodBadge(method: request.method)
                     .frame(width: DS.Metric.methodColumnWidth, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        onFilterMethod(request.method.uppercased())
+                    }
+                    .help(String(localized: "Double-click to filter by this method"))
 
                 urlLine
                     .padding(.trailing, DS.Space.x3)

@@ -69,6 +69,9 @@ struct ContentView: View {
             SampleTraffic.bootstrapIfRequested(state: state)
             SampleTraffic.injectSampleBreakpointIfRequested(state: state)
             SampleTraffic.runDevProbesIfNeeded()
+            if let search = DevLaunchOptions.sampleSearch {
+                state.searchText = search
+            }
             SampleTraffic.openSettingsIfRequested(state: state, openSettings: openSettings)
             if ProcessInfo.processInfo.arguments.contains("--sample-about") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {

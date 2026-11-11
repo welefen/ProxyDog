@@ -674,10 +674,27 @@ final class AppState: ObservableObject {
             items = items.filter { RequestCategory.categorize($0) == typeFilter }
         }
 
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !query.isEmpty else { return items }
+        // Search supports a `method:GET` token (double-clicking a row's method badge
+        // inserts it), mixed with plain text terms.
+        let raw = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return items }
+        var methodFilter: String?
+        var textTerms: [String] = []
+        for token in raw.split(separator: " ").map(String.init) {
+            if token.lowercased().hasPrefix("method:") {
+                let value = token.dropFirst("method:".count).uppercased()
+                if !value.isEmpty { methodFilter = value }
+            } else {
+                textTerms.append(token)
+            }
+        }
+        let query = textTerms.joined(separator: " ").lowercased()
         return items.filter { request in
-            request.urlString.lowercased().contains(query)
+            if let methodFilter, request.method.uppercased() != methodFilter {
+                return false
+            }
+            guard !query.isEmpty else { return true }
+            return request.urlString.lowercased().contains(query)
                 || request.method.lowercased().contains(query)
                 || request.statusText.lowercased() == query
         }

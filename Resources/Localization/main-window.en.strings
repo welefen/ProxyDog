@@ -228,3 +228,6 @@
 /* Media preview */
 "Open URL" = "Open URL";
 "Video exceeds the 2 MB capture limit; showing raw bytes" = "Video exceeds the 2 MB capture limit; showing raw bytes";
+
+/* Search filters */
+"Double-click to filter by this method" = "Double-click to filter by this method";
