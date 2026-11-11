@@ -183,9 +183,12 @@ final class AppSettings: ObservableObject {
         self.appearance = Appearance(rawValue: defaults.string(forKey: Key.appearance) ?? "") ?? .system
         self.hasCompletedOnboarding = defaults.bool(forKey: Key.onboarding)
         self.sslProxyingEnabled = defaults.object(forKey: Key.sslEnabled) as? Bool ?? true
-        self.systemProxyEnabled = defaults.bool(forKey: Key.systemProxy)
+        let systemProxyStored = defaults.bool(forKey: Key.systemProxy)
+        self.systemProxyEnabled = systemProxyStored
         let legacyUpstreamEnabled = defaults.object(forKey: Key.legacyUpstreamEnabled) as? Bool ?? false
-        self.upstreamHTTPEnabled = defaults.object(forKey: Key.upstreamHTTPEnabled) as? Bool ?? legacyUpstreamEnabled
+        // The HTTP upstream defaults to off and only switches on with the system proxy.
+        let storedHTTPUpstream = defaults.object(forKey: Key.upstreamHTTPEnabled) as? Bool ?? legacyUpstreamEnabled
+        self.upstreamHTTPEnabled = systemProxyStored ? storedHTTPUpstream : false
         self.upstreamSOCKSEnabled = defaults.object(forKey: Key.upstreamSOCKSEnabled) as? Bool ?? legacyUpstreamEnabled
         let storedKind = UpstreamProxyKind(rawValue: defaults.string(forKey: Key.upstreamKind) ?? "") ?? .httpConnect
         self.upstreamProxyKind = storedKind

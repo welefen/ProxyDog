@@ -565,18 +565,26 @@ final class AppState: ObservableObject {
         if !enabled, settings.allowLANDevices {
             applyLANAccess(false)
         }
+        // The HTTP upstream only stays on together with the system proxy.
+        if !enabled, settings.upstreamEnabled(for: .httpConnect) {
+            applyUpstreamProxy(
+                enabled: false,
+                host: settings.upstreamHost(for: .httpConnect),
+                port: settings.upstreamPort(for: .httpConnect),
+                kind: .httpConnect
+            )
+        }
     }
 
     /// Turning the system proxy on implies the user wants traffic to reach the internet;
     /// if an upstream address is already filled in, switch it on automatically.
     private func autoEnableConfiguredUpstreams() {
-        for kind in [UpstreamProxyKind.httpConnect, .socks5] {
-            guard !settings.upstreamEnabled(for: kind) else { continue }
-            let host = settings.upstreamHost(for: kind).trimmingCharacters(in: .whitespacesAndNewlines)
-            let port = settings.upstreamPort(for: kind)
-            guard !host.isEmpty, (1...65535).contains(port) else { continue }
-            applyUpstreamProxy(enabled: true, host: host, port: port, kind: kind)
-        }
+        let kind = UpstreamProxyKind.httpConnect
+        guard !settings.upstreamEnabled(for: kind) else { return }
+        let host = settings.upstreamHost(for: kind).trimmingCharacters(in: .whitespacesAndNewlines)
+        let port = settings.upstreamPort(for: kind)
+        guard !host.isEmpty, (1...65535).contains(port) else { return }
+        applyUpstreamProxy(enabled: true, host: host, port: port, kind: kind)
     }
 
     /// Favicons are fetched by the app itself; route them the same way the proxy reaches
