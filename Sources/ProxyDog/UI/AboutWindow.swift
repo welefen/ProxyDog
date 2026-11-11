@@ -47,10 +47,15 @@ private struct AboutView: View {
                 .font(DS.Typography.ui(12))
                 .foregroundStyle(DSColor.textSecondary)
                 .padding(.top, 5)
-            Link("@welefen", destination: URL(string: "https://github.com/welefen")!)
-                .font(DS.Typography.ui(12, .medium))
-                .padding(.top, 6)
-                .accessibilityLabel("Author welefen on GitHub")
+            HStack(spacing: 4) {
+                Text("Author:")
+                    .foregroundStyle(DSColor.textMuted)
+                Link("@welefen", destination: URL(string: "https://github.com/welefen")!)
+                    .foregroundStyle(DSColor.accent)
+                    .accessibilityLabel("Author welefen on GitHub")
+            }
+            .font(DS.Typography.ui(12, .medium))
+            .padding(.top, 6)
             Spacer(minLength: 0)
             HStack(spacing: 4) {
                 Text(verbatim: "Copyright © 2026")
