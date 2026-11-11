@@ -262,10 +262,7 @@ struct AIAnalysisView: View {
                 .disabled(isAnalyzing || !config.isConfigured)
             }
         }
-        .padding(DS.Space.x4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DSColor.raised)
-        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
     }
 
     // MARK: Results
