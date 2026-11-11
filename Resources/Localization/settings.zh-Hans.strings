@@ -238,3 +238,5 @@
 /* Certificate page */
 "Open or scan this address on the device: iPhone/iPad get an installable profile, Android/HarmonyOS download the certificate. Then trust the root certificate in the system settings." = "在设备上打开或扫码此地址即可：iPhone/iPad 会下载可安装的描述文件，Android / 鸿蒙会下载证书；安装后请在系统设置中信任根证书。";
 "Scan with the device camera to open the certificate page." = "用设备相机扫码打开证书页面。";
+"在设备上打开或扫码此地址即可：iPhone/iPad 会下载可安装的描述文件，Android 会下载证书，鸿蒙会显示安装说明。鸿蒙下载后不能直接在文件管理里点开安装，请到「设置 → 隐私和安全 → 更多安全设置 → 加密和凭据 → 安装数字证书 → CA 证书」中选择文件安装。" = "在设备上打开或扫码此地址即可：iPhone/iPad 会下载可安装的描述文件，Android 会下载证书，鸿蒙会显示安装说明。鸿蒙下载后不能直接在文件管理里点开安装，请到「设置 → 隐私和安全 → 更多安全设置 → 加密和凭据 → 安装数字证书 → CA 证书」中选择文件安装。";
+"Open or scan this address on the device: iPhone/iPad get an installable profile, Android downloads the certificate, and HarmonyOS shows the install steps. On HarmonyOS the downloaded file cannot be installed by tapping it in Files — use Settings → Privacy & security → More security settings → Encryption and credentials → Install a certificate → CA certificate." = "在设备上打开或扫码此地址即可：iPhone/iPad 会下载可安装的描述文件，Android 会下载证书，鸿蒙会显示安装说明。鸿蒙下载后不能直接在文件管理里点开安装，请到「设置 → 隐私和安全 → 更多安全设置 → 加密和凭据 → 安装数字证书 → CA 证书」中选择文件安装。";

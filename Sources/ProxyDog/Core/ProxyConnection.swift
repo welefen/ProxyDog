@@ -571,7 +571,11 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             serveRootProfile(context: context)
             return
         }
-        if ua.contains("android") || ua.contains("harmony") || ua.contains("openharmony") {
+        if ua.contains("harmony") || ua.contains("openharmony") {
+            serveHarmonyLandingPage(context: context)
+            return
+        }
+        if ua.contains("android") {
             serveRootCertificate(context: context, binaryDER: true)
             return
         }
@@ -586,6 +590,43 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             return parts[1].trimmingCharacters(in: .whitespaces)
         }
         return ""
+    }
+
+    /// HarmonyOS does not install a CA when the downloaded file is tapped in the file
+    /// manager; the user has to go through Settings. Show those steps explicitly and
+    /// offer the DER / CRT / PEM variants.
+    private func serveHarmonyLandingPage(context: ChannelHandlerContext) {
+        let html = """
+        <!DOCTYPE html><html><head><meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>ProxyDog 根证书安装</title>
+        <style>body{font:16px -apple-system,Helvetica,sans-serif;margin:28px 20px;color:#222;line-height:1.55}a.btn{display:block;text-align:center;background:#0a66ff;color:#fff;text-decoration:none;padding:12px;border-radius:10px;margin:12px 0}ol{padding-left:22px}code{background:#f2f2f7;padding:2px 5px;border-radius:4px}.muted{color:#666;font-size:13px}</style>
+        </head><body>
+        <h2>ProxyDog 根证书</h2>
+        <p><b>重要：</b>下载后直接在「文件管理」里点开证书不会安装，请按下面的系统设置步骤操作。</p>
+        <ol>
+        <li>点击下面的按钮下载证书（任选一种格式，推荐 DER）</li>
+        <li>打开 <b>设置 → 隐私和安全 → 更多安全设置 → 加密和凭据 → 安装数字证书</b></li>
+        <li>选择 <b>CA 证书</b>，从「下载」中选择 <code>ProxyDog-CA.cer</code></li>
+        <li>按提示确认（可能需要锁屏密码）</li>
+        <li>之后在 Wi-Fi 设置里把 HTTP 代理设为这台 Mac 的地址和端口</li>
+        </ol>
+        <a class="btn" href="/ca.cer">下载证书 (.cer / DER)</a>
+        <a class="btn" href="/ca.crt">下载证书 (.crt / DER)</a>
+        <a class="btn" href="/ca.pem">下载证书 (.pem)</a>
+        <p class="muted">Root certificate for ProxyDog. After downloading, install it from Settings → Privacy & security → More security settings → Encryption and credentials → Install a certificate → CA certificate. Tapping the file in Files does not install it.</p>
+        </body></html>
+        """
+        let data = Data(html.utf8)
+        var output = context.channel.allocator.buffer(capacity: data.count + 256)
+        output.writeString("HTTP/1.1 200 OK\r\n")
+        output.writeString("Content-Type: text/html; charset=utf-8\r\n")
+        output.writeString("Content-Length: \(data.count)\r\n")
+        output.writeString("Connection: close\r\n\r\n")
+        output.writeBytes(data)
+        context.channel.writeAndFlush(output).whenComplete { _ in
+            context.close(promise: nil)
+        }
     }
 
     private func serveCertificateLandingPage(context: ChannelHandlerContext) {

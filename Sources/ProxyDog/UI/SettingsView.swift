@@ -220,7 +220,7 @@ struct SettingsView: View {
                         SettingsHairline()
 
                         SettingsHintRow(
-                            hint: "Open or scan this address on the device: iPhone/iPad get an installable profile, Android/HarmonyOS download the certificate. Then trust the root certificate in the system settings."
+                            hint: "Open or scan this address on the device: iPhone/iPad get an installable profile, Android downloads the certificate, and HarmonyOS shows the install steps. On HarmonyOS the downloaded file cannot be installed by tapping it in Files — use Settings → Privacy & security → More security settings → Encryption and credentials → Install a certificate → CA certificate."
                         )
 
                         SettingsHairline()
