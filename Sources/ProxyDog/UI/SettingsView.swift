@@ -48,6 +48,10 @@ struct SettingsView: View {
     @ObservedObject private var updater = UpdateManager.shared
     @State private var language: AppLanguage = AppLanguage.stored
     @State private var selectedTab: SettingsTab = .connection
+    @ObservedObject private var aiConfig = AIConfigStore.shared
+    @FocusState private var aiModelFocused: Bool
+    @FocusState private var aiKeyFocused: Bool
+    @FocusState private var aiBaseURLFocused: Bool
 
     /// Left-hand navigation categories of the settings window.
     private enum FillFeedback {
@@ -58,6 +62,7 @@ struct SettingsView: View {
     private enum SettingsTab: String, CaseIterable, Identifiable {
         case connection
         case rules
+        case ai
         case appearance
 
         var id: String { rawValue }
@@ -66,6 +71,7 @@ struct SettingsView: View {
             switch self {
             case .connection: return "Connection"
             case .rules: return "Rules"
+            case .ai: return "AI"
             case .appearance: return "Appearance"
             }
         }
@@ -74,6 +80,7 @@ struct SettingsView: View {
             switch self {
             case .connection: return "network"
             case .rules: return "slider.horizontal.3"
+            case .ai: return "brain.head.profile"
             case .appearance: return "circle.lefthalf.filled"
             }
         }
@@ -93,6 +100,8 @@ struct SettingsView: View {
                             rewriteSection
                             breakpointSection
                         }
+                    case .ai:
+                        aiSettingsSection
                     case .appearance:
                         appearanceSection
                     }
@@ -582,6 +591,100 @@ struct SettingsView: View {
 
     // MARK: - Appearance
 
+    // MARK: AI
+
+    private var aiSettingsSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.x6) {
+            SettingsSection(title: "AI analysis") {
+                SettingsRow(
+                    title: "Provider",
+                    hint: "Used by the AI analysis sheet in the toolbar."
+                ) {
+                    PDDropdownPicker(
+                        options: AIProvider.allCases.map {
+                            .init(value: $0.rawValue, label: $0.label)
+                        },
+                        selection: Binding(
+                            get: { aiConfig.provider.rawValue },
+                            set: { aiConfig.provider = AIProvider(rawValue: $0) ?? .deepSeek }
+                        ),
+                        width: 220,
+                        mono: false
+                    )
+                }
+
+                SettingsHairline()
+
+                SettingsRow(
+                    title: "Model",
+                    hint: "Leave empty to use the provider's default model."
+                ) {
+                    TextField(aiConfig.provider.defaultModel, text: $aiConfig.model)
+                        .textFieldStyle(.plain)
+                        .font(DS.Typography.mono(12))
+                        .foregroundStyle(DSColor.textPrimary)
+                        .focused($aiModelFocused)
+                        .frame(width: 240)
+                        .padding(.horizontal, DS.Space.x2)
+                        .padding(.vertical, 5)
+                        .background(fieldBackground(isFocused: aiModelFocused))
+                }
+
+                SettingsHairline()
+
+                SettingsRow(
+                    title: "API key",
+                    hint: "Stored in the login keychain; sent only to the selected provider."
+                ) {
+                    HStack(spacing: DS.Space.x2) {
+                        SecureField(String(localized: "Paste your API key"), text: $aiConfig.apiKey)
+                            .textFieldStyle(.plain)
+                            .font(DS.Typography.mono(12))
+                            .foregroundStyle(DSColor.textPrimary)
+                            .focused($aiKeyFocused)
+                            .frame(width: 240)
+                            .padding(.horizontal, DS.Space.x2)
+                            .padding(.vertical, 5)
+                            .background(fieldBackground(isFocused: aiKeyFocused))
+                        if !aiConfig.apiKey.isEmpty {
+                            SettingsIconButton(
+                                systemName: "xmark.circle",
+                                help: String(localized: "Clear API key"),
+                                action: { aiConfig.clearKey() }
+                            )
+                        }
+                    }
+                }
+
+                SettingsHairline()
+
+                SettingsRow(
+                    title: "Base URL",
+                    hint: "Optional; leave empty to use the provider endpoint."
+                ) {
+                    TextField(
+                        aiConfig.provider.defaultBaseURL.isEmpty ? "https://…" : aiConfig.provider.defaultBaseURL,
+                        text: $aiConfig.baseURL
+                    )
+                    .textFieldStyle(.plain)
+                    .font(DS.Typography.mono(12))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .focused($aiBaseURLFocused)
+                    .frame(width: 300)
+                    .padding(.horizontal, DS.Space.x2)
+                    .padding(.vertical, 5)
+                    .background(fieldBackground(isFocused: aiBaseURLFocused))
+                }
+
+                if !aiConfig.configuration.isUsable {
+                    SettingsHintRow(
+                        hint: "Fill in the API key to enable the AI toolbar button; entries are saved automatically."
+                    )
+                }
+            }
+        }
+    }
+
     private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.x6) {
         SettingsSection(title: "Appearance") {
@@ -814,6 +917,7 @@ struct SettingsView: View {
         switch destination {
         case .connection: selectedTab = .connection
         case .rules: selectedTab = .rules
+        case .ai: selectedTab = .ai
         case .appearance: selectedTab = .appearance
         }
         state.settingsDestinationRequest = nil

@@ -294,3 +294,8 @@
 "The AI provider returned an unexpected response." = "The AI provider returned an unexpected response.";
 "The AI provider returned HTTP %d" = "The AI provider returned HTTP %d";
 "Enter an API key and model before analyzing." = "Enter an API key and model before analyzing.";
+
+/* AI settings */
+"Re-analyze" = "Re-analyze";
+"Modify configuration" = "Modify configuration";
+"AI" = "AI";

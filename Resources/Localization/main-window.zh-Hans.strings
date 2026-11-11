@@ -296,3 +296,8 @@
 "The AI provider returned an unexpected response." = "AI 服务返回了无法识别的响应。";
 "The AI provider returned HTTP %d" = "AI 服务返回 HTTP %d";
 "Enter an API key and model before analyzing." = "请先填写 API Key 和模型。";
+
+/* AI settings */
+"AI" = "AI";
+"Modify configuration" = "修改配置";
+"Re-analyze" = "重新分析";

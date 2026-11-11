@@ -11,6 +11,7 @@ struct AIAnalysisView: View {
     @State private var isAnalyzing = false
     @State private var errorText: String?
     @State private var didCopy = false
+    @State private var showConfiguration = false
 
     private enum Phase {
         case idle
@@ -52,7 +53,11 @@ struct AIAnalysisView: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.x5) {
-                    configurationCard
+                    if showConfiguration || !config.configuration.isUsable {
+                        configurationCard
+                    } else {
+                        compactConfiguration
+                    }
                     results
                 }
                 .padding(DS.Space.x5)
@@ -66,8 +71,10 @@ struct AIAnalysisView: View {
             if report == nil {
                 report = AIAnalyzer.report(for: requests)
             }
-            if DevLaunchOptions.autoRunAIAnalysis, config.configuration.isUsable {
+            if config.configuration.isUsable {
                 analyze()
+            } else {
+                showConfiguration = true
             }
         }
     }
@@ -186,6 +193,42 @@ struct AIAnalysisView: View {
     }
 
     // MARK: Results
+
+    private var compactConfiguration: some View {
+        HStack(spacing: DS.Space.x2) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(DSColor.green)
+            Text(config.provider.label)
+                .font(DS.Typography.ui(11.5, .medium))
+                .foregroundStyle(DSColor.textPrimary)
+            Text(config.configuration.resolvedModel)
+                .font(DS.Typography.mono(10.5))
+                .foregroundStyle(DSColor.textMuted)
+            Spacer(minLength: DS.Space.x2)
+            Button(String(localized: "Re-analyze")) {
+                analyze()
+            }
+            .buttonStyle(.plain)
+            .font(DS.Typography.ui(11))
+            .foregroundStyle(DSColor.accent)
+            .disabled(isAnalyzing)
+            Button(String(localized: "Modify configuration")) {
+                showConfiguration = true
+            }
+            .buttonStyle(.plain)
+            .font(DS.Typography.ui(11))
+            .foregroundStyle(DSColor.textSecondary)
+        }
+        .padding(DS.Space.x3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DSColor.raised)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                .strokeBorder(DSColor.border, lineWidth: 1)
+        )
+    }
 
     @ViewBuilder
     private var results: some View {
@@ -320,9 +363,11 @@ struct AIAnalysisView: View {
                 let text = try await AIClient.summarize(configuration: configuration, prompt: prompt)
                 summary = text
                 phase = .done
+                showConfiguration = false
             } catch {
                 errorText = error.localizedDescription
                 phase = .failed
+                showConfiguration = true
             }
             isAnalyzing = false
         }

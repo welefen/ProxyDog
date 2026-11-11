@@ -5,7 +5,7 @@ enum AIClient {
     static func summarize(configuration: AIConfiguration, prompt: String) async throws -> String {
         guard configuration.isUsable else { throw AIClientError.missingConfiguration }
         switch configuration.provider {
-        case .openAI, .deepSeek, .custom:
+        case .openAI, .deepSeek, .doubao, .kimi, .qwen, .zhipu, .siliconFlow, .openRouter, .custom:
             return try await openAICompatible(configuration: configuration, prompt: prompt)
         case .anthropic:
             return try await anthropic(configuration: configuration, prompt: prompt)

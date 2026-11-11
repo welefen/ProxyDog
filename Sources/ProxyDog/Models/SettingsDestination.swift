@@ -4,6 +4,7 @@ import Foundation
 enum SettingsDestination: String, Identifiable {
     case connection
     case rules
+    case ai
     case appearance
 
     var id: String { rawValue }

@@ -235,3 +235,11 @@
 /* Certificate page */
 "Open or scan this address on the device: iPhone/iPad get an installable profile, Android downloads the certificate, and HarmonyOS shows the exact install steps and download buttons. On HarmonyOS the downloaded file cannot be installed by tapping it in Files — follow the page and install it from Settings." = "Open or scan this address on the device: iPhone/iPad get an installable profile, Android downloads the certificate, and HarmonyOS shows the exact install steps and download buttons. On HarmonyOS the downloaded file cannot be installed by tapping it in Files — follow the page and install it from Settings.";
 "Scan with the device camera to open the certificate page." = "Scan with the device camera to open the certificate page.";
+
+/* AI settings */
+"Used by the AI analysis sheet in the toolbar." = "Used by the AI analysis sheet in the toolbar.";
+"Leave empty to use the provider's default model." = "Leave empty to use the provider's default model.";
+"Stored in the login keychain; sent only to the selected provider." = "Stored in the login keychain; sent only to the selected provider.";
+"Optional; leave empty to use the provider endpoint." = "Optional; leave empty to use the provider endpoint.";
+"Clear API key" = "Clear API key";
+"Fill in the API key to enable the AI toolbar button; entries are saved automatically." = "Fill in the API key to enable the AI toolbar button; entries are saved automatically.";
