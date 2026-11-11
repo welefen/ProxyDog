@@ -31,14 +31,32 @@ enum SystemProxyEnvironment {
         writeLaunchAgent(url: url, noProxy: noProxy)
     }
 
-    static func disable() {
+    /// Removes our injected variables. Safe to call when nothing was injected and also
+    /// recovers from stale state when UserDefaults were cleared: the LaunchAgent file or
+    /// a loopback proxy value identifies the injection as ours.
+    static func disable(port: Int? = nil) {
         let defaults = UserDefaults.standard
-        for name in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy", "NO_PROXY", "no_proxy"] {
+        let hasAgent = FileManager.default.fileExists(atPath: launchAgentPath)
+        let active = defaults.bool(forKey: activeKey)
+        let expected = port.map { "http://127.0.0.1:\($0)" }
+        let looksInjected = expected.map { url in
+            ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"]
+                .contains { launchctlGetenv($0) == url }
+        } ?? false
+        guard active || hasAgent || looksInjected else { return }
+
+        for name in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"] {
             launchctlUnsetenv(name)
         }
         if let saved = defaults.string(forKey: savedNoProxyKey), !saved.isEmpty {
             launchctlSetenv("NO_PROXY", saved)
             launchctlSetenv("no_proxy", saved)
+        } else {
+            let noProxy = launchctlGetenv("NO_PROXY")
+            if noProxy == "127.0.0.1,localhost,::1" {
+                launchctlUnsetenv("NO_PROXY")
+                launchctlUnsetenv("no_proxy")
+            }
         }
         defaults.removeObject(forKey: savedNoProxyKey)
         defaults.set(false, forKey: activeKey)

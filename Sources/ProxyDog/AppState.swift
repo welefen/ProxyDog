@@ -186,8 +186,8 @@ final class AppState: ObservableObject {
         refreshCertificateStatus()
         if settings.systemProxyEnabled {
             setSystemProxy(enabled: true)
-        } else if UserDefaults.standard.bool(forKey: "proxy.envProxyActive") {
-            SystemProxyEnvironment.disable()
+        } else {
+            SystemProxyEnvironment.disable(port: settings.port)
         }
         // LAN access is gated by the system proxy; stale persistence must not re-expose it.
         if settings.allowLANDevices, !settings.systemProxyEnabled {
@@ -552,7 +552,7 @@ final class AppState: ObservableObject {
                 if settings.injectProxyEnvironment {
                     SystemProxyEnvironment.enable(port: settings.port)
                 } else {
-                    SystemProxyEnvironment.disable()
+                    SystemProxyEnvironment.disable(port: settings.port)
                 }
                 autoEnableConfiguredUpstreams()
                 Analytics.shared.track("system_proxy_enabled")
@@ -560,7 +560,7 @@ final class AppState: ObservableObject {
                 try SystemProxy.disable()
                 settings.systemProxyEnabled = false
                 isSystemProxyEnabled = false
-                SystemProxyEnvironment.disable()
+                SystemProxyEnvironment.disable(port: settings.port)
                 Analytics.shared.track("system_proxy_disabled")
             }
         } catch {
@@ -602,7 +602,7 @@ final class AppState: ObservableObject {
                 SystemProxyEnvironment.enable(port: settings.port)
             }
         } else {
-            SystemProxyEnvironment.disable()
+            SystemProxyEnvironment.disable(port: settings.port)
         }
     }
 
@@ -620,8 +620,8 @@ final class AppState: ObservableObject {
         isSystemProxyEnabled = SystemProxy.isEnabled(port: settings.port)
         if isSystemProxyEnabled, settings.injectProxyEnvironment {
             SystemProxyEnvironment.enable(port: settings.port)
-        } else if UserDefaults.standard.bool(forKey: "proxy.envProxyActive") {
-            SystemProxyEnvironment.disable()
+        } else {
+            SystemProxyEnvironment.disable(port: settings.port)
         }
     }
 
