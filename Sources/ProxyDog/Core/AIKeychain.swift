@@ -8,6 +8,17 @@ enum AIKeychain {
     private static let account = "apiKey"
     private static let fallbackKey = "ai.apiKey"
 
+    /// Attributes-only check: does not decrypt the password, so it does not prompt.
+    static func exists() -> Bool {
+        var query = baseQuery()
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        if status == errSecSuccess { return true }
+        return UserDefaults.standard.string(forKey: fallbackKey)?.isEmpty == false
+    }
+
     static func read() -> String? {
         var query = baseQuery()
         query[kSecReturnData as String] = true

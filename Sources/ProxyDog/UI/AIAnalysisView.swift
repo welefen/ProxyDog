@@ -53,7 +53,7 @@ struct AIAnalysisView: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.x5) {
-                    if showConfiguration || !config.configuration.isUsable {
+                    if showConfiguration || !config.isConfigured {
                         configurationCard
                     } else {
                         compactConfiguration
@@ -71,7 +71,7 @@ struct AIAnalysisView: View {
             if report == nil {
                 report = AIAnalyzer.report(for: requests)
             }
-            if config.configuration.isUsable {
+            if config.isConfigured, !DevLaunchOptions.skipAutoRunAIAnalysis {
                 analyze()
             } else {
                 showConfiguration = true
@@ -104,63 +104,83 @@ struct AIAnalysisView: View {
     private var configurationCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.x3) {
             field(label: String(localized: "Provider")) {
-                PDDropdownPicker(options: providerOptions, selection: providerBinding, width: 240, mono: false)
+                PDDropdownPicker(options: providerOptions, selection: providerBinding, width: 220, mono: false)
             }
 
             field(label: String(localized: "Model")) {
                 TextField(config.provider.defaultModel, text: $config.model)
-                    .textFieldStyle(.roundedBorder)
-                    .font(DS.Typography.mono(11.5))
+                    .textFieldStyle(.plain)
+                    .font(DS.Typography.mono(12))
+                    .foregroundStyle(DSColor.textPrimary)
                     .frame(width: 320)
+                    .padding(.horizontal, DS.Space.x2)
+                    .padding(.vertical, 5)
+                    .background(fieldBackground)
             }
 
             field(label: "API Key") {
-                SecureField(String(localized: "Paste your API key"), text: $config.apiKey)
-                    .textFieldStyle(.roundedBorder)
-                    .font(DS.Typography.mono(11.5))
-                    .frame(width: 360)
+                SecureField(config.storedKeyPlaceholder, text: $config.apiKey)
+                    .textFieldStyle(.plain)
+                    .font(DS.Typography.mono(12))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .frame(width: 320)
+                    .padding(.horizontal, DS.Space.x2)
+                    .padding(.vertical, 5)
+                    .background(fieldBackground)
             }
 
             field(label: String(localized: "Base URL (optional)")) {
                 TextField(config.provider.defaultBaseURL.isEmpty ? "https://…" : config.provider.defaultBaseURL, text: $config.baseURL)
-                    .textFieldStyle(.roundedBorder)
-                    .font(DS.Typography.mono(11.5))
-                    .frame(width: 360)
+                    .textFieldStyle(.plain)
+                    .font(DS.Typography.mono(12))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .frame(width: 320)
+                    .padding(.horizontal, DS.Space.x2)
+                    .padding(.vertical, 5)
+                    .background(fieldBackground)
             }
 
             HStack(spacing: DS.Space.x3) {
-                Button {
-                    analyze()
-                } label: {
-                    HStack(spacing: DS.Space.x1 + 2) {
-                        if isAnalyzing {
-                            ProgressView().controlSize(.small)
-                        }
-                        Text(isAnalyzing
-                            ? String(localized: "Analyzing…")
-                            : String(localized: "Start analysis"))
-                    }
-                    .frame(minWidth: 108)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .disabled(isAnalyzing || !config.configuration.isUsable)
-
-                if !config.apiKey.isEmpty {
+                Text(String(localized: "The API key is stored in your login keychain."))
+                    .font(DS.Typography.ui(10.5))
+                    .foregroundStyle(DSColor.textMuted)
+                Spacer(minLength: DS.Space.x2)
+                if config.hasStoredKey || !config.apiKey.isEmpty {
                     Button(String(localized: "Clear key")) {
                         config.clearKey()
                         summary = nil
                         phase = .idle
                     }
                     .buttonStyle(.plain)
-                    .font(DS.Typography.ui(11))
+                    .font(DS.Typography.ui(11.5))
                     .foregroundStyle(DSColor.textMuted)
                 }
-
-                Text(String(localized: "The API key is stored in your login keychain."))
-                    .font(DS.Typography.ui(10.5))
-                    .foregroundStyle(DSColor.textMuted)
-                Spacer()
+                Button {
+                    analyze()
+                } label: {
+                    HStack(spacing: DS.Space.x1 + 2) {
+                        if isAnalyzing {
+                            ProgressView().controlSize(.mini)
+                        }
+                        Text(isAnalyzing
+                            ? String(localized: "Analyzing…")
+                            : String(localized: "Start analysis"))
+                    }
+                    .font(DS.Typography.ui(12, .medium))
+                    .foregroundStyle(isAnalyzing || !config.isConfigured ? DSColor.textMuted : DSColor.accent)
+                    .padding(.horizontal, DS.Space.x2 + 2)
+                    .frame(height: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                            .fill(DSColor.raised)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                                    .strokeBorder(DSColor.border, lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isAnalyzing || !config.isConfigured)
             }
 
             if let errorText {
@@ -181,14 +201,23 @@ struct AIAnalysisView: View {
         )
     }
 
+    private var fieldBackground: some View {
+        RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+            .fill(DSColor.raised)
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                    .strokeBorder(DSColor.border, lineWidth: 1)
+            )
+    }
+
     private func field<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
         HStack(alignment: .center, spacing: DS.Space.x3) {
             Text(label)
                 .font(DS.Typography.ui(11.5))
                 .foregroundStyle(DSColor.textSecondary)
                 .frame(width: 128, alignment: .leading)
-            content()
             Spacer(minLength: 0)
+            content()
         }
     }
 
@@ -202,7 +231,7 @@ struct AIAnalysisView: View {
             Text(config.provider.label)
                 .font(DS.Typography.ui(11.5, .medium))
                 .foregroundStyle(DSColor.textPrimary)
-            Text(config.configuration.resolvedModel)
+            Text(config.displayModel)
                 .font(DS.Typography.mono(10.5))
                 .foregroundStyle(DSColor.textMuted)
             Spacer(minLength: DS.Space.x2)
@@ -253,7 +282,7 @@ struct AIAnalysisView: View {
             }
         }
 
-        if let report {
+        if let report, summary != nil {
             VStack(alignment: .leading, spacing: DS.Space.x2) {
                 Text(String(localized: "Rule checks"))
                     .font(DS.Typography.ui(11.5, .semibold))
@@ -346,7 +375,8 @@ struct AIAnalysisView: View {
 
     private func analyze() {
         guard let report else { return }
-        guard config.configuration.isUsable else {
+        let configuration = config.makeConfiguration()
+        guard configuration.isUsable else {
             errorText = AIClientError.missingConfiguration.localizedDescription
             return
         }
@@ -357,7 +387,6 @@ struct AIAnalysisView: View {
 
         let chinese = Locale.preferredLanguages.first?.hasPrefix("zh") == true
         let prompt = AIAnalyzer.prompt(for: report, requests: requests, chinese: chinese)
-        let configuration = config.configuration
         Task {
             do {
                 let text = try await AIClient.summarize(configuration: configuration, prompt: prompt)

@@ -637,7 +637,7 @@ struct SettingsView: View {
                     hint: "Stored in the login keychain; sent only to the selected provider."
                 ) {
                     HStack(spacing: DS.Space.x2) {
-                        SecureField(String(localized: "Paste your API key"), text: $aiConfig.apiKey)
+                        SecureField(aiConfig.storedKeyPlaceholder, text: $aiConfig.apiKey)
                             .textFieldStyle(.plain)
                             .font(DS.Typography.mono(12))
                             .foregroundStyle(DSColor.textPrimary)
@@ -646,7 +646,7 @@ struct SettingsView: View {
                             .padding(.horizontal, DS.Space.x2)
                             .padding(.vertical, 5)
                             .background(fieldBackground(isFocused: aiKeyFocused))
-                        if !aiConfig.apiKey.isEmpty {
+                        if aiConfig.hasStoredKey || !aiConfig.apiKey.isEmpty {
                             SettingsIconButton(
                                 systemName: "xmark.circle",
                                 help: String(localized: "Clear API key"),
@@ -676,7 +676,7 @@ struct SettingsView: View {
                     .background(fieldBackground(isFocused: aiBaseURLFocused))
                 }
 
-                if !aiConfig.configuration.isUsable {
+                if !aiConfig.isConfigured {
                     SettingsHintRow(
                         hint: "Fill in the API key to enable the AI toolbar button; entries are saved automatically."
                     )

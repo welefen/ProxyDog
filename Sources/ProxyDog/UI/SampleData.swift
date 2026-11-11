@@ -35,6 +35,11 @@ enum DevLaunchOptions {
         value(for: "--sample-message").flatMap(Int.init)
     }
 
+    /// QA: keeps the AI analysis sheet on the configuration form instead of auto-running.
+    static var skipAutoRunAIAnalysis: Bool {
+        arguments.contains("--sample-ai-no-run")
+    }
+
     /// QA: starts the AI request as soon as the analysis sheet opens.
     static var autoRunAIAnalysis: Bool {
         arguments.contains("--sample-ai-run")

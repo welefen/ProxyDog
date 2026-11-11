@@ -299,3 +299,6 @@
 "Re-analyze" = "Re-analyze";
 "Modify configuration" = "Modify configuration";
 "AI" = "AI";
+
+/* AI key */
+"API key is saved (leave blank to keep it)" = "API key is saved (leave blank to keep it)";

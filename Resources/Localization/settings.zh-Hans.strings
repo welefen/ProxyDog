@@ -250,3 +250,6 @@
 "Optional; leave empty to use the provider endpoint." = "可选；留空则使用服务商默认接口地址。";
 "Clear API key" = "清除 API Key";
 "Fill in the API key to enable the AI toolbar button; entries are saved automatically." = "填写 API Key 后即可使用工具栏 AI 分析，配置会自动保存。";
+
+/* AI key */
+"API key is saved (leave blank to keep it)" = "API Key 已保存（留空保持不变）";

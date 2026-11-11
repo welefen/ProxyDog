@@ -243,3 +243,6 @@
 "Optional; leave empty to use the provider endpoint." = "Optional; leave empty to use the provider endpoint.";
 "Clear API key" = "Clear API key";
 "Fill in the API key to enable the AI toolbar button; entries are saved automatically." = "Fill in the API key to enable the AI toolbar button; entries are saved automatically.";
+
+/* AI key */
+"API key is saved (leave blank to keep it)" = "API key is saved (leave blank to keep it)";
