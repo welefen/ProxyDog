@@ -20,7 +20,7 @@ struct MultipartFormView: View {
     private func partView(_ part: MultipartFormData.Part) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.x2) {
             HStack(spacing: DS.Space.x2) {
-                Image(systemName: part.filename == nil ? "text.cursor" : "doc")
+                Image(systemName: part.filename == nil ? "text.alignleft" : "doc")
                     .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(DSColor.textMuted)
                 Text(part.name)
