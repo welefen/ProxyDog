@@ -70,6 +70,11 @@ struct MultipartFormView: View {
                 .frame(maxWidth: .infinity)
                 .background(Color(nsColor: .white))
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.xs, style: .continuous))
+        } else if let value = jsonValue(part) {
+            JSONTreeView(value: value)
+                .frame(height: 180)
+                .background(DSColor.raised)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.xs, style: .continuous))
         } else if let text = readableText(part.data) {
             MonoTextBodyView(text: text)
                 .frame(height: 120)
@@ -80,6 +85,13 @@ struct MultipartFormView: View {
                 .font(DS.Typography.ui(11))
                 .foregroundStyle(DSColor.textMuted)
         }
+    }
+
+    private func jsonValue(_ part: MultipartFormData.Part) -> JSONValue? {
+        let mime = part.contentType?.lowercased() ?? ""
+        let extensionName = part.filename.map { ($0 as NSString).pathExtension.lowercased() } ?? ""
+        guard mime.contains("json") || extensionName == "json" else { return nil }
+        return JSONValue.parse(part.data)
     }
 
     private func readableText(_ data: Data) -> String? {
