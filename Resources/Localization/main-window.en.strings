@@ -332,3 +332,6 @@
 
 /* AI key link */
 "Get API key" = "Get API key";
+
+/* Empty state */
+"Open Settings" = "Open Settings";

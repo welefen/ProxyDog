@@ -334,3 +334,6 @@
 
 /* AI key link */
 "Get API key" = "获取 API Key";
+
+/* Empty state */
+"Open Settings" = "去开启";

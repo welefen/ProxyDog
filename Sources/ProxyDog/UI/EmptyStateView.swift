@@ -6,6 +6,7 @@ import SwiftUI
 /// address, a copy button, and the three steps needed to route traffic through it.
 struct TrafficEmptyStateView: View {
     @EnvironmentObject private var state: AppState
+    @Environment(\.openSettings) private var openSettings
     @State private var didCopy = false
 
     private var listenAddress: String {
@@ -31,6 +32,27 @@ struct TrafficEmptyStateView: View {
 
             proxyRow
                 .padding(.top, DS.Space.x4)
+
+            Button {
+                state.requestSettings(destination: .connection)
+                openSettings()
+            } label: {
+                Text(String(localized: "Open Settings"))
+                    .font(DS.Typography.ui(11.5, .medium))
+                    .foregroundStyle(DSColor.accent)
+                    .padding(.horizontal, DS.Space.x3)
+                    .frame(height: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                            .fill(DSColor.raised)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                                    .strokeBorder(DSColor.border, lineWidth: 1)
+                            )
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.top, DS.Space.x3)
         }
         .frame(maxWidth: 300)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
