@@ -12,6 +12,9 @@ struct CookieSectionView: View {
     let responseCookies: [ResponseCookie]
     var totalBytes: Int = 0
 
+    @State private var isHovering = false
+    @State private var didCopyAll = false
+
     private var title: String {
         kind == .request
             ? String(localized: "Request Cookie")
@@ -37,9 +40,29 @@ struct CookieSectionView: View {
                         .font(DS.Typography.mono(10.5))
                         .foregroundStyle(DSColor.textMuted)
                         .monospacedDigit()
+
+                    Button {
+                        copyAll()
+                        didCopyAll = true
+                        Task {
+                            try? await Task.sleep(nanoseconds: 1_200_000_000)
+                            didCopyAll = false
+                        }
+                    } label: {
+                        Image(systemName: didCopyAll ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 9.5, weight: .medium))
+                            .foregroundStyle(didCopyAll ? DSColor.green : DSColor.textMuted)
+                            .frame(width: 14, height: 14)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(isHovering || didCopyAll ? 1 : 0)
+                    .fastTooltip(String(localized: "Copy all cookies"))
+                    .accessibilityLabel(String(localized: "Copy all cookies"))
                 }
                 Spacer(minLength: 0)
             }
+            .onHover { isHovering = $0 }
 
             if count == 0 {
                 Text("No cookies")
@@ -76,6 +99,26 @@ struct CookieSectionView: View {
                 }
             }
         }
+    }
+
+    private func copyAll() {
+        let text: String
+        if kind == .request {
+            text = requestCookies
+                .map { "\($0.name)=\($0.value)" }
+                .joined(separator: "; ")
+        } else {
+            text = responseCookies.map { cookie in
+                var pieces = ["\(cookie.name)=\(cookie.value)"]
+                if let domain = cookie.domain { pieces.append("Domain=\(domain)") }
+                if let path = cookie.path { pieces.append("Path=\(path)") }
+                if let expires = cookie.expires { pieces.append("Expires=\(expires)") }
+                if let flags = cookie.flags { pieces.append(flags.replacingOccurrences(of: " · ", with: "; ")) }
+                return pieces.joined(separator: "; ")
+            }
+            .joined(separator: "\n")
+        }
+        PDPasteboard.copy(text)
     }
 
     private func table<Content: View>(@ViewBuilder content: () -> Content) -> some View {

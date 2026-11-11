@@ -251,3 +251,6 @@
 "Request Cookie" = "Request Cookie";
 "Response Cookie" = "Response Cookie";
 "No cookies" = "No cookies";
+
+/* Cookies */
+"Copy all cookies" = "Copy all cookies";

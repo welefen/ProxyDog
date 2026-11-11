@@ -253,3 +253,6 @@
 "Request Cookie" = "请求 Cookie";
 "Response Cookie" = "响应 Cookie";
 "No cookies" = "没有 Cookie";
+
+/* Cookies */
+"Copy all cookies" = "复制全部 Cookie";
