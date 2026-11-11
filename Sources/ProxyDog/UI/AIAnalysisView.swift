@@ -268,12 +268,6 @@ struct AIAnalysisView: View {
                 Spacer(minLength: 0)
             }
 
-            if includeImages || includeFormValues {
-                Text(String(localized: "Uploaded images and form values are sent to the selected provider for this analysis."))
-                    .font(DS.Typography.ui(10.5))
-                    .foregroundStyle(DSColor.amber)
-            }
-
             TextEditor(text: $promptText)
                 .font(DS.Typography.ui(11.5))
                 .scrollContentBackground(.hidden)
