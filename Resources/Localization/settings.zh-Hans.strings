@@ -209,3 +209,6 @@
 "LAN address" = "局域网地址";
 "No LAN address found. Connect this Mac to a Wi-Fi or Ethernet network first." = "未找到局域网地址，请先将这台 Mac 接入 Wi-Fi 或以太网。";
 "This Mac's system proxy" = "本机系统代理";
+
+/* LAN access */
+"Turn on This Mac's system proxy first." = "请先开启本机系统代理";

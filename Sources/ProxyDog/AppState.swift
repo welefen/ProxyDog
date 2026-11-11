@@ -186,6 +186,11 @@ final class AppState: ObservableObject {
         if settings.systemProxyEnabled {
             setSystemProxy(enabled: true)
         }
+        // LAN access is gated by the system proxy; stale persistence must not re-expose it.
+        if settings.allowLANDevices, !settings.systemProxyEnabled {
+            settings.allowLANDevices = false
+            proxy.bindHost = "127.0.0.1"
+        }
         startProxy()
     }
 
@@ -205,7 +210,7 @@ final class AppState: ObservableObject {
         guard !proxy.status.isRunning else { return }
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
-        proxy.bindHost = settings.allowLANDevices ? "0.0.0.0" : "127.0.0.1"
+        proxy.bindHost = (settings.allowLANDevices && settings.systemProxyEnabled) ? "0.0.0.0" : "127.0.0.1"
         proxy.socksUpstreamFallbackToHTTP = false
         proxy.upstreamProxy = upstreamProxyFromSettings()
         proxy.socksUpstreamProxy = socksUpstreamProxyFromSettings()
@@ -240,7 +245,7 @@ final class AppState: ObservableObject {
         }
         proxy.port = settings.port
         proxy.sslProxyingEnabled = settings.sslProxyingEnabled
-        proxy.bindHost = settings.allowLANDevices ? "0.0.0.0" : "127.0.0.1"
+        proxy.bindHost = (settings.allowLANDevices && settings.systemProxyEnabled) ? "0.0.0.0" : "127.0.0.1"
         proxy.socksUpstreamFallbackToHTTP = false
         proxy.upstreamProxy = upstreamProxyFromSettings()
         proxy.socksUpstreamProxy = socksUpstreamProxyFromSettings()
@@ -275,9 +280,19 @@ final class AppState: ObservableObject {
 
     /// Exposes or hides the HTTP proxy on the local network.
     func applyLANAccess(_ enabled: Bool) {
+        // LAN access is only meaningful while this Mac's system proxy is on.
+        if enabled, !settings.systemProxyEnabled {
+            guard settings.allowLANDevices else { return }
+            settings.allowLANDevices = false
+            proxy.bindHost = "127.0.0.1"
+            if proxy.status.isRunning || proxyStatus.isRunning {
+                restartProxy()
+            }
+            return
+        }
         guard settings.allowLANDevices != enabled else { return }
         settings.allowLANDevices = enabled
-        proxy.bindHost = enabled ? "0.0.0.0" : "127.0.0.1"
+        proxy.bindHost = (enabled && settings.systemProxyEnabled) ? "0.0.0.0" : "127.0.0.1"
         if proxy.status.isRunning || proxyStatus.isRunning {
             restartProxy()
         }
@@ -544,6 +559,10 @@ final class AppState: ObservableObject {
             errorMessage = error.localizedDescription
         }
         syncFaviconRoute()
+        // LAN access depends on the Mac's system proxy being on; close it when that is off.
+        if !enabled, settings.allowLANDevices {
+            applyLANAccess(false)
+        }
     }
 
     /// Favicons are fetched by the app itself; route them the same way the proxy reaches

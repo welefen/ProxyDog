@@ -152,7 +152,10 @@ struct SettingsView: View {
         SettingsSection(title: "LAN access") {
             SettingsRow(
                 title: "Allow LAN devices",
-                hint: "Other devices on the same network can use this Mac as their HTTP proxy."
+                hint: "Other devices on the same network can use this Mac as their HTTP proxy.",
+                hintText: state.isSystemProxyEnabled
+                    ? nil
+                    : String(localized: "Turn on This Mac's system proxy first.")
             ) {
                 Toggle("", isOn: Binding(
                     get: { settings.allowLANDevices },
@@ -162,6 +165,7 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .tint(DSColor.accent)
+                .disabled(!state.isSystemProxyEnabled)
                 .accessibilityLabel("Allow LAN devices")
             }
 

@@ -206,3 +206,6 @@
 "LAN address" = "LAN address";
 "No LAN address found. Connect this Mac to a Wi-Fi or Ethernet network first." = "No LAN address found. Connect this Mac to a Wi-Fi or Ethernet network first.";
 "This Mac's system proxy" = "This Mac's system proxy";
+
+/* LAN access */
+"Turn on This Mac's system proxy first." = "Turn on This Mac's system proxy first.";
