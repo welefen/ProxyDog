@@ -200,7 +200,7 @@ struct SettingsView: View {
                     SettingsHairline()
 
                     if let certURL = lanCertificateURL, let url = URL(string: certURL) {
-                        SettingsRow(title: "iOS certificate profile") {
+                        SettingsRow(title: "Certificate URL") {
                             HStack(spacing: DS.Space.x2) {
                                 Text(certURL)
                                     .font(DS.Typography.mono(12))
@@ -219,39 +219,16 @@ struct SettingsView: View {
 
                         SettingsHairline()
 
-                        if let androidURLString = lanAndroidCertificateURL,
-                           let androidURL = URL(string: androidURLString) {
-                            SettingsRow(title: "Android / HarmonyOS certificate") {
-                                HStack(spacing: DS.Space.x2) {
-                                    Text(androidURLString)
-                                        .font(DS.Typography.mono(12))
-                                        .foregroundStyle(DSColor.textPrimary)
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                        .textSelection(.enabled)
-                                        .help(androidURLString)
-                                    SettingsIconButton(
-                                        systemName: "safari",
-                                        help: String(localized: "Open certificate URL"),
-                                        action: { NSWorkspace.shared.open(androidURL) }
-                                    )
-                                }
-                            }
-
-                            SettingsHairline()
-                        }
-
                         SettingsHintRow(
-                            hint: "On iOS: open the profile and install it under Settings → General → VPN & Device Management, then enable it in Certificate Trust Settings. On Android / HarmonyOS: download the .cer file, then install it as a trusted CA (HarmonyOS: Settings → Privacy & security → More security settings → Encryption and credentials → Install a certificate → CA certificate)."
+                            hint: "Open or scan this address on the device: iPhone/iPad get an installable profile, Android/HarmonyOS download the certificate. Then trust the root certificate in the system settings."
                         )
 
                         SettingsHairline()
 
-                        if let qrTarget = lanAndroidCertificateURL ?? lanCertificateURL,
-                           let qrImage = SettingsQRCode.image(for: qrTarget) {
+                        if let qrImage = SettingsQRCode.image(for: certURL) {
                             SettingsRow(
                                 title: "Certificate QR code",
-                                hint: "Scan to download the certificate (Android / HarmonyOS); on iOS use the profile link above instead."
+                                hint: "Scan with the device camera to open the certificate page."
                             ) {
                                 Image(nsImage: qrImage)
                                     .interpolation(.none)
@@ -279,12 +256,7 @@ struct SettingsView: View {
 
     private var lanCertificateURL: String? {
         guard settings.allowLANDevices, let host = state.lanAddress else { return nil }
-        return "http://\(host):\(settings.port)/ca.mobileconfig"
-    }
-
-    private var lanAndroidCertificateURL: String? {
-        guard settings.allowLANDevices, let host = state.lanAddress else { return nil }
-        return "http://\(host):\(settings.port)/ca.cer"
+        return "http://\(host):\(settings.port)/ca"
     }
 
     private func copyLANProxyAddress() {

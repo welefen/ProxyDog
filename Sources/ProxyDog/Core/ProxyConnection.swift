@@ -486,6 +486,12 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             remainder.writeBuffer(&buffer)
         }
 
+        if method == "GET", ["/ca", "/ca/", "/certificate"].contains(target) {
+            finished = true
+            serveSmartCertificate(context: context, requestHead: headText)
+            return
+        }
+
         if method == "GET", ["/ca.mobileconfig", "/proxydog-ca.mobileconfig"].contains(target) {
             finished = true
             serveRootProfile(context: context)
@@ -548,6 +554,64 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
         output.writeString("HTTP/1.1 200 OK\r\n")
         output.writeString("Content-Type: application/x-x509-ca-cert\r\n")
         output.writeString("Content-Disposition: attachment; filename=\"\(filename)\"\r\n")
+        output.writeString("Content-Length: \(data.count)\r\n")
+        output.writeString("Connection: close\r\n\r\n")
+        output.writeBytes(data)
+        context.channel.writeAndFlush(output).whenComplete { _ in
+            context.close(promise: nil)
+        }
+    }
+
+    /// Single "scan this" endpoint: picks the right certificate format from the UA.
+    /// iOS gets the installable profile, Android/HarmonyOS get the DER file, everything
+    /// else gets a small landing page with both links.
+    private func serveSmartCertificate(context: ChannelHandlerContext, requestHead: String) {
+        let ua = Self.userAgent(from: requestHead).lowercased()
+        if ua.contains("iphone") || ua.contains("ipad") || ua.contains("ipod") {
+            serveRootProfile(context: context)
+            return
+        }
+        if ua.contains("android") || ua.contains("harmony") || ua.contains("openharmony") {
+            serveRootCertificate(context: context, binaryDER: true)
+            return
+        }
+        serveCertificateLandingPage(context: context)
+    }
+
+    private static func userAgent(from requestHead: String) -> String {
+        for line in requestHead.split(separator: "\r\n") {
+            let parts = line.split(separator: ":", maxSplits: 1)
+            guard parts.count == 2,
+                  parts[0].trimmingCharacters(in: .whitespaces).lowercased() == "user-agent" else { continue }
+            return parts[1].trimmingCharacters(in: .whitespaces)
+        }
+        return ""
+    }
+
+    private func serveCertificateLandingPage(context: ChannelHandlerContext) {
+        let html = """
+        <!DOCTYPE html><html><head><meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>ProxyDog Certificate</title>
+        <style>body{font:15px -apple-system,Helvetica,sans-serif;margin:40px auto;max-width:640px;padding:0 20px;color:#222}a{color:#0a66ff}code{background:#f2f2f7;padding:2px 5px;border-radius:4px}</style>
+        </head><body>
+        <h2>ProxyDog root certificate / 根证书</h2>
+        <p>Open this same address on the device that will use the proxy — the right format is picked automatically:
+        iPhone/iPad gets an installable profile, Android/HarmonyOS gets the DER certificate.</p>
+        <p>在需要抓包的设备上打开同一地址即可：iPhone/iPad 会下载可安装的描述文件，Android / 鸿蒙会下载 DER 证书。</p>
+        <ul>
+        <li><a href="/ca.mobileconfig">iOS profile (.mobileconfig)</a></li>
+        <li><a href="/ca.cer">Android / HarmonyOS certificate (.cer, DER)</a></li>
+        <li><a href="/ca.pem">PEM certificate</a></li>
+        </ul>
+        <p>Install the certificate, then enable full trust for it in the system settings.</p>
+        <p>安装证书后，请在系统设置中将其设为完全信任。</p>
+        </body></html>
+        """
+        let data = Data(html.utf8)
+        var output = context.channel.allocator.buffer(capacity: data.count + 256)
+        output.writeString("HTTP/1.1 200 OK\r\n")
+        output.writeString("Content-Type: text/html; charset=utf-8\r\n")
         output.writeString("Content-Length: \(data.count)\r\n")
         output.writeString("Connection: close\r\n\r\n")
         output.writeBytes(data)
