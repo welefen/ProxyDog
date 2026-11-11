@@ -547,6 +547,7 @@ final class AppState: ObservableObject {
                 try SystemProxy.enable(port: settings.port)
                 settings.systemProxyEnabled = true
                 isSystemProxyEnabled = true
+                autoEnableConfiguredUpstreams()
                 Analytics.shared.track("system_proxy_enabled")
             } else {
                 try SystemProxy.disable()
@@ -563,6 +564,18 @@ final class AppState: ObservableObject {
         // LAN access depends on the Mac's system proxy being on; close it when that is off.
         if !enabled, settings.allowLANDevices {
             applyLANAccess(false)
+        }
+    }
+
+    /// Turning the system proxy on implies the user wants traffic to reach the internet;
+    /// if an upstream address is already filled in, switch it on automatically.
+    private func autoEnableConfiguredUpstreams() {
+        for kind in [UpstreamProxyKind.httpConnect, .socks5] {
+            guard !settings.upstreamEnabled(for: kind) else { continue }
+            let host = settings.upstreamHost(for: kind).trimmingCharacters(in: .whitespacesAndNewlines)
+            let port = settings.upstreamPort(for: kind)
+            guard !host.isEmpty, (1...65535).contains(port) else { continue }
+            applyUpstreamProxy(enabled: true, host: host, port: port, kind: kind)
         }
     }
 
