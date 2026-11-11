@@ -646,6 +646,13 @@ struct SettingsView: View {
                             .padding(.horizontal, DS.Space.x2)
                             .padding(.vertical, 5)
                             .background(fieldBackground(isFocused: aiKeyFocused))
+                        if let url = aiConfig.provider.apiKeyURL {
+                            SettingsIconButton(
+                                systemName: "arrow.up.right.square",
+                                help: String(localized: "Get API key"),
+                                action: { NSWorkspace.shared.open(url) }
+                            )
+                        }
                         if !aiConfig.apiKey.isEmpty {
                             SettingsIconButton(
                                 systemName: "xmark.circle",

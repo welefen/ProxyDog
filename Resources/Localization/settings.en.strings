@@ -253,3 +253,6 @@
 /* AI prompt */
 "Prompt" = "Prompt";
 "Default focus: errors, screenshots or private images in uploads, app lists and other privacy data. Edit to customize." = "Default focus: errors, screenshots or private images in uploads, app lists and other privacy data. Edit to customize.";
+
+/* AI key link */
+"Get API key" = "Get API key";

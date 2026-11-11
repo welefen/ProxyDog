@@ -160,14 +160,21 @@ struct AIAnalysisView: View {
             }
 
             field(label: "API Key") {
-                SecureField(String(localized: "Paste your API key"), text: $config.apiKey)
-                    .textFieldStyle(.plain)
-                    .font(DS.Typography.mono(12))
-                    .foregroundStyle(DSColor.textPrimary)
-                    .frame(width: 320)
-                    .padding(.horizontal, DS.Space.x2)
-                    .padding(.vertical, 5)
-                    .background(fieldBackground)
+                HStack(spacing: DS.Space.x2) {
+                    SecureField(String(localized: "Paste your API key"), text: $config.apiKey)
+                        .textFieldStyle(.plain)
+                        .font(DS.Typography.mono(12))
+                        .foregroundStyle(DSColor.textPrimary)
+                        .frame(width: 288)
+                        .padding(.horizontal, DS.Space.x2)
+                        .padding(.vertical, 5)
+                        .background(fieldBackground)
+                    if let url = config.provider.apiKeyURL {
+                        PDIconButton(symbol: "arrow.up.right.square", help: String(localized: "Get API key")) {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                }
             }
 
             field(label: String(localized: "Base URL (optional)")) {

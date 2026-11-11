@@ -66,6 +66,25 @@ enum AIProvider: String, CaseIterable, Codable, Identifiable {
     }
 
     var requiresBaseURL: Bool { self == .custom }
+
+    /// Provider console where users create an API key.
+    var apiKeyURL: URL? {
+        let string: String
+        switch self {
+        case .openAI: string = "https://platform.openai.com/api-keys"
+        case .deepSeek: string = "https://platform.deepseek.com/api_keys"
+        case .doubao: string = "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey"
+        case .kimi: string = "https://platform.moonshot.cn/console/api-keys"
+        case .qwen: string = "https://bailian.console.aliyun.com/?apiKey=1"
+        case .zhipu: string = "https://open.bigmodel.cn/usercenter/apikeys"
+        case .siliconFlow: string = "https://cloud.siliconflow.cn/account/ak"
+        case .openRouter: string = "https://openrouter.ai/keys"
+        case .anthropic: string = "https://console.anthropic.com/settings/keys"
+        case .gemini: string = "https://aistudio.google.com/app/apikey"
+        case .custom: return nil
+        }
+        return URL(string: string)
+    }
 }
 
 /// One image attached to an analysis request (base64-encoded per provider).

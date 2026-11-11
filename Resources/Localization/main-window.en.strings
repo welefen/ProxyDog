@@ -329,3 +329,6 @@
 /* AI option labels */
 "Analyze images uploaded in requests" = "Analyze images uploaded in requests";
 "Analyze form values in requests" = "Analyze form values in requests";
+
+/* AI key link */
+"Get API key" = "Get API key";

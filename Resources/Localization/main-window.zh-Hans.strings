@@ -331,3 +331,6 @@
 /* AI option labels */
 "Analyze images uploaded in requests" = "分析请求中上传的图片";
 "Analyze form values in requests" = "分析请求中表单值";
+
+/* AI key link */
+"Get API key" = "获取 API Key";
