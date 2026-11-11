@@ -16,7 +16,7 @@
 - **请求详情**：Overview（URL、客户端、耗时、大小、解密状态）、Headers（请求/响应表头，点击复制）、Body（JSON 树、文本、图片预览、二进制 Hex、Pretty/Raw 切换；`multipart/form-data` 会自动解析成字段/文件列表，图片直接预览、文件可保存）、Messages（WebSocket 消息）。
 - **WebSocket 调试**：抓取 101 升级握手，按帧解析双向消息（文本/二进制/ping/pong/关闭、分片重组），wss 自动解密；详情页「消息」标签实时追加，可查看每条消息内容。
 - **请求归属**：通过 libproc 反查发起连接的本地进程，详情页显示是哪个 App（含 PID，可看可执行路径），并保留原始 User-Agent。
-- **检索与筛选**：全文搜索、按域名过滤、Chrome DevTools 风格的类型筛选（Fetch/XHR、Doc、CSS、JS、Font、Img、Media、Manifest、Socket、Wasm、Other）、暂停/恢复抓包、清空、单条删除、收藏。
+- **检索与筛选**：全文搜索、按域名过滤、Chrome DevTools 风格的类型筛选（Fetch/XHR、Doc、CSS、JS、Font、Img、Media、Manifest、Socket、Wasm、Other、File、Error）、暂停/恢复抓包、清空、单条删除、收藏。
 - **重写规则（Rewrite）**：不写代码的静态规则，在设置里配置后立即生效；支持重定向、替换请求、替换响应、修改请求、修改响应 5 种动作（URL 正则/子串 + 可选 HTTP 方法匹配），HTTP/1.1 与 HTTP/2 流量都适用。
 - **断点（Breakpoint）**：命中 URL 的请求在转发前/响应返回前暂停，弹出编辑器可临时修改请求或响应正文，改完「放行」或「丢弃」；单次生效，不影响其他请求。
 - **AI 分析**：工具条上的 AI 按钮会分析当前列表，发现失败请求、慢请求、大响应、明文 HTTP、重复调用等异常并给出模型总结。首次使用需选择服务商（OpenAI / DeepSeek / 豆包 / Kimi / 通义千问 / 智谱 GLM / SiliconFlow / OpenRouter / Anthropic / Gemini / 自定义 OpenAI 兼容接口）并填写 API Key，也可在「设置 → AI」中配置；配置好后再次点击按钮直接出结果。分析提示词可自定义，并可选择分析请求数量、是否附带上传图片、是否包含表单值；默认重点检查错误请求、上传内容中的截图等隐私图片、App 列表等隐私数据；API Key 保存在本机偏好设置中。
@@ -38,7 +38,7 @@ Body 详情：JSON 树与 Pretty/Raw 切换。
 
 ![请求详情](Docs/screenshots/zh/request-body.png)
 
-类型筛选：Chrome DevTools 风格，按 Fetch/XHR、文档、CSS、JS、字体、图片、媒体、清单、Socket、Wasm、其他筛选。
+类型筛选：Chrome DevTools 风格，按 Fetch/XHR、文档、CSS、JS、字体、图片、媒体、清单、Socket、Wasm、其他、File（上传文件）、Error（异常请求）筛选。
 
 ![类型筛选](Docs/screenshots/zh/type-filter.png)
 

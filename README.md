@@ -16,7 +16,7 @@ Also available as a [DMG disk image](https://github.com/welefen/ProxyDog/raw/mas
 - **Request inspector**: Overview (URL, client, timing, size, decryption state), Headers (request/response with copy), Body (JSON tree, text, image preview, binary hex, Pretty/Raw; `multipart/form-data` is parsed into fields/files with inline image previews and save buttons), Messages (WebSocket frames).
 - **WebSocket debugging**: captures the 101 upgrade and parses frames in both directions (text/binary/ping/pong/close, fragmented messages reassembled); `wss://` is decrypted automatically. The Messages tab appends frames live with previews and full payloads.
 - **Request attribution**: figures out which local process opened each connection via `libproc` and shows the app name, PID/path and the original User-Agent in the inspector.
-- **Search and filters**: full-text search, per-domain filtering, Chrome DevTools-style type chips (Fetch/XHR, Doc, CSS, JS, Font, Img, Media, Manifest, Socket, Wasm, Other), pause/resume, clear, delete single rows and pinning.
+- **Search and filters**: full-text search, per-domain filtering, Chrome DevTools-style type chips (Fetch/XHR, Doc, CSS, JS, Font, Img, Media, Manifest, Socket, Wasm, Other, File, Error), pause/resume, clear, delete single rows and pinning.
 - **Rewrite rules**: no-code static rules evaluated as traffic flows: redirect, replace request, replace response, modify request, modify response (URL regex/substring plus optional HTTP method). Applies to both HTTP/1.1 and HTTP/2 traffic.
 - **Breakpoints**: pause matching requests before they are forwarded or responses before they are written, edit the body in a modal editor, then resume or drop. One-shot, so other traffic keeps flowing.
 - **AI analysis**: the AI toolbar button analyzes the current list for failed requests, slow responses, large bodies, plaintext HTTP and repeated calls, with a model-written summary. On first use pick a provider (OpenAI / DeepSeek / Doubao / Kimi / Qwen / Zhipu GLM / SiliconFlow / OpenRouter / Anthropic / Gemini / custom OpenAI-compatible endpoint) and enter an API key, or configure it in Settings → AI; later clicks analyze immediately. The analysis prompt is editable and you can choose how many requests to analyze, attach uploaded images, and include form values; by default it focuses on failed requests, screenshots or private images in uploads, app lists and other privacy data. The API key is stored locally in preferences.
@@ -38,7 +38,7 @@ Body inspector: JSON tree with Pretty/Raw toggle.
 
 ![Request detail](Docs/screenshots/en/request-body.png)
 
-Type filter: Chrome DevTools-style chips for Fetch/XHR, Doc, CSS, JS, Font, Img, Media, Manifest, Socket, Wasm and Other.
+Type filter: Chrome DevTools-style chips for Fetch/XHR, Doc, CSS, JS, Font, Img, Media, Manifest, Socket, Wasm, Other, File (uploads) and Error.
 
 ![Type filter](Docs/screenshots/en/type-filter.png)
 
@@ -46,7 +46,11 @@ WebSocket messages: the 101 handshake, both directions and payload previews (tex
 
 ![WebSocket](Docs/screenshots/en/websocket.png)
 
-Settings: a sidebar with Connection (HTTP proxy, port, upstream proxies, SOCKS5, SSL & certificate), Rules and Appearance.
+AI analysis: configure a mainstream LLM provider, review the prompt and options, then let the model inspect failed requests, uploaded images, form values and other privacy leaks.
+
+![AI analysis](Docs/screenshots/en/ai-analysis.png)
+
+Settings: a sidebar with Connection (HTTP proxy, port, upstream proxies, environment proxy injection, SOCKS5, SSL & certificate), Rules, AI and Appearance.
 
 ![Settings](Docs/screenshots/en/settings.png)
 
