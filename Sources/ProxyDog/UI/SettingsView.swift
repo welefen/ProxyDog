@@ -305,7 +305,6 @@ struct SettingsView: View {
 
     private var connectionSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.x6) {
-            lanAccessSection
             SettingsSection(title: "HTTP / HTTPS") {
                 SettingsRow(
                     title: "This Mac's system proxy",
@@ -554,6 +553,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            lanAccessSection
             certificateSection
         }
     }
