@@ -22,6 +22,10 @@ enum AIKeychain {
     }
 
     static func save(_ value: String) {
+        guard !value.isEmpty else {
+            delete()
+            return
+        }
         let data = Data(value.utf8)
         var query = baseQuery()
         let attributes: [String: Any] = [kSecValueData as String: data]
