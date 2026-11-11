@@ -15,17 +15,19 @@ struct TrafficEmptyStateView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Image(systemName: "network")
-                .font(.system(size: 20, weight: .regular))
-                .foregroundStyle(DSColor.textMuted)
+            if state.isSystemProxyEnabled {
+                Image(systemName: "network")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(DSColor.textMuted)
 
-            Text("No traffic captured")
-                .font(DS.Typography.ui(13, .medium))
-                .foregroundStyle(DSColor.textPrimary)
-                .padding(.top, DS.Space.x3)
+                Text("No traffic captured")
+                    .font(DS.Typography.ui(13, .medium))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .padding(.top, DS.Space.x3)
 
-            portChip
-                .padding(.top, DS.Space.x3)
+                portChip
+                    .padding(.top, DS.Space.x3)
+            }
 
             steps
                 .padding(.top, DS.Space.x6)
