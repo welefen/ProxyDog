@@ -653,15 +653,24 @@ struct SettingsView: View {
     /// System-proxy fill icon with a short success / not-found label.
     @ViewBuilder
     private func fillControl(feedback: FillFeedback?, help: String, action: @escaping () -> Void) -> some View {
-        HStack(spacing: DS.Space.x1) {
-            if let feedback {
-                Text(feedback == .filled ? "Filled" : "No system proxy")
-                    .font(DS.Typography.ui(11, .medium))
-                    .foregroundStyle(feedback == .filled ? DSColor.accent : DSColor.amber)
-                    .transition(.opacity)
+        SettingsIconButton(systemName: "arrow.down.to.line", help: help, action: action)
+            .overlay(alignment: .topTrailing) {
+                if let feedback {
+                    Text(feedback == .filled ? "Filled" : "No system proxy")
+                        .font(DS.Typography.ui(10.5, .medium))
+                        .foregroundStyle(feedback == .filled ? DSColor.accent : DSColor.amber)
+                        .fixedSize()
+                        .padding(.horizontal, 6)
+                        .frame(height: 16)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(DSColor.raised)
+                                .overlay(Capsule(style: .continuous).strokeBorder(DSColor.border, lineWidth: 1))
+                        )
+                        .offset(y: -19)
+                        .transition(.opacity)
+                }
             }
-            SettingsIconButton(systemName: "arrow.down.to.line", help: help, action: action)
-        }
     }
 
     private func flashFill(_ success: Bool, isSocks: Bool) {
@@ -680,18 +689,27 @@ struct SettingsView: View {
     /// Restart icon that briefly turns into a checkmark plus a "Restarted" label.
     @ViewBuilder
     private func restartControl(isRestarted: Bool, action: @escaping () -> Void) -> some View {
-        HStack(spacing: DS.Space.x1) {
+        SettingsIconButton(
+            systemName: isRestarted ? "checkmark.circle.fill" : "arrow.clockwise",
+            help: String(localized: "Restart proxy"),
+            action: action
+        )
+        .overlay(alignment: .topTrailing) {
             if isRestarted {
                 Text("Restarted")
-                    .font(DS.Typography.ui(11, .medium))
+                    .font(DS.Typography.ui(10.5, .medium))
                     .foregroundStyle(DSColor.accent)
+                    .fixedSize()
+                    .padding(.horizontal, 6)
+                    .frame(height: 16)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(DSColor.raised)
+                            .overlay(Capsule(style: .continuous).strokeBorder(DSColor.border, lineWidth: 1))
+                    )
+                    .offset(y: -19)
                     .transition(.opacity)
             }
-            SettingsIconButton(
-                systemName: isRestarted ? "checkmark.circle.fill" : "arrow.clockwise",
-                help: String(localized: "Restart proxy"),
-                action: action
-            )
         }
     }
 
