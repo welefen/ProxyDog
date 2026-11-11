@@ -110,9 +110,26 @@ struct TrafficListView: View {
                     openSettings()
                 }
 
-                PDIconButton(symbol: "brain.head.profile", help: String(localized: "Analyze requests with AI")) {
+                Button {
                     showsAIAnalysis = true
+                } label: {
+                    Text("AI")
+                        .font(DS.Typography.mono(11, .semibold))
+                        .foregroundStyle(DSColor.accent)
+                        .frame(width: 26, height: 22)
+                        .background(
+                            RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                                .fill(DSColor.accent.opacity(0.10))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                                .strokeBorder(DSColor.accent.opacity(0.30), lineWidth: 1)
+                        )
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .fastTooltip(String(localized: "Analyze requests with AI"))
+                .accessibilityLabel(String(localized: "Analyze requests with AI"))
 
                 PDIconButton(
                     symbol: state.isProxyRunning ? "power.circle.fill" : "power",
