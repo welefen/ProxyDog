@@ -52,10 +52,15 @@ private struct AboutView: View {
                 .padding(.top, 6)
                 .accessibilityLabel("Author welefen on GitHub")
             Spacer(minLength: 0)
-            Text(verbatim: "Copyright © 2026 ProxyDog")
-                .font(DS.Typography.ui(11))
-                .foregroundStyle(DSColor.textMuted)
-                .padding(.bottom, 18)
+            HStack(spacing: 4) {
+                Text(verbatim: "Copyright © 2026")
+                    .foregroundStyle(DSColor.textMuted)
+                Link("ProxyDog", destination: URL(string: "https://github.com/welefen/ProxyDog/")!)
+                    .foregroundStyle(DSColor.accent)
+                    .accessibilityLabel("ProxyDog on GitHub")
+            }
+            .font(DS.Typography.ui(11))
+            .padding(.bottom, 18)
         }
         .frame(width: 420, height: 320)
         .background(DSColor.chrome)
