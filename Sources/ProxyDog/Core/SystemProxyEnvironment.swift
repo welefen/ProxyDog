@@ -22,45 +22,73 @@ enum SystemProxyEnvironment {
             defaults.set(true, forKey: activeKey)
         }
         let noProxy = mergedNoProxy(launchctlGetenv("NO_PROXY"))
-        for name in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"] {
-            launchctlSetenv(name, url)
-        }
-        for name in ["NO_PROXY", "no_proxy"] {
-            launchctlSetenv(name, noProxy)
-        }
+        var commands: [[String]] = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"]
+            .map { ["setenv", $0, url] }
+        commands += ["NO_PROXY", "no_proxy"].map { ["setenv", $0, noProxy] }
+        runLaunchctlBatch(commands)
         writeLaunchAgent(url: url, noProxy: noProxy)
     }
 
     /// Removes our injected variables. Safe to call when nothing was injected and also
-    /// recovers from stale state when UserDefaults were cleared: the LaunchAgent file or
-    /// a loopback proxy value identifies the injection as ours.
+    /// recovers from stale state when UserDefaults were cleared.
     static func disable(port: Int? = nil) {
         let defaults = UserDefaults.standard
         let hasAgent = FileManager.default.fileExists(atPath: launchAgentPath)
         let active = defaults.bool(forKey: activeKey)
-        let expected = port.map { "http://127.0.0.1:\($0)" }
-        let looksInjected = expected.map { url in
-            ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"]
-                .contains { launchctlGetenv($0) == url }
-        } ?? false
-        guard active || hasAgent || looksInjected else { return }
+        if !active, !hasAgent {
+            // Stale fallback: only trust an exact loopback URL for our own port.
+            guard let port,
+                  launchctlGetenv("HTTP_PROXY") == "http://127.0.0.1:\(port)" else { return }
+        }
 
-        for name in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"] {
-            launchctlUnsetenv(name)
-        }
+        var commands: [[String]] = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"]
+            .map { ["unsetenv", $0] }
         if let saved = defaults.string(forKey: savedNoProxyKey), !saved.isEmpty {
-            launchctlSetenv("NO_PROXY", saved)
-            launchctlSetenv("no_proxy", saved)
+            commands.append(["setenv", "NO_PROXY", saved])
+            commands.append(["setenv", "no_proxy", saved])
         } else {
-            let noProxy = launchctlGetenv("NO_PROXY")
-            if noProxy == "127.0.0.1,localhost,::1" {
-                launchctlUnsetenv("NO_PROXY")
-                launchctlUnsetenv("no_proxy")
-            }
+            commands.append(["unsetenv", "NO_PROXY"])
+            commands.append(["unsetenv", "no_proxy"])
         }
+        runLaunchctlBatch(commands)
         defaults.removeObject(forKey: savedNoProxyKey)
         defaults.set(false, forKey: activeKey)
         try? FileManager.default.removeItem(atPath: launchAgentPath)
+    }
+
+    /// Non-blocking cleanup for app termination: launchctl operations can take seconds,
+    /// so run them from a detached shell after the app is allowed to quit.
+    static func scheduleDisableAfterExit() {
+        let defaults = UserDefaults.standard
+        let hasAgent = FileManager.default.fileExists(atPath: launchAgentPath)
+        guard defaults.bool(forKey: activeKey) || hasAgent else { return }
+
+        var lines = ["#!/bin/sh"]
+        for name in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"] {
+            lines.append("/bin/launchctl unsetenv \(name)")
+        }
+        if let saved = defaults.string(forKey: savedNoProxyKey), !saved.isEmpty {
+            lines.append("/bin/launchctl setenv NO_PROXY '\(saved)'")
+            lines.append("/bin/launchctl setenv no_proxy '\(saved)'")
+        } else {
+            lines.append("/bin/launchctl unsetenv NO_PROXY")
+            lines.append("/bin/launchctl unsetenv no_proxy")
+        }
+        lines.append("rm -f '\(launchAgentPath)'")
+        lines.append("rm -f \"$0\"")
+        let scriptPath = NSTemporaryDirectory() + "proxydog-env-cleanup-\(UUID().uuidString).sh"
+        let script = lines.joined(separator: "\n") + "\n"
+        guard (try? script.write(toFile: scriptPath, atomically: true, encoding: .utf8)) != nil else { return }
+
+        defaults.removeObject(forKey: savedNoProxyKey)
+        defaults.set(false, forKey: activeKey)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = [scriptPath]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
     }
 
     private static func mergedNoProxy(_ existing: String?) -> String {
@@ -85,6 +113,18 @@ enum SystemProxyEnvironment {
         let result = runLaunchctl(["getenv", name])
         let value = result.trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
+    }
+
+    private static func runLaunchctlBatch(_ commands: [[String]]) {
+        let group = DispatchGroup()
+        for arguments in commands {
+            group.enter()
+            DispatchQueue.global(qos: .utility).async {
+                _ = runLaunchctl(arguments)
+                group.leave()
+            }
+        }
+        group.wait()
     }
 
     @discardableResult

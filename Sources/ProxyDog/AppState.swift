@@ -203,6 +203,10 @@ final class AppState: ObservableObject {
         if settings.systemProxyEnabled {
             try? SystemProxy.disable()
         }
+        // Quitting ProxyDog must not leave apps pointing at an env proxy that no longer
+        // exists. launchctl can be slow, so finish this from a detached helper.
+        settings.injectProxyEnvironment = false
+        SystemProxyEnvironment.scheduleDisableAfterExit()
     }
 
     // MARK: - Proxy control
