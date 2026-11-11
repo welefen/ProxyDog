@@ -254,3 +254,6 @@
 
 /* Cookies */
 "Copy all cookies" = "Copy all cookies";
+
+/* Status bar */
+"Double-click to show failed requests" = "Double-click to show failed requests";

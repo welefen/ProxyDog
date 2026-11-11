@@ -15,7 +15,8 @@ struct StatusBarView: View {
             countItem(
                 PDFormat.count(errorCount),
                 label: errorLabel,
-                color: errorCount > 0 ? DSColor.red : DSColor.textMuted
+                color: errorCount > 0 ? DSColor.red : DSColor.textMuted,
+                onDoubleTap: errorCount > 0 ? toggleErrorFilter : nil
             )
 
             sizeItem
@@ -117,7 +118,12 @@ struct StatusBarView: View {
 
     // MARK: Items
 
-    private func countItem(_ value: String, label: String, color: Color = DSColor.textSecondary) -> some View {
+    private func countItem(
+        _ value: String,
+        label: String,
+        color: Color = DSColor.textSecondary,
+        onDoubleTap: (() -> Void)? = nil
+    ) -> some View {
         HStack(spacing: DS.Space.x1) {
             Text(value)
                 .font(DS.Typography.mono(10.5, .medium))
@@ -127,7 +133,18 @@ struct StatusBarView: View {
                 .font(DS.Typography.ui(10.5))
                 .foregroundStyle(DSColor.textMuted)
         }
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            onDoubleTap?()
+        }
+        .help(onDoubleTap == nil ? "" : String(localized: "Double-click to show failed requests"))
         .accessibilityElement(children: .combine)
+        .accessibilityHint(onDoubleTap == nil ? "" : String(localized: "Double-click to show failed requests"))
+    }
+
+    /// Status-bar error count doubles as a shortcut for the Error type filter.
+    private func toggleErrorFilter() {
+        state.typeFilter = state.typeFilter == .error ? .all : .error
     }
 
     private var pausedChip: some View {

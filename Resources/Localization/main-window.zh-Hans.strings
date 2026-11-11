@@ -256,3 +256,6 @@
 
 /* Cookies */
 "Copy all cookies" = "复制全部 Cookie";
+
+/* Status bar */
+"Double-click to show failed requests" = "双击筛选错误请求";
