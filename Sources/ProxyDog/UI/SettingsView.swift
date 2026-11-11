@@ -349,7 +349,7 @@ struct SettingsView: View {
 
                 SettingsRow(
                     title: "Inject proxy environment",
-                    hint: "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up.",
+                    hint: "Sets HTTP_PROXY / HTTPS_PROXY and NODE_EXTRA_CA_CERTS for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up.",
                     hintText: state.isSystemProxyEnabled
                         ? nil
                         : String(localized: "Turn on HTTP proxy first.")

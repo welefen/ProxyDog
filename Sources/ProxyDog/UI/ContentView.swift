@@ -74,7 +74,9 @@ struct ContentView: View {
             }
             if let enableEnv = DevLaunchOptions.forceSystemProxyEnvironment {
                 if enableEnv {
-                    SystemProxyEnvironment.enable(port: state.settings.port)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        SystemProxyEnvironment.enable(port: state.settings.port)
+                    }
                 } else {
                     SystemProxyEnvironment.disable()
                 }

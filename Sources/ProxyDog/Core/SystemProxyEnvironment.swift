@@ -12,21 +12,31 @@ enum SystemProxyEnvironment {
     private static let launchAgentPath = ("~/Library/LaunchAgents/" + launchAgentLabel + ".plist" as NSString)
         .expandingTildeInPath
     private static let savedNoProxyKey = "proxy.envSavedNoProxy"
+    private static let savedNodeExtraCAKey = "proxy.envSavedNodeExtraCA"
     private static let activeKey = "proxy.envProxyActive"
+    private static let rootCAPath = ("~/Library/Application Support/ProxyDog/Certificates/ca.crt" as NSString)
+        .expandingTildeInPath
+    private static let nodeExtraCAPath = ("~/Library/Application Support/ProxyDog/Certificates/node-extra-ca.pem" as NSString)
+        .expandingTildeInPath
 
     static func enable(port: Int) {
         let url = "http://127.0.0.1:\(port)"
         let defaults = UserDefaults.standard
         if !defaults.bool(forKey: activeKey) {
             defaults.set(launchctlGetenv("NO_PROXY") ?? "", forKey: savedNoProxyKey)
+            defaults.set(launchctlGetenv("NODE_EXTRA_CA_CERTS") ?? "", forKey: savedNodeExtraCAKey)
             defaults.set(true, forKey: activeKey)
         }
         let noProxy = mergedNoProxy(launchctlGetenv("NO_PROXY"))
+        let nodeCA = installNodeExtraCA()
         var commands: [[String]] = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"]
             .map { ["setenv", $0, url] }
         commands += ["NO_PROXY", "no_proxy"].map { ["setenv", $0, noProxy] }
+        if let nodeCA {
+            commands.append(["setenv", "NODE_EXTRA_CA_CERTS", nodeCA])
+        }
         runLaunchctlBatch(commands)
-        writeLaunchAgent(url: url, noProxy: noProxy)
+        writeLaunchAgent(url: url, noProxy: noProxy, nodeCAPath: nodeCA)
     }
 
     /// Removes our injected variables. Safe to call when nothing was injected and also
@@ -50,10 +60,17 @@ enum SystemProxyEnvironment {
             commands.append(["unsetenv", "NO_PROXY"])
             commands.append(["unsetenv", "no_proxy"])
         }
+        if let savedCA = defaults.string(forKey: savedNodeExtraCAKey), !savedCA.isEmpty {
+            commands.append(["setenv", "NODE_EXTRA_CA_CERTS", savedCA])
+        } else {
+            commands.append(["unsetenv", "NODE_EXTRA_CA_CERTS"])
+        }
         runLaunchctlBatch(commands)
         defaults.removeObject(forKey: savedNoProxyKey)
+        defaults.removeObject(forKey: savedNodeExtraCAKey)
         defaults.set(false, forKey: activeKey)
         try? FileManager.default.removeItem(atPath: launchAgentPath)
+        try? FileManager.default.removeItem(atPath: nodeExtraCAPath)
     }
 
     /// Non-blocking cleanup for app termination: launchctl operations can take seconds,
@@ -74,7 +91,13 @@ enum SystemProxyEnvironment {
             lines.append("/bin/launchctl unsetenv NO_PROXY")
             lines.append("/bin/launchctl unsetenv no_proxy")
         }
+        if let savedCA = defaults.string(forKey: savedNodeExtraCAKey), !savedCA.isEmpty {
+            lines.append("/bin/launchctl setenv NODE_EXTRA_CA_CERTS '\(savedCA)'")
+        } else {
+            lines.append("/bin/launchctl unsetenv NODE_EXTRA_CA_CERTS")
+        }
         lines.append("rm -f '\(launchAgentPath)'")
+        lines.append("rm -f '\(nodeExtraCAPath)'")
         lines.append("rm -f \"$0\"")
         let scriptPath = NSTemporaryDirectory() + "proxydog-env-cleanup-\(UUID().uuidString).sh"
         let script = lines.joined(separator: "\n") + "\n"
@@ -89,6 +112,27 @@ enum SystemProxyEnvironment {
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         try? process.run()
+    }
+
+    /// Builds a PEM bundle with ProxyDog's CA plus any CA file the user already pointed
+    /// NODE_EXTRA_CA_CERTS at, so Node/Electron apps can verify decrypted HTTPS.
+    private static func installNodeExtraCA() -> String? {
+        guard let rootCA = FileManager.default.contents(atPath: rootCAPath) else { return nil }
+        var combined = rootCA
+        let existing = launchctlGetenv("NODE_EXTRA_CA_CERTS")
+        if let existing, !existing.isEmpty, existing != nodeExtraCAPath,
+           let userCA = FileManager.default.contents(atPath: existing) {
+            if combined.last != 0x0A {
+                combined.append(Data("\n".utf8))
+            }
+            combined.append(userCA)
+        }
+        do {
+            try combined.write(to: URL(fileURLWithPath: nodeExtraCAPath), options: .atomic)
+            return nodeExtraCAPath
+        } catch {
+            return nil
+        }
     }
 
     private static func mergedNoProxy(_ existing: String?) -> String {
@@ -147,8 +191,8 @@ enum SystemProxyEnvironment {
         }
     }
 
-    private static func writeLaunchAgent(url: String, noProxy: String) {
-        let script = [
+    private static func writeLaunchAgent(url: String, noProxy: String, nodeCAPath: String?) {
+        var commands = [
             "/bin/launchctl setenv HTTP_PROXY '\(url)'",
             "/bin/launchctl setenv HTTPS_PROXY '\(url)'",
             "/bin/launchctl setenv ALL_PROXY '\(url)'",
@@ -157,7 +201,11 @@ enum SystemProxyEnvironment {
             "/bin/launchctl setenv all_proxy '\(url)'",
             "/bin/launchctl setenv NO_PROXY '\(noProxy)'",
             "/bin/launchctl setenv no_proxy '\(noProxy)'",
-        ].joined(separator: " && ")
+        ]
+        if let nodeCAPath {
+            commands.append("/bin/launchctl setenv NODE_EXTRA_CA_CERTS '\(nodeCAPath)'")
+        }
+        let script = commands.joined(separator: " && ")
         let plist: [String: Any] = [
             "Label": launchAgentLabel,
             "ProgramArguments": ["/bin/sh", "-c", script],

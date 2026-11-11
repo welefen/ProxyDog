@@ -267,3 +267,6 @@
 /* Proxy env injection */
 "Inject proxy environment" = "注入代理环境变量";
 "Sets HTTP_PROXY / HTTPS_PROXY for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up." = "为之后启动的应用注入 HTTP_PROXY / HTTPS_PROXY（适合 Electron/Node 客户端）；需要重启这些应用才会生效。";
+
+/* Proxy env injection */
+"Sets HTTP_PROXY / HTTPS_PROXY and NODE_EXTRA_CA_CERTS for apps launched afterwards (useful for Electron/Node clients); restart those apps to pick it up." = "为之后启动的应用注入 HTTP_PROXY / HTTPS_PROXY 和 NODE_EXTRA_CA_CERTS（适合 Electron/Node 客户端）；需要重启这些应用才会生效。";
