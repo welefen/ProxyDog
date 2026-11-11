@@ -486,6 +486,13 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
             remainder.writeBuffer(&buffer)
         }
 
+        if method == "GET", target.hasPrefix("/download/ca.") {
+            finished = true
+            let isPEM = target.hasSuffix(".pem")
+            serveRootCertificate(context: context, binaryDER: !isPEM, forceSave: true)
+            return
+        }
+
         if method == "GET", ["/ca", "/ca/", "/certificate"].contains(target) {
             finished = true
             serveSmartCertificate(context: context, requestHead: headText)
@@ -531,7 +538,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
     /// Serves the root CA over plain HTTP so LAN devices can download and install it.
     /// `/ca.cer` returns binary DER (what Android/HarmonyOS installers expect),
     /// `/ca.pem` returns the PEM text for manual/desktop use.
-    private func serveRootCertificate(context: ChannelHandlerContext, binaryDER: Bool) {
+    private func serveRootCertificate(context: ChannelHandlerContext, binaryDER: Bool, forceSave: Bool = false) {
         guard let pem = try? String(contentsOf: certificateAuthority.rootCertificateURL, encoding: .utf8) else {
             respondRaw(context: context, head: "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
             return
@@ -552,7 +559,7 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
         }
         var output = context.channel.allocator.buffer(capacity: data.count + 256)
         output.writeString("HTTP/1.1 200 OK\r\n")
-        output.writeString("Content-Type: application/x-x509-ca-cert\r\n")
+        output.writeString("Content-Type: \(forceSave ? "application/octet-stream" : "application/x-x509-ca-cert")\r\n")
         output.writeString("Content-Disposition: attachment; filename=\"\(filename)\"\r\n")
         output.writeString("Content-Length: \(data.count)\r\n")
         output.writeString("Connection: close\r\n\r\n")
@@ -623,10 +630,10 @@ final class ProxyFrontendHandler: ChannelInboundHandler, RemovableChannelHandler
         <li>按提示确认（可能需要锁屏密码）</li>
         <li>安装后，在 Wi-Fi 设置里把 HTTP 代理设为 <code>%(proxy)s</code></li>
         </ol>
-        <p class="muted">部分版本的路径为：设置 → 隐私和安全 → 更多安全设置 → 加密和凭据 → 安装数字证书 → CA 证书。</p>
-        <a class="btn" href="/ca.cer">下载证书 (.cer / DER)</a>
-        <a class="btn" href="/ca.crt">下载证书 (.crt / DER)</a>
-        <a class="btn" href="/ca.pem">下载证书 (.pem)</a>
+        <p class="muted">部分版本的路径为：设置 → 隐私和安全 → 更多安全设置 → 加密和凭据 → 安装数字证书 → CA 证书。<br>如果在文件选择器里看不到刚下载的证书：打开「文件管理 → 浏览 → 内部存储 → Download」确认文件存在；仍看不到时改下 .crt 或 .pem 格式再试。</p>
+        <a class="btn" href="/download/ca.cer">下载证书 (.cer / DER)</a>
+        <a class="btn" href="/download/ca.crt">下载证书 (.crt / DER)</a>
+        <a class="btn" href="/download/ca.pem">下载证书 (.pem)</a>
         <p class="muted">Root certificate for ProxyDog. Install it from Settings → Security → More security settings → Encryption and credentials → Install from storage → CA certificate; tapping the file in Files does not install it. Then set the Wi-Fi HTTP proxy to %(proxy)s.</p>
         </body></html>
         """.replacingOccurrences(of: "%(proxy)s", with: proxyAddress)
