@@ -66,20 +66,20 @@ struct CookieSectionView: View {
 
             if kind == .request {
                 table {
-                    row(header: true, cells: [("Name", 160), ("Value", nil)])
+                    row(header: true, cells: [("Name", 160), ("Value", 600)])
                     ForEach(requestCookies) { cookie in
                         Divider().overlay(DSColor.border)
-                        row(header: false, cells: [("Name", 160), ("Value", nil)], values: [cookie.name, cookie.value])
+                        row(header: false, cells: [("Name", 160), ("Value", 600)], values: [cookie.name, cookie.value])
                     }
                 }
             } else {
                 table {
-                    row(header: true, cells: [("Name", 120), ("Value", 150), ("Domain", 110), ("Path", 50), ("Expires", 140), ("Flags", 220)])
+                    row(header: true, cells: [("Name", 120), ("Value", 320), ("Domain", 120), ("Path", 60), ("Expires", 160), ("Flags", 240)])
                     ForEach(responseCookies) { cookie in
                         Divider().overlay(DSColor.border)
                         row(
                             header: false,
-                            cells: [("Name", 120), ("Value", 150), ("Domain", 110), ("Path", 50), ("Expires", 140), ("Flags", 220)],
+                            cells: [("Name", 120), ("Value", 320), ("Domain", 120), ("Path", 60), ("Expires", 160), ("Flags", 240)],
                             values: [
                                 cookie.name,
                                 cookie.value,
@@ -116,13 +116,15 @@ struct CookieSectionView: View {
     }
 
     private func table<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(spacing: 0) { content() }
-            .background(DSColor.raised)
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                    .strokeBorder(DSColor.border, lineWidth: DS.Metric.separator)
-            )
+        ScrollView(.horizontal, showsIndicators: true) {
+            VStack(spacing: 0) { content() }
+        }
+        .background(DSColor.raised)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                .strokeBorder(DSColor.border, lineWidth: DS.Metric.separator)
+        )
     }
 
     @ViewBuilder
