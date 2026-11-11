@@ -54,6 +54,7 @@ struct TrafficEmptyStateView: View {
                     )
             }
             .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, DS.Space.x3)
         }
         .frame(maxWidth: 300)
