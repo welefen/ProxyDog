@@ -187,12 +187,15 @@ struct BodyTabView: View {
     let request: CapturedRequest
 
     var body: some View {
-        VStack(spacing: 0) {
-            BodySectionView(request: request, side: .request)
-            PDHairline()
-            BodySectionView(request: request, side: .response)
+        GeometryReader { proxy in
+            VSplitView {
+                BodySectionView(request: request, side: .request)
+                    .frame(minHeight: 80)
+                BodySectionView(request: request, side: .response)
+                    .frame(minHeight: 80)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(DSColor.base)
     }
 }
