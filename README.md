@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-A native, lightweight HTTP/HTTPS debugging proxy for macOS that works out of the box: see which app each request came from, decrypt HTTPS with one click and read the decoded body, inspect WebSocket messages, rewrite traffic, pause requests with breakpoints, and route through SOCKS5 or an existing VPN proxy — all in one window.
+A native, lightweight HTTP/HTTPS debugging proxy for macOS that works out of the box: see which app each request came from, decrypt HTTPS with one click and read the decoded body, inspect WebSocket messages, rewrite traffic, pause requests with breakpoints, route through SOCKS5 or an existing VPN proxy, and analyze the current traffic with mainstream LLM providers (failed requests, uploaded screenshots and other privacy leaks) — all in one window.
 
 [![Download ProxyDog for macOS](https://img.shields.io/badge/Download-ProxyDog%201.0.1%20for%20macOS-2ea44f?logo=apple&logoColor=white)](https://github.com/welefen/ProxyDog/raw/master/updates/ProxyDog-1.0.1.zip)
 
