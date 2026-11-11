@@ -219,3 +219,7 @@
 /* Fill feedback */
 "Filled" = "已填入";
 "No system proxy" = "未找到系统代理";
+
+/* LAN access */
+"Certificate QR code" = "证书二维码";
+"Scan with the device camera to download and install the root certificate." = "用设备相机扫码即可下载并安装根证书。";

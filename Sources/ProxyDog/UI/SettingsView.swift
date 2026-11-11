@@ -224,22 +224,22 @@ struct SettingsView: View {
                         )
 
                         SettingsHairline()
-                    }
 
-                    if let qrImage = SettingsQRCode.image(for: proxyAddress) {
-                        SettingsRow(
-                            title: "QR code",
-                            hint: "Scan with a proxy app on the device to fill in the proxy address."
-                        ) {
-                            Image(nsImage: qrImage)
-                                .interpolation(.none)
-                                .resizable()
-                                .frame(width: 120, height: 120)
-                                .padding(DS.Space.x2)
-                                .background(
-                                    RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
-                                        .fill(Color(nsColor: .white))
-                                )
+                        if let qrImage = SettingsQRCode.image(for: certURL) {
+                            SettingsRow(
+                                title: "Certificate QR code",
+                                hint: "Scan with the device camera to download and install the root certificate."
+                            ) {
+                                Image(nsImage: qrImage)
+                                    .interpolation(.none)
+                                    .resizable()
+                                    .frame(width: 120, height: 120)
+                                    .padding(DS.Space.x2)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: DS.Radius.sm, style: .continuous)
+                                            .fill(Color(nsColor: .white))
+                                    )
+                            }
                         }
                     }
                 } else {

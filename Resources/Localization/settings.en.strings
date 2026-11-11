@@ -216,3 +216,7 @@
 /* Fill feedback */
 "Filled" = "Filled";
 "No system proxy" = "No system proxy";
+
+/* LAN access */
+"Certificate QR code" = "Certificate QR code";
+"Scan with the device camera to download and install the root certificate." = "Scan with the device camera to download and install the root certificate.";
