@@ -208,3 +208,8 @@
 "Update %@ is available" = "有新版本 %@ 可用，点击查看";
 "Update %@ is ready to install" = "新版本 %@ 已下载，点击安装";
 "完成更新" = "完成更新";
+
+/* About */
+"About ProxyDog" = "关于 ProxyDog";
+"Version %@ (%@)" = "版本 %@ (%@)";
+"Author welefen on GitHub" = "作者：welefen（GitHub）";

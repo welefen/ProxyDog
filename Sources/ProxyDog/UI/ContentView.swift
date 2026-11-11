@@ -70,6 +70,11 @@ struct ContentView: View {
             SampleTraffic.injectSampleBreakpointIfRequested(state: state)
             SampleTraffic.runDevProbesIfNeeded()
             SampleTraffic.openSettingsIfRequested(state: state, openSettings: openSettings)
+            if ProcessInfo.processInfo.arguments.contains("--sample-about") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    AboutWindow.show()
+                }
+            }
             if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--sample-update-phase"),
                ProcessInfo.processInfo.arguments.indices.contains(index + 1) {
                 let raw = ProcessInfo.processInfo.arguments[index + 1]

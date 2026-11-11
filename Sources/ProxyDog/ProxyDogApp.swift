@@ -59,6 +59,11 @@ struct ProxyDogApp: App {
     @CommandsBuilder
     private var appCommands: some Commands {
         CommandGroup(replacing: .newItem) {}
+        CommandGroup(replacing: .appInfo) {
+            Button("About ProxyDog") {
+                AboutWindow.show()
+            }
+        }
         CommandMenu("Proxy") {
             Button(LocalizedStringKey(state.isProxyRunning ? "Stop Proxy" : "Start Proxy")) {
                 state.toggleProxy()
