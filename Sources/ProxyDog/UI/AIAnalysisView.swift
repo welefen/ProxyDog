@@ -52,12 +52,30 @@ struct AIAnalysisView: View {
         return lines.joined(separator: "\n")
     }
 
+    private var sheetHeight: CGFloat {
+        if requests.isEmpty { return 330 }
+        if summary == nil {
+            return config.isConfigured ? 590 : 660
+        }
+        return 720
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
             if requests.isEmpty {
                 emptyState
+            } else if summary == nil {
+                VStack(alignment: .leading, spacing: DS.Space.x5) {
+                    if showConfiguration || !config.isConfigured {
+                        configurationCard
+                    } else {
+                        compactConfiguration
+                    }
+                    promptCard
+                }
+                .padding(DS.Space.x5)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Space.x5) {
@@ -71,11 +89,13 @@ struct AIAnalysisView: View {
                     }
                     .padding(DS.Space.x5)
                 }
+                .frame(height: 520)
             }
             Divider()
             footer
         }
-        .frame(width: 660, height: requests.isEmpty ? 360 : 700)
+        .frame(width: 660)
+        .modifier(AISheetSizing(fallbackHeight: sheetHeight))
         .background(DSColor.base)
         .onAppear {
             if report == nil {
@@ -93,6 +113,19 @@ struct AIAnalysisView: View {
 
     private var header: some View {
         HStack(spacing: DS.Space.x3) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(DSColor.textSecondary)
+                    .frame(width: 20, height: 20)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .fastTooltip(String(localized: "Close"))
+            .accessibilityLabel(String(localized: "Close"))
+
             Image(systemName: "brain.head.profile")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(DSColor.accent)
@@ -394,13 +427,22 @@ struct AIAnalysisView: View {
             .font(DS.Typography.ui(11.5, .medium))
             .foregroundStyle(didCopy ? DSColor.green : DSColor.accent)
             Spacer()
-            Button(String(localized: "Close")) {
-                dismiss()
-            }
-            .keyboardShortcut(.cancelAction)
         }
         .padding(.horizontal, DS.Space.x5)
         .frame(height: 48)
+    }
+
+    private struct AISheetSizing: ViewModifier {
+        let fallbackHeight: CGFloat
+
+        @ViewBuilder
+        func body(content: Content) -> some View {
+            if #available(macOS 15.0, *) {
+                content.presentationSizing(.fitted)
+            } else {
+                content.frame(height: fallbackHeight)
+            }
+        }
     }
 
     private func findingCard(_ finding: AIAnomaly) -> some View {
