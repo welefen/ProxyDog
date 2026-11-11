@@ -311,3 +311,8 @@
 /* AI empty state */
 "No requests to analyze" = "没有可分析的请求";
 "Capture some traffic first, then run the AI analysis." = "请先抓取一些流量，再运行 AI 分析。";
+
+/* AI prompt */
+"Prompt" = "提示词";
+"Focus on: 1) failed requests (4xx/5xx, connection errors) and likely causes; 2) whether uploaded content contains screenshots or other private images; 3) whether user app lists, device identifiers or other privacy data were reported; 4) any other notable anomalies." = "重点分析：1）有哪些失败请求（4xx/5xx、连接失败）及可能原因；2）上传内容中是否包含截图或其它隐私图片；3）是否上报了用户 App 列表、设备标识等隐私数据；4）其它值得注意的异常。";
+"Default focus: errors, screenshots or private images in uploads, app lists and other privacy data. Edit to customize." = "默认重点关注错误、上传内容中的截图/隐私图片、App 列表等隐私数据，可自行修改。";

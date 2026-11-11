@@ -112,7 +112,12 @@ enum AIAnalyzer {
         requests.prefix(3).map { "\($0.method) \($0.urlString) → \($0.statusText)" }
     }
 
-    static func prompt(for report: AIAnalysisReport, requests: [CapturedRequest], chinese: Bool) -> String {
+    static func prompt(
+        for report: AIAnalysisReport,
+        requests: [CapturedRequest],
+        chinese: Bool,
+        focus: String
+    ) -> String {
         var lines: [String] = []
         for request in requests.prefix(80) {
             let duration = request.duration.map { String(format: "%.0fms", $0 * 1000) } ?? "-"
@@ -122,8 +127,11 @@ enum AIAnalyzer {
         let instruction = chinese
             ? "你是网络抓包分析助手。请用简体中文分析下面的抓包请求与本地统计，指出可能的异常（失败原因、性能问题、可优化点），给出 3-5 条简短要点，不要重复原始请求列表，不要编造未出现的数据。"
             : "You are a network trace assistant. Analyze the captured requests and local stats below. Point out likely anomalies (failure causes, performance issues, optimizations) in 3-5 short bullet points. Do not repeat the raw list or invent data."
+        let focusLine = chinese ? "分析重点：\(focus)" : "Focus: \(focus)"
         return """
         \(instruction)
+
+        \(focusLine)
 
         Local findings:
         \(findings)

@@ -151,6 +151,18 @@ struct AIAnalysisView: View {
                     .background(fieldBackground)
             }
 
+            field(label: String(localized: "Prompt")) {
+                TextEditor(text: Binding(
+                    get: { config.effectivePrompt },
+                    set: { config.prompt = $0 }
+                ))
+                .font(DS.Typography.ui(11.5))
+                .scrollContentBackground(.hidden)
+                .padding(5)
+                .frame(width: 340, height: 86)
+                .background(fieldBackground)
+            }
+
             field(label: String(localized: "Base URL (optional)")) {
                 TextField(config.provider.defaultBaseURL.isEmpty ? "https://…" : config.provider.defaultBaseURL, text: $config.baseURL)
                     .textFieldStyle(.plain)
@@ -408,7 +420,7 @@ struct AIAnalysisView: View {
         summary = nil
 
         let chinese = Locale.preferredLanguages.first?.hasPrefix("zh") == true
-        let prompt = AIAnalyzer.prompt(for: report, requests: requests, chinese: chinese)
+        let prompt = AIAnalyzer.prompt(for: report, requests: requests, chinese: chinese, focus: config.effectivePrompt)
         Task {
             do {
                 let text = try await AIClient.summarize(configuration: configuration, prompt: prompt)

@@ -249,3 +249,7 @@
 
 /* AI key storage */
 "Stored locally in your preferences; sent only to the selected provider." = "Stored locally in your preferences; sent only to the selected provider.";
+
+/* AI prompt */
+"Prompt" = "Prompt";
+"Default focus: errors, screenshots or private images in uploads, app lists and other privacy data. Edit to customize." = "Default focus: errors, screenshots or private images in uploads, app lists and other privacy data. Edit to customize.";

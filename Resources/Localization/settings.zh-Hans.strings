@@ -256,3 +256,7 @@
 
 /* AI key storage */
 "Stored locally in your preferences; sent only to the selected provider." = "保存在本机偏好设置中，只会发送给所选服务商。";
+
+/* AI prompt */
+"Prompt" = "提示词";
+"Default focus: errors, screenshots or private images in uploads, app lists and other privacy data. Edit to customize." = "默认重点关注错误、上传内容中的截图/隐私图片、App 列表等隐私数据，可自行修改。";

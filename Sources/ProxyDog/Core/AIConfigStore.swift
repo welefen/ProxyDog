@@ -12,6 +12,7 @@ final class AIConfigStore: ObservableObject {
         static let baseURL = "ai.baseURL"
         static let model = "ai.model"
         static let apiKey = "ai.apiKey"
+        static let prompt = "ai.prompt"
     }
 
     private let defaults = UserDefaults.standard
@@ -25,6 +26,11 @@ final class AIConfigStore: ObservableObject {
     @Published var model: String {
         didSet { defaults.set(model, forKey: Key.model) }
     }
+    /// Custom analysis focus; empty means use `defaultPrompt`.
+    @Published var prompt: String {
+        didSet { defaults.set(prompt, forKey: Key.prompt) }
+    }
+
     /// Stored locally in UserDefaults; never in the keychain.
     @Published var apiKey: String {
         didSet {
@@ -44,6 +50,7 @@ final class AIConfigStore: ObservableObject {
         baseURL = environment["PROXYDOG_AI_BASE_URL"] ?? defaults.string(forKey: Key.baseURL) ?? ""
         model = environment["PROXYDOG_AI_MODEL"] ?? defaults.string(forKey: Key.model) ?? ""
         apiKey = environment["PROXYDOG_AI_KEY"] ?? defaults.string(forKey: Key.apiKey) ?? ""
+        prompt = defaults.string(forKey: Key.prompt) ?? ""
 
         // Older builds stored the key in the login keychain; remove that legacy item
         // best-effort. The key is now kept in preferences only.
@@ -63,6 +70,15 @@ final class AIConfigStore: ObservableObject {
         let hasModel = !provider.defaultModel.isEmpty || !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let hasBase = !provider.defaultBaseURL.isEmpty || !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         return hasKey && hasModel && hasBase
+    }
+
+    var defaultPrompt: String {
+        String(localized: "Focus on: 1) failed requests (4xx/5xx, connection errors) and likely causes; 2) whether uploaded content contains screenshots or other private images; 3) whether user app lists, device identifiers or other privacy data were reported; 4) any other notable anomalies.")
+    }
+
+    var effectivePrompt: String {
+        let value = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? defaultPrompt : prompt
     }
 
     var displayModel: String {
