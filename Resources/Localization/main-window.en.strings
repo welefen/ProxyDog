@@ -211,3 +211,6 @@
 "About ProxyDog" = "About ProxyDog";
 "Version %@ (%@)" = "Version %@ (%@)";
 "Author welefen on GitHub" = "Author welefen on GitHub";
+
+/* About */
+"Version %@" = "Version %@";

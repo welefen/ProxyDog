@@ -213,3 +213,6 @@
 "About ProxyDog" = "关于 ProxyDog";
 "Version %@ (%@)" = "版本 %@ (%@)";
 "Author welefen on GitHub" = "作者：welefen（GitHub）";
+
+/* About */
+"Version %@" = "版本 %@";

@@ -43,7 +43,7 @@ private struct AboutView: View {
                 .font(DS.Typography.ui(21, .semibold))
                 .foregroundStyle(DSColor.textPrimary)
                 .padding(.top, 14)
-            Text(String(format: String(localized: "Version %@ (%@)"), AppInfo.version, AppInfo.build))
+            Text(String(format: String(localized: "Version %@"), AppInfo.version))
                 .font(DS.Typography.ui(12))
                 .foregroundStyle(DSColor.textSecondary)
                 .padding(.top, 5)
